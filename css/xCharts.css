@@ -1,0 +1,94 @@
+.xc-tooltip-text-p{
+    margin: 3px;
+}
+
+.xc-vcenter{
+    height: 100%;
+    text-align: center;
+}
+
+
+.xc-tooltip{
+    border-color: rgb(0, 0, 0);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 10px;
+    padding: 10px;
+    display: none;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    transform: translate(-1px, -1px);
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.xc-tooltip-pie {
+    fontSize: 12;
+    border-radius: 10px;
+    position: absolute;
+    visibility: hidden;
+    background-color: rgba(0,0,0,0.5);
+    padding: 10px;
+    color: #fff;
+    z-index: 1000;
+    text-align: left;
+    transform: translate(50px, -120px);
+    /* 覆盖xc-tooltip的样式 */
+    display: inherit;
+    top: auto;
+    left: auto;
+}
+.xc-tooltip-text{
+    color:#fff;
+}
+.xc-vcenter::before{
+    content: '';
+    width: 0;
+    height: 100%;
+    display: inline-block;
+    visibility: hidden;
+    vertical-align: middle;
+}
+
+
+
+.xc-spinner{
+    display: inline-block;
+    vertical-align: middle;
+    display: none;
+}
+.xc-spinner > div {
+    width: 20px;
+    height: 20px;
+    background-color: #7eb00a;
+    border-radius: 100%;
+    display: inline-block;
+    -webkit-animation: bouncedelay 1.4s infinite ease-in-out;
+    animation: bouncedelay 1.4s infinite ease-in-out;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
+
+.xc-spinner .xc-bounce1 {
+    -webkit-animation-delay: -0.32s;
+    animation-delay: -0.32s;
+}
+
+.xc-spinner .xc-bounce2 {
+    -webkit-animation-delay: -0.16s;
+    animation-delay: -0.16s;
+}
+
+@-webkit-keyframes bouncedelay {
+    0%, 80%, 100% { -webkit-transform: scale(0.0) }
+    40% { -webkit-transform: scale(1.0) }
+}
+
+@keyframes bouncedelay {
+    0%, 80%, 100% {
+        transform: scale(0.0);
+        -webkit-transform: scale(0.0);
+    } 40% {
+          transform: scale(1.0);
+          -webkit-transform: scale(1.0);
+      }
+}

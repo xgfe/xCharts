@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>title</title>
+    <link rel="stylesheet" href="../css/xCharts.css"/>
+    <script src="../bower_components/d3/d3.js"></script>
+    <script src="../js/xCharts-0.0.2.js"></script>
+    <script src="../js/chart/line-0.0.2.js"></script>
+</head>
+<body>
+<style>
+    h1 {
+        text-align: center;
+    }
+
+    .main {
+        text-align: center;
+    }
+    .main>div{
+        margin:0 auto;
+        width: 1000px;
+        height: 500px;
+    }
+
+</style>
+<h1>config-title</h1>
+
+<h2>默认参数</h2>
+
+<div class="main">
+    <div class="one"></div>
+</div>
+<h2>title.y=middel</h2>
+<div class="main">
+    <div class="two"></div>
+</div>
+<h2>标题样式设置</h2>
+<div class="main">
+    <div class="three"></div>
+</div>
+
+<script>
+    var config_one = {
+        title: {
+            //标题配置项
+            show: true, //标题开关，true表示显示，false表示不显示
+            text: '我是主标题', //主标题文本
+            subtext: '我是副标题', //副标题文本
+        },
+        xAxis: [
+            {
+                type: 'time',
+                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
+                tickFormat: function (d, i) { //格式化每个x显示
+                    d = new Date(d);
+                    return d.getMonth() + '/' + d.getDay();
+                }
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value'
+            }
+        ],
+        series: [
+            {
+                name: '最高气温',
+                type: 'line',
+                yAxisIndex: 0, //如果是百分比单位，则使用 第二个Y轴
+                smooth: true,
+                data: ['11%', 11, 15, 13, 12, 40, 60], //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，需要下面补全
+                units: '%' //这里如果是百分数就需要添加
+            }
+        ],
+    }
+    xCharts(document.querySelector(".one")).loadConfig(config_one);
+
+    var config_two = {
+        title: {
+            //标题配置项
+            show: true, //标题开关，true表示显示，false表示不显示
+            text: '我是主标题', //主标题文本
+            subtext: '我是副标题', //副标题文本
+            x:'center', //水平位置，默认center, 支持 'center'|'left'|'right'|number(单位px或者百分比)
+            y:'middle', //暂时不支持自定义,垂直位置，默认top,注意一旦设置y后标题将会不在图表上占据位置会和图表重叠在一起, 支持 'top'|'middle'|'bottom'|number(单位px或者百分比)
+        },
+        xAxis: [
+            {
+                type: 'time',
+                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
+                tickFormat: function (d, i) { //格式化每个x显示
+                    d = new Date(d);
+                    return d.getMonth() + '/' + d.getDay();
+                }
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value'
+            }
+        ],
+        series: [
+            {
+                name: '最高气温',
+                type: 'line',
+                yAxisIndex: 0, //如果是百分比单位，则使用 第二个Y轴
+                smooth: true,
+                data: ['11%', 11, 15, 13, 12, 40, 60], //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，需要下面补全
+                units: '%' //这里如果是百分数就需要添加
+            }
+        ],
+    }
+    xCharts(document.querySelector(".two")).loadConfig(config_two);
+
+    var config_three = {
+        title: {
+            //标题配置项
+            show: true, //标题开关，true表示显示，false表示不显示
+            text: '我是主标题', //主标题文本
+            x:'center', //水平位置，默认center, 支持 'center'|'left'|'right'|number(单位px或者百分比)
+            y:'top', //暂时不支持自定义,垂直位置，默认top,注意一旦设置y后标题将会不在图表上占据位置会和图表重叠在一起, 支持 'top'|'middle'|'bottom'|number(单位px或者百分比)
+            textStyle:{
+                fontSize:20,
+                color:'rgba(0,0,0,0.5)'
+            }
+        },
+        xAxis: [
+            {
+                type: 'time',
+                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
+                tickFormat: function (d, i) { //格式化每个x显示
+                    d = new Date(d);
+                    return d.getMonth() + '/' + d.getDay();
+                }
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value'
+            }
+        ],
+        series: [
+            {
+                name: '最高气温',
+                type: 'line',
+                yAxisIndex: 0, //如果是百分比单位，则使用 第二个Y轴
+                smooth: true,
+                data: ['11%', 11, 15, 13, 12, 40, 60], //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，需要下面补全
+                units: '%' //这里如果是百分数就需要添加
+            }
+        ],
+    }
+    xCharts(document.querySelector(".three")).loadConfig(config_three);
+
+</script>
+</body>
+</html>

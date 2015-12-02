@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>标准折线图</title>
+    <link rel="stylesheet" href="../css/xCharts.css"/>
+    <script src="../bower_components/requirejs/require.js"></script>
+    <style>
+        .line, .area-line {
+            border: 10px solid #eee;
+            -webkit-box-sizing: border-box;
+            padding: 10px;
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+<h2>标准折线图</h2>
+<div class="line" style=""></div>
+<script>
+
+            require.config({
+                ver: '0.1',
+                baseUrl: '../js_old',
+                paths: {
+                    'xCharts': "xCharts-0.0.2",
+                    'd3': 'd3',
+                    'legend': 'legend',
+                    'line': 'chart/line-0.0.2'
+                },
+                shim: {
+                    'd3': {
+                        exports: 'd3'
+                    },
+                    xCharts: {
+                        deps: ['d3']
+                    },
+                    legend: {
+                        deps: ['xCharts']
+                    },
+                    line: {
+                        deps: ['xCharts']
+                    }
+                }
+            } )
+            require(['xCharts', 'd3', 'legend', 'line'], function (chart) {
+                //多Y折线图
+                var line = chart(document.querySelector('.line'));
+
+                var option = {
+                    title: {
+                        //标题配置项
+                        show: true, //标题开关，true表示显示，false表示不显示
+                        text: '我是主标题', //主标题文本
+                        subtext: '我是副标题', //副标题文本
+                        x: 'center', //水平位置，默认center, 支持 'center'|'left'|'right'|number(单位px或者百分比)
+                        y: 'top', //垂直位置，默认top,注意一旦设置y后标题将会不在图表上占据位置会和图表重叠在一起, 支持 'top'|'middle'|'bottom'|number(单位px或者百分比)
+                        itemGap: 5,
+                        textStyle: { //主标题
+                            fontFamily: "'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;", //字体类型
+                            fontSize: 14, //字号
+                            color: '#000', //默认颜色
+                        },
+                        subtextStyle: {
+                            fontFamily: "'Source Sans Pro', 'Helvetiightca Neue', Helvetica, Arial, sans-serif;", //字体类型
+                            fontSize: 12, //字号
+                            color: '#00', //默认颜色
+                        }
+
+                    },
+                    legend: {
+                        show: true,
+                        orient: 'vertical', //布局方式，默认水平布局,'horizontal'| 'vertical'
+                        x: 'right', //水平布局时支持'left','center','right';垂直布局时支持'left','right'
+                        y: 'top', //水平布局时支持'top','bottom';垂直布局时支持:'top'
+                        itemGap: 10,//legend之间的间距
+                        formatter: function (name) {
+                            return name;
+                        }, //legend格式化函数，返回一个显示的字符串
+        //                selectedMode:'multiple', //选择模式,默认多选, 'multiple'|'single'
+                        item: {
+                            fontSize: 14, //图例文字字号
+                            color: '#000', //字体颜色
+                            chartSize: 20,//图标的宽度
+                            hiddenOpacity: 0.3, //点击隐藏后透明度
+                            hoverStyle: {
+                                color: 'auto', //鼠标移入时字体颜色，auto表示和图例保持一致
+                            }
+
+                }
+            },
+            tooltip: {
+                show: true, //提示是否显示
+                trigger: 'axis', //触发方式，默认'axis',可选'axis'|'item'
+                //                formatter:function(data){}, //文本格式化函数，返回一个html文本,用
+                showDelay: 20,//延迟响应时间
+                hideDelay: 100,//隐藏延迟
+            },
+            animation: {
+                show: true, // todo 暂未加上
+                durantionTime: 1000, //动画时间,单位ms
+                transitionEase: 'circle', //动画曲线 'linear'|'cubic'|'sin'|'exp'|'circle'|'elastic'|'back'|'bounce'|'ease-in'|'ease-out'|'ease-in-out'|'ease-out-int'
+            },
+            xAxis: [
+                {
+                    type: 'time',
+                    data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
+                    tickFormat: function (d, i) { //格式化每个x显示
+                        d = new Date(d);
+                        return d.getMonth() + '/' + d.getDay();
+                    },
+                    ticks: 5
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    ticks: 10
+                }
+            ],
+            series: [
+                {
+                    name: '最高气温',
+                    type: 'line',
+//                    yAxisIndex: 1, //如果是百分比单位，则使用 第二个Y轴
+                    smooth: true,
+                    data: ['11%', 11, 15, 13, 12, 40, 60], //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，需要下面补全
+                    units: '%' //这里如果是百分数就需要添加
+                },
+
+                {
+                    name: '最低气温1dd',
+                    type: 'line',
+                    smooth: false,
+                    data: [10, 22, 50, 30, 0, 0, 0]
+
+                },
+
+
+            ]
+        };
+        line.loadConfig(option);
+
+
+    })
+
+</script>
+
+</body>
+</html>

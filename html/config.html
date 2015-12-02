@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>参数汇总页</title>
+</head>
+<body>
+
+<style>
+    .one{
+        z-index: 200;
+    }
+    .one,.two{
+        position: absolute;
+        left: 100px;
+        top: 100px;
+    }
+</style>
+
+<div class="one">
+    <svg>
+        <path d="M0,0l100,100" stroke="red"></path>
+    </svg>
+</div>
+<div class="two">
+    <svg>
+        <path d="M0,0l100,100" stroke="green"></path>
+    </svg>
+</div>
+
+<script>
+    var title={
+        //标题配置项
+            show:true, //标题开关，true表示显示，false表示不显示
+            text:'我是主标题', //主标题文本
+            subtext:'我是副标题', //副标题文本
+            x:'center', //水平位置，默认center, 支持 'center'|'left'|'right'|number(单位px或者百分比)
+            y:'top', //暂时不支持自定义,垂直位置，默认top,注意一旦设置y后标题将会不在图表上占据位置会和图表重叠在一起, 支持 'top'|'middle'|'bottom'|number(单位px或者百分比)
+            textStyle:{ //主标题
+                // TODO font-family去掉
+                fontFamily:"'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;", //字体类型
+                fontSize:14, //字号
+                color:'#000', //默认颜色
+            },
+            subtextStyle:{
+                fontFamily:"'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;", //字体类型
+                fontSize:12, //字号
+                color:'#00', //默认颜色
+            }
+
+    }
+
+    var tooltip= {
+        show: true, //提示是否显示
+        trigger: 'axis', //触发方式，默认'axis',可选'axis'|'item'
+        formatter: function (data) {
+        }, //文本格式化函数，返回一个html文本,用
+        showDelay: 20,//延迟响应时间
+        hideDelay: 100,//隐藏延迟
+        durationTime: 400, //过渡动画时间,单位ms,默认400
+    }
+
+    var legend={
+        show:true,
+        orient:'horizontal', //布局方式，默认水平布局,'horizontal'| 'vertical'
+        x:'center', //水平布局时支持'left','center','right';垂直布局时支持'left','right',注：center只在单行有效
+        y:'bottom', //水平布局时支持'top','bottom'
+        itemGap:2,//legend之间的间距
+        formatter:function(name){return name;}, //legend格式化函数，返回一个显示的字符串
+//        selectedMode:'multiple', //选择模式,默认多选, 'multiple'|'single'
+        item:{
+            fontSize:14, //图例文字字号
+            color:'#000', //字体颜色
+            chartSize:20,//图标的宽度
+            hiddenOpacity:0.3, //点击隐藏后透明度
+            hoverStyle:{
+                color:'auto', //鼠标移入时字体颜色，auto表示和图例保持一致
+            }
+
+        }
+    }
+
+    var animation={
+        show:true,
+        durantionTime:1000, //动画时间,单位ms
+        durantionEase:'circle', //动画曲线 'linear'|'cubic'|'sin'|'exp'|'circle'|'elastic'|'back'|'bounce'|'ease-in'|'ease-out'|'ease-in-out'|'ease-out-int'
+        // 折线图 TODO 改成css动画-模拟线条生成
+    }
+
+    var axis=[{
+        type:'value', //坐标轴的类型，'category'|'value'|'time'
+        data:[], //当type=category,time时，指定坐标轴的值
+        tickFormat:function(tick){},//将坐标的值传入，返回一个字符串供显示，tooltip也会使用这个函数作为标题
+        position: 'left',//y轴时有效，left时y轴在左边，right时Y轴在右边
+        maxValue: 100, minValue: 0, //type=value有效，手动设置最大最小值
+    }]
+
+    //窗口大小改变自动重绘
+    var autoRefresh={
+        open:true,
+        wait:1000  //等待重绘时间
+    }
+
+    //折线图
+    var series = [
+        {
+            name: '最高气温', //线条代表的名字
+            type: 'line', //折线图类型
+            yAxisIndex: 0, //多Y轴时声明属于哪一个轴，默认从0,值:0|1
+            smooth: true, //是否使用平滑曲线算法
+            areaStyle: {
+                show: true, //开启面积图
+                color: 'rgba(0,0,0,0.5)'//不设值的话，默认和线条一样的颜色
+            },
+            data: ['11%', 11, 15, 70, 12, 40, 60], //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，需要下面补全
+            units: '%' //这里如果是百分数就需要添加
+        },{
+            name: '最高气温', //线条代表的名字
+            type: 'line', //折线图类型
+            yAxisIndex: 0, //多Y轴时声明属于哪一个轴，默认从0,值:0|1
+            smooth: true, //是否使用平滑曲线算法
+            areaStyle: {
+                show: true, //开启面积图
+                color: 'rgba(0,0,0,0.5)'//不设值的话，默认和线条一样的颜色
+            },
+            data: ['11%', -11, 15, 13, 12, 40, 60], //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，需要下面补全
+            units: '%' //这里如果是百分数就需要添加
+        }
+    ]
+
+
+    //地图
+    var mapName = [
+        '中国',
+        '广东', '青海', '四川', '海南', '陕西',
+        '甘肃', '云南', '湖南', '湖北', '黑龙江',
+        '贵州', '山东', '江西', '河南', '河北',
+        '山西', '安徽', '福建', '浙江', '江苏',
+        '吉林', '辽宁', '台湾',
+        '新疆', '广西', '宁夏', '内蒙古', '西藏',
+        '北京', '天津', '上海', '重庆',
+        '香港', '澳门'
+    ];
+
+    series: [
+        {
+            type: 'map',
+            map: '中国', //对应mapName中的值
+            data: []
+        }
+    ]
+    //散点图，气泡图
+    //散点图，气泡图的axis类型不能为category
+    series: [
+        {
+            name: '业绩',
+            type: 'scatter',
+            data: [[161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
+                [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
+                [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0]
+            ], //包含x，y值的数组,第一个为x，第二个为y
+            size:function(d){ //气泡大小
+                return d[0]/8;
+            }
+        }
+    ]
+    //漏斗图，金字塔图
+    series: [
+        {
+            name: '漏斗图',
+            type: 'funnel',
+            sort:'top', //top,down top时为金字塔，down为漏斗，模式为down
+            size:['50%','60%'], //漏斗图大小，数组[a,b] a,b单位为px或者%代表着漏斗图的宽度和高度,默认为px
+            data: [
+                {name:'腾讯',value:'80'},
+                {name:'百度',value:'100'},
+                {name:'阿里巴巴',value:'60'},
+                {name:'京东',value:'40'},
+                {name:'淘宝',value:'20'},
+            ]
+        }
+    ]
+</script>
+
+<script>
+
+    function d3_scale_linearTickRange(domain, m) {
+        if (m == null) m = 10;
+        var extent = (domain), span = extent[1] - extent[0], step = Math.pow(10, Math.floor(Math.log(span / m) / Math.LN10)), err = m / span * step;
+        if (err <= .15) step *= 10; else if (err <= .35) step *= 5; else if (err <= .75) step *= 2;
+        extent[0] = Math.ceil(extent[0] / step) * step;
+        extent[1] = Math.floor(extent[1] / step) * step + step * .5;
+        extent[2] = step;
+        return extent;
+    }
+
+    var domian=[0,600];
+    var e = d3_scale_linearTickRange(domian);
+    console.log(e);
+    domian=[domian[0]- e[2],domian[1]];
+    console.log(domian);
+    e = d3_scale_linearTickRange(domian);
+    console.log(e);
+
+    d3.extent([[1,4],[-1,2],[-2,-2,-2]],function(d){
+        if(d.length==3){
+            return
+        }
+        return d3.extent(d,function(d){
+            return d;
+        })
+    })
+
+</script>
+
+</body>
+</html>
