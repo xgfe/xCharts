@@ -349,9 +349,7 @@
                             data.y = parseFloat(d);
                             data.y0 = yScale.domain()[0];
                             data.value = d;
-                        }/*else{
-                         throw new Error('xAxis.type equal value is not support');
-                         }*/
+                        }
                         else {
                             data.y = yConfig.data[idx];
                             data.x0 = xScale.domain()[0];

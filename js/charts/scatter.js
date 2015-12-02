@@ -21,7 +21,7 @@
             _this.yAxisScale = messageCenter.yAxisScale;
             _this.series=parseSeries(series,_this.xAxisScale,_this.yAxisScale);
             _this.data=getData(_this.series);
-
+            console.log(messageCenter.margin);
         },
         render:function(ease,time){
             var _this=this;

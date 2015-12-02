@@ -38,6 +38,7 @@
      * @returns {*}
      */
     function copy(form, deep) {
+        if(!form) return form;
         var type = utils.getType(form);
         if(type=="Object" || type=='Array'){
             var clone=type=='Object'?{}:[];

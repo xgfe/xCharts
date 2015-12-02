@@ -12,7 +12,6 @@
     components.extend({title: title})
 
     function title(messageCenter, config, type) {
-        if(!config.title.show) return;
         Component.call(this, messageCenter, config, type);
     }
 
