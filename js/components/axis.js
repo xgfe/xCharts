@@ -56,7 +56,7 @@
 
             //默认已经是单x轴,且type！=value
 
-            var axis = this.axisData[0];
+            var axis = this.axisConfig[0];
             this.on('tooltipSectionChange.axis', function (sectionNumber, callback) {
                 var data =axis.data[sectionNumber];
                 data=axis.tickFormat(data);
