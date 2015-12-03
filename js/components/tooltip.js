@@ -75,24 +75,26 @@
                     sectionLength=xAxisData.length-1,
                     everySectionWidth=width/sectionLength;
                 var sectionNumber = Math.round( (x-_this.margin.left)/everySectionWidth );//得到在哪个区域，从0开始
-                //如果区域没变，则不去重新获取文本，保持默认状态不变
-                if(sectionNumber==oldSectionNumber)
-                    return;
-                else
+
+
+                if(sectionNumber!==oldSectionNumber){
+                    //触发tooltipSectionChange事件，获取文本
+                    _this.tooltip.html("");
+                    _this.fire("tooltipSectionChange",sectionNumber,function(html){
+                        var _html = _this.tooltip.html();
+                        _this.tooltip.html(_html+html);
+                    },_this.tooltipConfig.formatter);
+
                     oldSectionNumber=sectionNumber;
+                }
+
 
                 x=xScale(xAxisData[sectionNumber]);
                 axisLine.attr('x1',x).attr('x2',x).attr('y1',0).attr('y2',height).attr('opacity',1);
                 x+=_this.margin.left;//修正tooltip的位置
 
-                //触发tooltipSectionChange事件，获取文本
-                _this.tooltip.html("");
-                _this.fire("tooltipSectionChange",sectionNumber,function(html){
-                    // TODO 拿到外面去设置html，貌似可以节约性能的样子，试试
-                    var _html = _this.tooltip.html();
-                    _this.tooltip.html(_html+html);
-                },_this.tooltipConfig.formatter);
                 _this.setPosition([x,y])
+
             })
 
             //这里是为了当没有任何需要显示的值时，能保证tooltip不出现
