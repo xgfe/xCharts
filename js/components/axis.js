@@ -112,10 +112,19 @@
                 return;
             }
 
-            var scale = d3.scale.ordinal()
-                .domain(singleConfig.data)
-                .rangeRoundPoints(range);
+            if(isBar(this.config.series)){
+                var scale = d3.scale.ordinal()
+                    .domain(singleConfig.data)
+                    .rangeRoundBands(range,0,0.1);
+
+            }else{
+                var scale = d3.scale.ordinal()
+                    .domain(singleConfig.data)
+                    .rangeRoundPoints(range);
+            }
+
             return scale;
+
         },
         __valueAxis: function (singleConfig, idx) {
             // TODO 最大最小值，多一格出来，否则气泡图容易出界
@@ -252,6 +261,14 @@
         }
     }
 
+
+    function isBar(series){
+        for(var i= 0,s;s=series[i++];)
+            if(s.type==='bar')
+                return true;
+
+        return false;
+    }
 
     function defaultConfig(type) {
         //注释掉是因为该项没有默认值,非必须或者必须由用户指定
