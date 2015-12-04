@@ -63,7 +63,12 @@
                     {
                         name: '韩梅梅',
                         type: 'bar',
-                        data: [60, 50, 40, 30, 20, 10]
+                        data: [60, 50, 40, 30, 20, 10],
+                        formatter: function(name, value) {
+                            var htmlStr = '';
+                            htmlStr += "<div>" + name + "：" + value + "分</div>";
+                            return htmlStr;
+                        }
                     }
                 ]
             };

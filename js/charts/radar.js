@@ -331,7 +331,6 @@
         },
         __tooltipReady: function() {
             var _self = this;
-            console.log(_self);
             var tooltip = _self.messageCenter.components.tooltip;
             this.coverPolygonList.on('mousemove.radar', function() {
                 var index = d3.select(this).datum().index;
