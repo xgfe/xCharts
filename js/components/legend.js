@@ -280,9 +280,9 @@
         pie:pieAndRadar,
         radar:pieAndRadar,
         scatter:lineParse,
-        funnel:pieAndRadar
+        funnel:pieAndRadar,
+        bar:lineParse,
     }
-
 
     /**
      * 处理饼图和雷达图
@@ -352,7 +352,8 @@
         'radar':getRadarPath,
         'pie':getScatterPath,
         'scatter':getScatterPath,
-        'funnel':getFunnelPath
+        'funnel':getFunnelPath,
+        'bar':getBarPath,
     }
     // TODO 改成闭包，节约性能
     /**
@@ -370,7 +371,7 @@
 
     /**
      * 散点图图例,饼图图例
-     * @param size 正方形 宽度
+     * @param size  宽度
      * @returns {string} 圆圈 O
      */
     function getScatterPath(size) {
@@ -408,6 +409,14 @@
     function getFunnelPath(size){
         var offset=size/10;
         return 'M0,'+offset+' L'+size+','+offset+' L'+size*0.5+','+size
+    }
+
+    function getBarPath(size){
+        var leftTop=[0,size/4],
+            rightTop=[size,size/4],
+            rightBottom=[size,size/4*3],
+            leftBottom=[0,size/4*3]
+        return 'M'+leftTop+' L'+rightTop+'L'+rightBottom+'L'+leftBottom+'z';
     }
 
     function defaultConfig() {
