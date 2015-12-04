@@ -312,7 +312,7 @@
                     }
                 }
             });
-            this.on('legendClick', function(nameList) {
+            this.on('legendClick.radar', function(nameList) {
                 for(var i=0;i<_self.areas.length;i++) {
                     _self.areas[i].isShow = false;
                 }

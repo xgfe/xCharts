@@ -60,4 +60,9 @@
     visibility: hidden;
 }
 
+/* 柱状图样式 */
+.xc-bar-rect {
+    rx: 5;
+    ry: 5;
+}
 

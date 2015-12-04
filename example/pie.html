@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>饼图</title>
+        <script src="../bower_components/d3/d3.js"></script>
+        <script src="../js/xCharts.js"></script>
+        <script src="../js/utils/utils.js"></script>
+        <script src="../js/components/Component.js"></script>
+        <script src="../js/components/axis.js"></script>
+        <script src="../js/components/legend.js"></script>
+        <script src="../js/components/tooltip.js"></script>
+        <script src="../js/charts/Chart.js"></script>
+        <script src="../js/charts/pie.js"></script>
+        <link rel="stylesheet" href="../js/css/xCharts.css"/>
+        <style>
+            h2 {
+                text-align: center;
+            }
+            .container {
+                margin: 0 auto;
+                width: 700px;
+                height: 400px;
+                border: 1px solid #dee5e7;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>饼图示例</h2>
+        <div class="container"></div>
+        <script>
+            var container = xCharts(document.querySelector('.container'));
+            var option = {
+                tooltip: {
+                    show: true
+                },
+                legend: {
+                    orient: 'vertical',
+                    x: 'right',
+                    show: true,
+                    data: ["小宝", "安宁", "黎伟", "冬冬", "邵庄", "甜甜"]
+                },
+                series: [
+                    {
+                        type: 'pie',
+                        center: ['50%', '50%'],
+                        radius: {
+                            outerRadius: '30%',
+                            innerRadius: 0
+                        },
+                        data: [
+                            {
+                                name: "小宝",
+                                value: 10
+                            },
+                            {
+                                name: "安宁",
+                                value: 20
+                            },
+                            {
+                                name: "黎伟",
+                                value: 30
+                            },
+                            {
+                                name: "冬冬",
+                                value: 40
+                            },
+                            {
+                                name: "邵庄",
+                                value: 50
+                            },
+                            {
+                                name: "甜甜",
+                                value: 60
+                            }
+                        ]
+                    }
+                ]
+            };
+            container.loadConfig(option);
+        </script>
+    </body>
+</html>
