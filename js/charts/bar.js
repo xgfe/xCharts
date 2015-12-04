@@ -76,7 +76,7 @@
         },
         ready: function() {
             this.__legendReady();
-            //this.__tooltipReady();
+            this.__tooltipReady();
         },
         __getDefaultData: function() {
             var rangeBand = this.barXScale.rangeBand(),
@@ -137,12 +137,14 @@
             for(var i=0;i<this.rectsData.length;i++) {
                 // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
                 var tempRect = this.rectsData[i].rectsData;
+                var rectX = rectMargin;
                 for(var k=0;k<tempRect.length;k++) {
                     // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
-                    var rectX = rectMargin;
                     if(this.barSeries[k].isShow) {
                         tempRect[k].x = rectX;
+                        tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
                         tempRect[k].width = realRectWidth;
+                        tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
                         rectX += realRectWidth + rectMargin;
                     } else {
                         tempRect[k].y = this.yRange;
@@ -197,6 +199,28 @@
                 });
             return rectList;
         },
+        __changeRect: function() {
+            for(var i=0;i<this.rectList.length;i++) {
+                var rectArr = this.rectList[i];
+                for(var k=0;k<rectArr.length;k++) {
+                    d3.select(rectArr[k])
+                        .transition()
+                        .duration(500)
+                        .attr('x', function(d) {
+                            return d.x;
+                        })
+                        .attr('y', function(d) {
+                            return d.y;
+                        })
+                        .attr('width', function(d) {
+                            return d.width;
+                        })
+                        .attr('height', function(d) {
+                            return d.height;
+                        });
+                }
+            }
+        },
         __legendReady: function() {
             var _self = this;
             this.on('legendMouseenter.bar', function(name) {
@@ -245,8 +269,32 @@
                 }
                 // 根据新的isShow配置进行计算
                 _self.__changeRectsData();
-                _self.__renderRect();
+                _self.__changeRect();
             });
+        },
+        __tooltipReady: function() {
+            var _self = this;
+            if(this.config.tooltip.trigger == 'axis') {
+                this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
+                    var htmlStr = '';
+                    _self.barSeries.forEach(function (series) {
+                        if (!series.isShow) {
+                            return;
+                        } else {
+                            var formatter = series.formatter || format || defaultFormatter;
+                            htmlStr += formatter(series.name, series.data[sectionNumber]);
+                        }
+                    })
+                    callback(htmlStr);
+                });
+            } else {
+                //TODO 待添加trigger为 'item'时的tooltip事件
+            }
         }
     });
+    function defaultFormatter(name, value) {
+        var htmlStr = '';
+        htmlStr += "<div>" + name + "：" + value + "</div>";
+        return htmlStr;
+    }
 }(window))
