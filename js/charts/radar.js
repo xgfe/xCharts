@@ -1,6 +1,6 @@
 /**
- * Created by chenxuan03 on 15/11/4.
- * 雷达图
+ * @file 雷达图
+ * @author chenwubai.cx@gmail.com
  */
 (function(window) {
     var xCharts = window.xCharts;

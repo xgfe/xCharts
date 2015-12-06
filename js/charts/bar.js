@@ -1,6 +1,6 @@
 /**
  * @file 柱状图
- * @author chenxuan03@meituan.com
+ * @author chenwubai.cx@gmail.com
  */
 (function(window) {
     var xCharts = window.xCharts;
