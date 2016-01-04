@@ -37,9 +37,11 @@
 
             var groupPosition = _this.__calcPosition();//计算位置
 
+
+
             var legendGroup = _this.svg.selectAll('.xc-legend-group').data([_this]);
-            legendGroup.enter().append('g').attr('class','xc-legend-group')
-                .attr('transform',"translate("+groupPosition+")");
+            legendGroup.enter().append('g').attr('class','xc-legend-group');
+            legendGroup.attr('transform',"translate("+groupPosition+")");
             var itemList=legendGroup.selectAll('.xc-legend-item').data(_this.series);
             itemList.enter().append('g').attr("class","xc-legend-item");
             itemList.exit().remove();
@@ -102,7 +104,8 @@
                 }
 
                 reload(data.name);
-            })
+            });
+
             _this.itemList.on('mouseenter.legend',function(data){
                 var color;
                 if(hoverColor=='auto')
