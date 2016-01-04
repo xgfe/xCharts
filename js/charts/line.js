@@ -178,7 +178,6 @@
                     areaUse.attr('xlink:href', areaId);
                     circleUse.attr('xlink:href', circleId);
                     d3.select(lineId).attr('stroke', 'yellow').attr('stroke-width', serie.lineStyle.width + 3);
-                    d3.select(areaId).attr('opacity', 0.8);
                     d3.select(circleId).attr('fill', 'yellow');
                 })
 
@@ -194,7 +193,6 @@
                     areaUse.attr('xlink:href', "");
                     circleUse.attr('xlink:href', "");
                     d3.select(lineId).attr('stroke', serie.color).attr('stroke-width', serie.lineStyle.width);
-                    d3.select(areaId).attr('opacity', serie.areaStyle.opacity);
                     d3.select(circleId).attr('fill', serie.color);
                 })
 

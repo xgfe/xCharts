@@ -30,11 +30,15 @@
         },
         refresh:function(ease,time){
             //当容器改变时，刷新当前组件
+            this.margin=this.messageCenter.margin;//每次刷新时，重置margin
+            this.originalHeight=this.messageCenter.originalHeight; //将变化后的宽高重新赋值
+            this.originalWidth=this.messageCenter.originalWidth
             this.init(this.messageCenter,this.config,this.type,this.config.series);//初始化
             this.render('linear',0);//刷新
         },
         updateSeries:function(series){
             //加载新数据
+
             this.init(this.messageCenter,this.config,this.type,series);//重新初始化
             this.render('linear',0);//刷新
             this.ready();//绘画完成，重新绑定事件
