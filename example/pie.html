@@ -19,7 +19,7 @@
             }
             .container {
                 margin: 0 auto;
-                width: 700px;
+                width: 50%;
                 height: 400px;
                 border: 1px solid #dee5e7;
             }
@@ -29,7 +29,7 @@
         <h2>饼图示例</h2>
         <div class="container"></div>
         <script>
-            var container = xCharts(document.querySelector('.container'));
+            var chart = xCharts(document.querySelector('.container'));
             var option = {
                 tooltip: {
                     show: true
@@ -77,7 +77,10 @@
                     }
                 ]
             };
-            container.loadConfig(option);
+            chart.loadConfig(option);
+            window.addEventListener('resize', function(){
+                chart.refresh();
+            });
         </script>
     </body>
 </html>

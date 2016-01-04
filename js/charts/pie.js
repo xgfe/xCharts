@@ -25,7 +25,7 @@
             this.pieConfig = {};
             for(var i=0;i<series.length;i++) {
                 if(series[i].type == 'pie') {
-                    this.pieConfig = series[i];
+                    this.pieConfig = utils.copy(series[i], true);
                     break;
                 }
             }
@@ -53,6 +53,9 @@
             this.__legendReady();
             this.__tooltipReady();
         },
+        /*refresh: function() {
+
+        },*/
         __correctConfig: function() {
             // 把一些百分比的设置计算出实际值并添加一些属性方便后面计算
 
@@ -103,39 +106,50 @@
             return bigArcFunc;
         },
         __renderPieWrapper: function() {
-            var pieWrapper = this.main.append('g')
-                .classed('xc-pie', true)
-                .attr('transform', 'translate(' + this.pieConfig.center[0] + ',' + this.pieConfig.center[1] + ')');
+            var pieWrapper;
+            if(!this.main.select('.xc-pie').node()) {
+                // 初始化加载
+                pieWrapper = this.main.append('g')
+                    .classed('xc-pie', true);
+            } else {
+                pieWrapper = this.main.select('.xc-pie');
+            }
+            pieWrapper.attr('transform', 'translate(' + this.pieConfig.center[0] + ',' + this.pieConfig.center[1] + ')');
             return pieWrapper;
         },
         __renderArcs: function() {
             var _self = this;
-            var arcs = this.pieWrapper.append('g')
-                .classed('xc-pie-arcs', true);
-            var arcList = arcs.selectAll('.xc-pie-arc')
-                .data(this.pieData)
-                .enter()
-                .append('path')
-                .classed('xc-pie-arc', true)
-                .style('fill', function(d) {
-                    return d.data.color;
-                });
-            arcList.transition()
-                .duration(500)
-                .attrTween('d', function(d) {
-                    this._current = this._current || {startAngle: 0, endAngle: 0};
-                    var interpolate = d3.interpolate(this._current, d);
-                    this._current = interpolate(1);
-                    return function (t) {
-                        return _self.arcFunc(interpolate(t));
-                    }
-                });
-            return arcList;
+            var arcs;
+            if(!this.pieWrapper.select('.xc-pie-arcs').node()) {
+                arcs = this.pieWrapper.append('g')
+                    .classed('xc-pie-arcs', true);
+                var arcList = arcs.selectAll('.xc-pie-arc')
+                    .data(this.pieData)
+                    .enter()
+                    .append('path')
+                    .classed('xc-pie-arc', true)
+                    .style('fill', function(d) {
+                        return d.data.color;
+                    });
+                arcList.transition()
+                    .duration(500)
+                    .attrTween('d', function(d) {
+                        this._current = this._current || {startAngle: 0, endAngle: 0};
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(1);
+                        return function (t) {
+                            return _self.arcFunc(interpolate(t));
+                        }
+                    });
+                return arcList;
+            } else {
+                return this.__changeArcs();
+            }
         },
         __changeArcs: function() {
             var _self = this;
             var arcs = this.pieWrapper.select('.xc-pie-arcs');
-            arcs.selectAll('.xc-pie-arc')
+            var arcList = arcs.selectAll('.xc-pie-arc')
                 .data(this.pieData)
                 .transition()
                 .duration(500)
@@ -147,6 +161,7 @@
                         return _self.arcFunc(interpolate(t));
                     }
                 });
+            return arcList;
         },
         __legendReady: function() {
             var _self = this;
@@ -228,5 +243,82 @@
     });
     function defaultFormatter(name, value) {
         return "<div>" + name + '：' + value + "</div>";
+    }
+
+    function defaultConfig() {
+        /**
+         * @var pie
+         * @type Object
+         * @extends xCharts.series
+         * @describtion 饼图配置项
+         */
+        var config = {
+            /**
+             * 定义图表类型是饼图
+             * @var type
+             * @type String
+             * @describtion 指定图表类型
+             * @values 'pie'
+             * @extends xCharts.series.pie
+             */
+            type: 'pie',
+            /**
+             * @var center
+             * @type Array
+             * @describtion 饼图圆心位置，可为百分比或数值。若为百分比则center[0]（圆心x坐标）参照容器宽度，center[1]（圆心y坐标）参照容器高度。
+             * @default ['50%','50%']
+             * @extends xCharts.series.pie
+             */
+            center: ['50%', '50%'],
+            /**
+             * @var radius
+             * @type Object
+             * @describtion 定义饼图的内半径和外半径
+             * @extends xCharts.series.pie
+             */
+            radius: {
+                /**
+                 * @var outerRadius
+                 * @type String|Number
+                 * @describtion 定义饼图的外半径，可取百分比或数值，若为百分比则参照容器宽度进行计算。
+                 * @default '30%'
+                 * @extends xCharts.series.pie.radius
+                 */
+                outerRadius: '30%',
+                /**
+                 * @var innerRadius
+                 * @type String|Number
+                 * @describtion 定义饼图的内半径，可取百分比或数值，若为百分比，则参照容器宽度进行计算。
+                 * @default 0
+                 * @extends xCharts.series.pie.radius
+                 */
+                innerRadius: 0
+            },
+            /**
+             * @var data
+             * @type Array
+             * @describtion 饼图数据
+             * @extends xCharts.series.pie
+             */
+            data: [
+                {
+                    /**
+                     * @var name
+                     * @type String
+                     * @describtion 弧形名称
+                     * @extends xCharts.series.pie.data
+                     */
+                    name: '',
+                    /**
+                     * @var value
+                     * @type Number
+                     * @describtion 弧形所代表的项的数据值
+                     * @extends xCharts.series.pie.data
+                     */
+                    value: 0
+                }
+            ]
+        }
+        return config;
     }
 }(window))
