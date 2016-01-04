@@ -2,7 +2,7 @@
  * node
  * 生成doc相关的json
  */
-var dox = require('../../node_modules/dox');
+var dox = require('../node_modules/dox');
 var fs = require('fs');
 
 

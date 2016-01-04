@@ -110,6 +110,7 @@
             this.originalWidth=getWidth(this.container.node());
             this.originalHeight=getHeight(this.container.node());
             this.margin=xCharts.utils.copy(this.originMargin);
+
             this.svg.attr('width',this.originalWidth).attr('height',this.originalHeight);
 
             //第二步 通知已有组件刷新
@@ -120,6 +121,9 @@
                     component.refresh();
                 }
             }
+
+            this.width=this.originalWidth-this.margin.left-this.margin.right;
+            this.height=this.originalHeight-this.margin.top-this.margin.bottom;
             //第三步 通知已有图表刷新
             for(var k in charts){
                 if(charts.hasOwnProperty(k)){
