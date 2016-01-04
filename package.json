@@ -22,6 +22,7 @@
   "author": "scliuyang,chenwubai",
   "license": "ISC",
   "devDependencies": {
+    "dox": "^0.8.0",
     "jasmine": "^2.3.2",
     "jasmine-core": "^2.3.4",
     "karma": "^0.13.15",

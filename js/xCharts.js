@@ -39,19 +39,19 @@
             this.div=container.append('div').attr('class','xc-container');
             this.svg=this.div.append('svg').attr('class','xc-svg').attr('width',this.originalWidth).attr('height',this.originalHeight);
             this.main=this.svg.append('g').attr('class','xc-main');
-            this.margin = {top: 30, left: 50, right: 50, bottom: 20};
+            this.margin = {top: 30, left: 50, right: 50, bottom: 30};
             this.originMargin=xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList={};
             return this;
         },
         loadConfig: function (config) {
             //加入时间测试
-            var now = new Date();
+            console.time("draw charts")
             //深复制config
             this.config=xCharts.utils.copy(config,true);
             this.getColor=xCharts.utils.getColor(config.color);
             this.firstDrawing(this.config);
-            console.log('绘制完毕时间%dms',new Date()-now);
+            console.timeEnd("draw charts");
         },
         firstDrawing:function(config){
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
@@ -104,7 +104,7 @@
             }
         },
         refresh:function(){
-
+            console.time("refresh time");
             //刷新产生的条件,预知
             //1 容器大小发生了改变，修正
             this.originalWidth=getWidth(this.container.node());
@@ -131,6 +131,8 @@
                     chart.refresh();
                 }
             }
+
+            console.timeEnd("refresh time");
 
         },
         updateSeries:function(series){
