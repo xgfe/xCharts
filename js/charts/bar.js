@@ -21,27 +21,30 @@
     bar.prototype.extend = xCharts.extend;
     bar.prototype.extend({
         init: function(messageCenter, config, type, series) {
-            // 提出type为bar的series的子元素对象
-            this.barSeries = new Array();
-            for(var i=0;i<series.length;i++) {
-                if(series[i].type == 'bar') {
-                    this.barSeries.push(series[i]);
+            var _self = this;
+            if(!this.barSeries) {
+                // 提出type为bar的series的子元素对象
+                this.barSeries = new Array();
+                for(var i=0;i<series.length;i++) {
+                    if(series[i].type == 'bar') {
+                        this.barSeries.push(series[i]);
+                    }
                 }
+                // 给每种柱状添加idx，并获取颜色
+                this.barSeries.forEach(function(series, i) {
+                    series.idx = i;
+                    series.color = _self.getColor(i);
+                    series.isShow = true;
+                });
             }
+
+
             // 用变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
             this.margin = messageCenter.margin;
             this.width = messageCenter.width;
             this.height = messageCenter.height;
             this.main = messageCenter.main;
             this.getColor = messageCenter.getColor;
-
-            var _self = this;
-            // 给每种柱状添加idx，并获取颜色
-            this.barSeries.forEach(function(series, i) {
-                series.idx = i;
-                series.color = _self.getColor(i);
-                series.isShow = true;
-            });
 
             this.xAxisScale = messageCenter.xAxisScale;
             this.yAxisScale = messageCenter.yAxisScale;
@@ -154,50 +157,75 @@
             }
         },
         __renderBarWrapper: function() {
-            var bar = this.main.append('g')
-                .classed('xc-bar', true);
+            var bar;
+            if(!this.main.select('.xc-bar').node()) {
+                // 初始化加载
+                bar = this.main.append('g')
+                    .classed('xc-bar', true);
+            } else {
+                bar = this.main.select('.xc-bar');
+            }
             return bar;
         },
         __renderRectWrapper: function() {
-            var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
-                .data(this.rectsData)
-                .enter()
-                .append('g')
-                .classed('xc-bar-rectWrapper', true)
-                .attr('transform', function(d) {
-                    return 'translate(' + d.x + ',' + d.y + ')';
-                });
+            var rectWrapperList;
+            if(!this.bar.select('.xc-bar-rectWrapper').node()) {
+                rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
+                    .data(this.rectsData)
+                    .enter()
+                    .append('g')
+                    .classed('xc-bar-rectWrapper', true)
+                    .attr('transform', function(d) {
+                        return 'translate(' + d.x + ',' + d.y + ')';
+                    });
+            } else {
+                rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
+                    .data(this.rectsData)
+                    .attr('transform', function(d) {
+                        return 'translate(' + d.x + ',' + d.y + ')';
+                    });
+            }
             return rectWrapperList;
         },
         __renderRect: function() {
-            var rectList = this.rectWrapperList
-                .selectAll('.xc-bar-rect')
-                .data(function(d) {
-                    return d.rectsData;
-                })
-                .enter()
-                .append('rect')
-                .classed('xc-bar-rect', true)
-                .attr('x', function(d) {
-                    return d.x;
-                })
-                .attr('y', this.yRange)
-                .attr('width', function(d) {
-                    return d.width;
-                })
-                .attr('height', 0)
-                .attr('fill', function(d) {
-                    return d.color;
-                })
-                .transition()
-                .duration(500)
-                .attr('y', function(d) {
-                    return d.y;
-                })
-                .attr('height', function(d) {
-                    return d.height;
-                });
-            return rectList;
+            var rectList;
+            if(!this.rectWrapperList.select('.xc-bar-rect').node()) {
+                rectList = this.rectWrapperList
+                    .selectAll('.xc-bar-rect')
+                    .data(function(d) {
+                        return d.rectsData;
+                    })
+                    .enter()
+                    .append('rect')
+                    .classed('xc-bar-rect', true)
+                    .attr('x', function(d) {
+                        return d.x;
+                    })
+                    .attr('y', this.yRange)
+                    .attr('width', function(d) {
+                        return d.width;
+                    })
+                    .attr('height', 0)
+                    .attr('fill', function(d) {
+                        return d.color;
+                    })
+                    .transition()
+                    .duration(500)
+                    .attr('y', function(d) {
+                        return d.y;
+                    })
+                    .attr('height', function(d) {
+                        return d.height;
+                    });
+                return rectList;
+            } else {
+                this.rectWrapperList
+                    .selectAll('.xc-bar-rect')
+                    .data(function(d) {
+                        return d.rectsData;
+                    });
+                return this.__changeRect();
+            }
         },
         __changeRect: function() {
             for(var i=0;i<this.rectList.length;i++) {
@@ -220,6 +248,7 @@
                         });
                 }
             }
+            return this.rectList;
         },
         __legendReady: function() {
             var _self = this;

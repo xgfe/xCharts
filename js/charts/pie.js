@@ -22,13 +22,24 @@
     pie.prototype.extend({
         init: function(messageCenter, config, type, series) {
             // 提出type为pie的series的子元素对象
-            this.pieConfig = {};
-            for(var i=0;i<series.length;i++) {
-                if(series[i].type == 'pie') {
-                    this.pieConfig = utils.copy(series[i], true);
-                    break;
+            if(!this.pieConfig) {
+                this.pieConfig = {};
+                for(var i=0;i<series.length;i++) {
+                    if(series[i].type == 'pie') {
+                        this.pieConfig = utils.copy(series[i], true);
+                        break;
+                    }
+                }
+            } else {
+                for(var i=0;i<series.length;i++) {
+                    if(series[i].type == 'pie') {
+                        this.pieConfig.center = utils.copy(series[i].center, true);
+                        this.pieConfig.radius = utils.copy(series[i].radius, true);
+                        break;
+                    }
                 }
             }
+
             // 用变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
             this.width = messageCenter.width;
             this.height = messageCenter.height;
