@@ -86,7 +86,6 @@
                 rangeBandNum = this.barXScale.domain().length,
                 xRange = this.barXScale.rangeExtent(),
                 yRange = this.barYScale.range();
-            console.log(xRange);
             this.xRange = xRange[1] - xRange[0];
             this.yRange = yRange[0] - yRange[1];
             var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
@@ -106,7 +105,7 @@
                     var tempRect = {
                         x: rectX,
                         y: this.barYScale(this.barSeries[k].data[i]),
-                        width: rectWidth,
+                        width: rectWidth > 0 ? rectWidth : 0,
                         height: this.yRange - this.barYScale(this.barSeries[k].data[i]),
                         color: this.barSeries[k].color
                     };
