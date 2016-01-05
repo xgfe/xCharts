@@ -88,8 +88,13 @@
                     oldSectionNumber=sectionNumber;
                 }
 
+                //如果是柱状图的话，需要使用bar上提供的接口来获取x坐标
+                if(_this.messageCenter.charts['bar']){
+                    x=_this.messageCenter.charts['bar'].getTooltipPosition(sectionNumber);
+                }else{
+                    x=xScale(xAxisData[sectionNumber]);
+                }
 
-                x=xScale(xAxisData[sectionNumber]);
                 axisLine.attr('x1',x).attr('x2',x).attr('y1',0).attr('y2',height).attr('opacity',1);
                 x+=_this.margin.left;//修正tooltip的位置
 
