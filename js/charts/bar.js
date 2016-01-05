@@ -86,6 +86,7 @@
                 rangeBandNum = this.barXScale.domain().length,
                 xRange = this.barXScale.rangeExtent(),
                 yRange = this.barYScale.range();
+            console.log(xRange);
             this.xRange = xRange[1] - xRange[0];
             this.yRange = yRange[0] - yRange[1];
             var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
@@ -319,6 +320,13 @@
             } else {
                 //TODO 待添加trigger为 'item'时的tooltip事件
             }
+        },
+        getTooltipPosition: function(tickIndex) {
+            var rangeBand = this.barXScale.rangeBand(),
+                rangeBandNum = this.barXScale.domain().length,
+                xRange = this.barXScale.rangeExtent();
+            var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
+            return xRange[0] + outPadding + tickIndex*rangeBand + rangeBand/2;
         }
     });
     function defaultFormatter(name, value) {
