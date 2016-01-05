@@ -1,6 +1,6 @@
 {
   "name": "xCharts",
-  "version": "0.9.0",
+  "version": "0.1.0",
   "description": "基于D3的图表库",
   "main": "js/xCharts.js",
   "directories": {
