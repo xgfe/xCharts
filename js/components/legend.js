@@ -8,6 +8,7 @@
     var d3 = window.d3;
     var components = xCharts.components;
     var Component = components['Component'];
+
     utils.inherits(legend, Component);
     components.extend({legend: legend})
 
@@ -46,10 +47,12 @@
             itemList.enter().append('g').attr("class","xc-legend-item");
             itemList.exit().remove();
             itemList.attr('transform',function(serie){
-                this.isChecked=true;//默认选中状态，给click事件用
+                this.isChecked=this.isChecked==undefined?true:this.isChecked;//默认选中状态，给click事件用
                 return 'translate('+serie.position+')';
             }).attr('fill',color)
-                .attr('opacity',1);
+                .attr('opacity',function(){
+                    return this.isChecked?1:_this.config.item.opacity;
+                });
 
             //因为事件是绑定在g上，所以里面的path和text可以删掉节约代码
             itemList.html("");
