@@ -334,4 +334,45 @@
         htmlStr += "<div>" + name + "：" + value + "</div>";
         return htmlStr;
     }
+
+    function defaultConfig() {
+        /**
+         * @var bar
+         * @type Object
+         * @extends xCharts.series
+         * @describtion 柱状图配置项
+         */
+        var config = {
+            /**
+             * @var type
+             * @type String
+             * @describtion 指定图表类型
+             * @values 'bar'
+             * @extends xCharts.series.bar
+             */
+            type: 'bar',
+            /**
+             * @var name
+             * @type String
+             * @describtion 数据项名称
+             * @extends xCharts.series.bar
+             */
+            name: '',
+            /**
+             * @var data
+             * @type Array
+             * @describtion 柱状图数据项对应的各项指标的值的集合
+             * @extends xCharts.series.bar
+             */
+            data: [],
+            /**
+             * @var formatter
+             * @type function
+             * @describtion 数据项信息展示文本的格式化函数
+             * @extends xCharts.series.bar
+             */
+            formatter: function(name, value) {}
+        }
+        return config;
+    }
 }(window))
