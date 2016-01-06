@@ -1,10 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>xCharts</title>
-    </head>
-    <body>
-        <h1>Nothing</h1>
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <title>xCharts API</title>
+    <link rel="stylesheet" href="css/animate.css"/>
+    <link rel="stylesheet" href="css/app.css"/>
+    <link rel="stylesheet" href="css/bootstrap.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="css/indx.css"/>
+    <script src="bower_components/angular/angular.min.js"></script>
+    <script src="js/index.js"></script>
+    <style>
+        li:target{
+          background: rgba(17, 153, 196,0.1);
+        }
+    </style>
+</head>
+<body ng-app="apiModel">
+    <div ng-controller="apiCtrl" style="height: 100%">
+        <div class="left wrapper padder-md scrollable">
+            <h3>xCharts配置项</h3>
+            <tree-view tree-data="apiData" class="padder-md" item-clicked="configClick($item)" ></tree-view>
+        </div>
+        <div class="main">
+            <div class="wrapper scrollable detail-content">
+                <h3>{{showDataName}}</h3>
+                <ul class="detail-content-ul">
+                    <li class="wrapper b-b" ng-repeat="item in showData" id="/{{item.name}}">
+                        <h4>{{item.name}}</h4>
+                        <p><span class="label label-default" >type:</span> {{item.type||'Object'}}</p>
+                        <p><span class="label label-info" ng-if="item.values">values:</span> {{item.values}}</p>
+                        <p><span class="label label-primary" ng-if="item.default">默认值:</span> {{item.default}}</p>
+                        <!-- describtion 每一个都用p包裹-->
+                        <p ng-repeat="d in item.describtion">{{d.string}}</p>
+
+                        <h6 ng-if="item.example">example:</h6>
+                        <pre class="well" ng-repeat="example in item.example">{{example.string}}</pre>
+
+                        <p  ng-if="item.demo">
+                            <span class="label label-success">demo:</span>
+                            <span ng-repeat="dm in item.demo"><a class="label label-info m-r-xs" href="{{dm.demoUrl}}">{{dm.demoName}}</a></span>
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
 </html>
