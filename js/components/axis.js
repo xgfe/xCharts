@@ -174,6 +174,31 @@
                     return +new Date(d);
                 }))
                 .range(range);
+
+            //现在只考虑x坐标轴
+            if(this.isXAxis){
+                //取得series中data的长度，均分domain,保证singleConfig.data长度一致
+                var series = this.config.series;
+                var dataLength=1;
+                for(var i= 0,serie;serie=series[i++];){
+                    // 这里只支持折线图，暂不考虑其他
+                    var xIndex = serie.xAxisIndex==undefined?0:serie.xAxisIndex;
+                    if(serie.type=='line' && xIndex==idx){
+                        dataLength=serie.data.length-1;
+                        break;
+                    }
+                }
+
+                var domain = scale.domain(),
+                    timeDifference=domain[1]-domain[0], //最大最小时间差
+                    sectionTime = timeDifference/dataLength;//时间与时间之间的间隔
+
+                singleConfig.data=[+domain[0]];
+                for(var i=0;i<dataLength;i++){
+                    singleConfig.data[i+1]=+domain[0]+Math.round(sectionTime*(i+1),1);
+                }
+            }
+
             return scale;
         }
     });

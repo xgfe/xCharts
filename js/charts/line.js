@@ -1,7 +1,7 @@
 /**
  * Created by liuyang on 15/10/27.
  * 折线图
- * TODO 实现xy轴互换的情况
+ *
  * TODO 动画效果
  */
 (function (window) {
@@ -21,6 +21,7 @@
                 this.xAxisScale = messageCenter.xAxisScale;
                 this.yAxisScale = messageCenter.yAxisScale;
                 this.series = this.__parseSeries(series, config);
+                this.timeModel = config.xAxis[0].type=='time';//时间轴模式
             },
 
             __parseSeries: function (series, config) {
@@ -47,7 +48,7 @@
             render: function (ease, durationTime) {
                 this.__renderArea(ease, durationTime);
                 this.__renderLine(ease, durationTime);
-                this.__renderCircle(ease, durationTime);
+                if(!this.timeModel) this.__renderCircle(ease, durationTime);
             },
             __renderLine: function (ease, time) {
                 var id = this.id, _this = this;
@@ -177,8 +178,8 @@
                     lineUse.attr('xlink:href', lineId);
                     areaUse.attr('xlink:href', areaId);
                     circleUse.attr('xlink:href', circleId);
-                    d3.select(lineId).attr('stroke', 'yellow').attr('stroke-width', serie.lineStyle.width + 3);
-                    d3.select(circleId).attr('fill', 'yellow');
+                    d3.select(lineId).attr('stroke-width', serie.lineStyle.width + 1);
+                    //d3.select(circleId).attr('fill', 'yellow');
                 })
 
                 this.on('legendMouseleave.line', function (name) {
@@ -226,6 +227,29 @@
 
                         var html = "", series = _this.series;
 
+                        if(_this.timeModel){
+                            //时间轴时，鼠标地方会出现圆点
+                            _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
+                            _this.series.forEach(function(serie){
+
+                                var data = serie.data[sectionNumber];
+                                _this.main.append('circle').datum(data)
+                                    .attr('class',"xc-tooltip-circle")
+                                    .attr('r', function (d) {
+                                        return d._serie.lineStyle.radius;
+                                    })
+                                    .attr('cx', function (d) {
+                                        return d.xScale(d.x);
+                                    })
+                                    .attr('cy', function (d) {
+                                        return d.yScale(d.y);
+                                    })
+                                    .attr('fill',function(d){
+                                        return d._serie.color;
+                                    })
+                            })
+
+                        }
 
                         series.forEach(function (serie) {
                             if (serie.show === false) return;
@@ -234,6 +258,11 @@
                             html += serieFormat(serie.name, data);
                         })
                         callback(html);
+                    });
+
+                    this.on('tooltipHidden',function(){
+                        //当tooltip滑出区域时，需要清理圆点
+                        _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
                     })
                 } else {
                     //trigger='item'
