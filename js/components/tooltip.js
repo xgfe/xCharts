@@ -126,6 +126,7 @@
             })
         },
         hidden: function () {
+            this.fire('tooltipHidden');
             this.tooltipShow=false;
             this.tooltip.style({visibility: 'hidden'})
         },
