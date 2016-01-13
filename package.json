@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build":"./build.sh"
+    "build": "./build.sh"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
   "author": "scliuyang,chenwubai",
   "license": "ISC",
   "devDependencies": {
+    "browserify": "^13.0.0",
     "dox": "^0.8.0",
     "jasmine": "^2.3.2",
     "jasmine-core": "^2.3.4",
