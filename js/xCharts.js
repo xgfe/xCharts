@@ -46,12 +46,12 @@
         },
         loadConfig: function (config) {
             //加入时间测试
-            console.time("draw charts")
+            // console.time("draw charts")
             //深复制config
             this.config=xCharts.utils.copy(config,true);
             this.getColor=xCharts.utils.getColor(config.color);
             this.firstDrawing(this.config);
-            console.timeEnd("draw charts");
+            // console.timeEnd("draw charts");
         },
         firstDrawing:function(config){
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面

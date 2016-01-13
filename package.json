@@ -10,7 +10,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "./build.sh"
+    "build": "./build.sh",
+    "build2": "./build2.sh"
   },
   "repository": {
     "type": "git",
