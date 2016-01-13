@@ -1,9 +1,14 @@
 .xc-container{
     position:relative;
 }
-.xc-axis text{
-    fill:#000;
-    stroke:none;
+.xc-axis text,
+.xc-legend-item text {
+    fill: #a2a2a2;
+    stroke: none;
+}
+.xc-axis line,
+.xc-axis path {
+    stroke: #a2a2a2;
 }
 .xc-legend-group{
     cursor: pointer;
