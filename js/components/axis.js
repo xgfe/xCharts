@@ -31,9 +31,12 @@
                 var scale = this.__axis(a, i); //每个坐标轴都会生成一个scale
                 this.messageCenter[this.type + 'Scale'][i] = scale; //通过messageCenter将scale提供给其他组件使用
                 a = utils.merage(defaultConfig(type), a); //给予默认配置
-                this.axisConfig[i]=a;//为了tooltip时，能获取到格式化函数
+                this.axisConfig[i]=a; //为了tooltip时，能获取到格式化函数
                 //坐标轴函数
-                var axis = d3.svg.axis().scale(scale).orient(a.position).tickFormat(a.tickFormat);
+
+                if(!a.show) return true; //不显示坐标
+
+               var axis = d3.svg.axis().scale(scale).orient(a.position).tickFormat(a.tickFormat);
                 //添加<g>
                 var axisGroup = this.main.selectAll(".xc-axis." + type + '-' + i).data([a]);
                 axisGroup.enter().append('g').attr('class', 'xc-axis ' + type + '-' + i).attr('fill', 'none').attr('stroke', '#000');
@@ -367,7 +370,16 @@
              *  控制坐标轴上最小值显示
              *  当传入值中的最小值小于minValue时，以传入值为准
              */
-            //minValue: 0, //type=value有效，手动设置最大最小值
+            //minValue: 0, //type=value有效，手动设置最大最小值,
+            /**
+             * @var show
+             * @extends xCharts.axis
+             * @type Boolean
+             * @default true
+             * @describtion
+             * 当不需要显示坐标轴时，可以关掉这个选项
+             */
+            show:true
         }
         return axis;
     }
