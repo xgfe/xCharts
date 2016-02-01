@@ -253,7 +253,8 @@
 
                         series.forEach(function (serie) {
                             if (serie.show === false) return;
-                            var data = serie.data[sectionNumber].value;
+                            var data = serie.data[sectionNumber]===undefined?"":serie.data[sectionNumber].value;
+
                             var serieFormat = serie.formatter || format ||defaultFormatter;
                             html += serieFormat(serie.name, data);
                         })
