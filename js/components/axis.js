@@ -62,8 +62,8 @@
             var axis = this.axisConfig[0];
             this.on('tooltipSectionChange.axis', function (sectionNumber, callback) {
                 var data =axis.data[sectionNumber];
-                data=axis.tickFormat(data);
-                var html = "<p>"+data+"</p>";
+                var html =axis.formatter(data);
+
                 callback(html);
             });
 
@@ -341,6 +341,21 @@
              *  @default 不做任何处理
              */
             tickFormat: utils.loop,
+            /**
+             * @var formatter
+             * @extends xCharts.axis
+             * @type Function
+             * @describtion
+             * 对坐标轴上的每一个label进行格式化,需要返回一个字符串作为tooltip的title字段
+             * @example
+             *  function(value){
+             *      return value+'%';
+             *  }
+             *  @default 调用tickFormat进行处理,两边包裹<p>标签
+             */
+            formatter: function(value){
+                return "<p>"+this.tickFormat(value)+"</p>";
+            },
             /**
              * @var position
              * @extends xCharts.axis
