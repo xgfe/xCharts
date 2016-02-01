@@ -27,7 +27,7 @@
             this.tooltipShow=false;
             this.display=true;
             //没有x轴，多x轴，x轴type==value 将会改成item触发方式
-            if(!this.config.xAxis|| this.config.xAxis.length>1|| this.config.xAxis[0].type=='value') this.config.tooltip.trigger='axis';
+            if(!this.config.xAxis|| this.config.xAxis.length>1|| this.config.xAxis[0].type=='value') this.config.tooltip.trigger='item';
             this.tooltipConfig = utils.merage(defaultConfig(), config.tooltip);
 
         },
