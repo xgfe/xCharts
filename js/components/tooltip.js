@@ -128,7 +128,8 @@
         hidden: function () {
             this.fire('tooltipHidden');
             this.tooltipShow=false;
-            this.tooltip.style({visibility: 'hidden'})
+            this.tooltip.style({visibility: 'hidden'});
+            this.main.selectAll('.xc-tooltip-line').attr('opacity',0);
         },
         setPosition: function (position,offsetX,offsetY) {
             var _this = this,offsetX=offsetX||5,offsetY=offsetY||5;
