@@ -29,6 +29,7 @@
 
     xCharts.prototype.extend({
         //初始化方法
+        // TODO 当在同一个容器里进行初始化时，会使前面的图表还留存在内存中，当监听refresh时，会造成获取不到宽高报NAN错,这里想个办法辨识容器是否有以前的charts，然后解除引用
         init: function (container) {
             container=d3.select(container);
             container.html('');//清理容器里面的所有节点
