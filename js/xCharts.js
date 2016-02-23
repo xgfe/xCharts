@@ -105,7 +105,7 @@
             }
         },
         refresh:function(){
-            console.time("refresh time");
+            //console.time("refresh time");
             //刷新产生的条件,预知
             //1 容器大小发生了改变，修正
             this.originalWidth=getWidth(this.container.node());
@@ -133,10 +133,13 @@
                 }
             }
 
-            console.timeEnd("refresh time");
+            //console.timeEnd("refresh time");
 
         },
-        updateSeries:function(series){
+        _updateSeries:function(series){
+
+            // TODO 开放这个功能
+
             this.config.series=xCharts.utils.copy(series,true);
             this.margin=xCharts.utils.copy(this.originMargin);
             //第一步 通知已有组件刷新
@@ -147,6 +150,10 @@
                     component.updateSeries(this.config.series);
                 }
             }
+
+            this.width=this.originalWidth-this.margin.left-this.margin.right;
+            this.height=this.originalHeight-this.margin.top-this.margin.bottom;
+
             //第二步 通知已有图表刷新
             for(var k in charts){
                 if(charts.hasOwnProperty(k)){
@@ -155,23 +162,37 @@
                 }
             }
         },
-        on:function(str,cb){
+        on:function(name,callback){
             //契合D3，一个namespace只会有一个fn，后来的会使上面的fn失效
             //满足先到先响应的策略
+
+            // 一个实例有且仅有一个Eventlist，多个实例直接互不干扰
             var list=this.EventList;
-            var arr=str.split('.');
-            var type=arr[0];
+
+            //分割eventname和namespace 例如tooltipSectionChange.axis
+            var arr=name.split('.');
+            var eventName=arr[0];
+
+            //如果用户不设置namecpace，默认为default
             var nameSpace=arr[1]?arr[1]:'default';
-            list[type]||( list[type]=[]);
-            for(var i= 0,l;l=list[type][i++];){
+
+            list[eventName]||( list[eventName]=[]);
+
+            //如果有相同的namespace，移除该事件
+            for(var i= 0,l;l=list[eventName][i++];){
                 if(l.nameSpace==nameSpace){
                     list[type].splice(i-1,1);
                     break;
                 }
             }
-            list[type].push({nameSpace:nameSpace,callback:cb})
+            list[eventName].push({nameSpace:nameSpace,callback:callback})
         },
-        fire:function(type){
+        /**
+         * 触发某个事件
+         * @param type 事件名称
+         * @param ...args 事件参数
+         */
+        fire:function(type/*,...args*/){
             var args=Array.prototype.slice.call(arguments,1);
             var list=this.EventList[type];
             if(!list) return;
@@ -180,7 +201,13 @@
             })
         }
     })
+
+    //和jquery类似，这样做new init的实例能访问到xCharts.prototype上的属性和方法
     xCharts.prototype.init.prototype=xCharts.prototype;
+
+    //组件和图表控件的注册存放地
+    // 这样做xCharts可以知道哪些组件被用户引入方便调用
+    // 为以后支持模块引入做准备
     xCharts.extend({
         //图表库
         charts:{
@@ -212,6 +239,11 @@
 
     }
 
+    /**
+     * 获取传入dom的真实宽，在border-box模式下会去掉padding和border宽度
+     * @param {DOM} container
+     * @returns width
+     */
     function getWidth(container){
         var width = css(container,'width',true);
         if(css(container,'boxSizing')!=='border-box'){
@@ -223,6 +255,12 @@
             - css(container,'borderRightWidth',true);
         return width;
     }
+
+    /**
+     * 获取传入dom的真实高，在border-box模式下会去掉padding和border高度
+     * @param {DOM} container
+     * @returns height
+     */
     function getHeight(container){
         var height = css(container,"height",true);
         if(css(container,'boxSizing')!=='border-box'){
