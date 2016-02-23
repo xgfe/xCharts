@@ -25,11 +25,11 @@
         render: function (ease, time) {
             var _this = this,
                 textAnchor = 'start',
-                textFontSize=_this.titleConfig.textStyle.fontSize,
-                subtextFontSize=_this.titleConfig.subtextStyle.fontSize,
+                textFontSize = _this.titleConfig.textStyle.fontSize,
+                subtextFontSize = _this.titleConfig.subtextStyle.fontSize,
                 x = _this.titleConfig.x,
                 y = _this.titleConfig.y,
-                height=_this.height;
+                height = _this.height;
             if (x == 'left') {
                 x = 0;
                 textAnchor = 'start';
@@ -41,14 +41,14 @@
                 textAnchor = 'end';
             }
 
-            if(y=='top'){
-                y='1em';
+            if (y == 'top') {
+                y = '1em';
                 //只有在y==top时，文本不浮动，需要调整margin.top 防止和charts重叠
-                _this.margin.top+=parseFloat(textFontSize)+parseFloat(subtextFontSize);
-            }else if(y=='center'){
-                y='50%';
-            }else if(y=='bottom'){
-                y=height-parseFloat(subtextFontSize);
+                _this.margin.top += parseFloat(textFontSize) + parseFloat(subtextFontSize);
+            } else if (y == 'center') {
+                y = '50%';
+            } else if (y == 'bottom') {
+                y = height - parseFloat(subtextFontSize);
             }
 
             //第一步在svg下添加一个text，目的是为了能在浮动的时候能覆盖所有的charts
@@ -56,19 +56,20 @@
             title.enter().append('text').attr('class', 'xc-title');
             //添加主标题
             var titleText = title.selectAll('.xc-title-text').data([_this.titleConfig]);
-            titleText.enter().append('tspan').attr('class', 'xc-title-text');;
+            titleText.enter().append('tspan').attr('class', 'xc-title-text');
+            ;
             titleText.text(function (config) {
                 return config.text;
             })
                 .attr('x', x)
                 .attr('y', y)
-                .attr('font-size',textFontSize)
-                .attr('fill',function(config){
+                .attr('font-size', textFontSize)
+                .attr('fill', function (config) {
                     return config.textStyle.color;
                 })
-                .attr('text-anchor',textAnchor);
+                .attr('text-anchor', textAnchor);
             //添加副标题
-            var subtitleText=title.selectAll('.xc-title-subtext').data([_this.titleConfig]);
+            var subtitleText = title.selectAll('.xc-title-subtext').data([_this.titleConfig]);
             subtitleText.enter().append('tspan').attr('class', 'xc-title-subtext');
 
             subtitleText.text(function (config) {
@@ -76,13 +77,13 @@
             })
                 .attr('x', x)
                 .attr('dy', '1.2em')
-                .attr('fill',function(config){
+                .attr('fill', function (config) {
                     return config.subtextStyle.color;
                 })
-                .attr('font-size',subtextFontSize)
-                .attr('text-anchor',textAnchor);
+                .attr('font-size', subtextFontSize)
+                .attr('text-anchor', textAnchor);
         },
-        updateSeries:function(){
+        updateSeries: function () {
             //数据更新与title无关，不做处理
         }
     })
