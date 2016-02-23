@@ -117,6 +117,7 @@
      * ]
      */
     function getColor(palette) {
+        // TODO 判断palette的正确性
         if (!palette) {
             palette = [
                 '#2ec7c9', '#b6a2de', '#5ab1ef', '#ffb980', '#d87a80',
