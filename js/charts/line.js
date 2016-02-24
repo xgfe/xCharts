@@ -455,13 +455,13 @@
              * @var line
              * @type Object
              * @extends xCharts.series
-             * @describtion 折线图配置项
+             * @description 折线图配置项
              */
             var config = {
                 /**
                  * @var name
                  * @type String
-                 * @describtion 线条名字
+                 * @description 线条名字
                  * @extends xCharts.series.line
                  */
                 name: '',
@@ -469,7 +469,7 @@
                  * 定义图表类型是折线图
                  * @var type
                  * @type String
-                 * @describtion 指定图表类型
+                 * @description 指定图表类型
                  * @values 'line'
                  * @extends xCharts.series.line
                  */
@@ -477,7 +477,7 @@
                 /**
                  * @var xAxisIndex
                  * @type Number
-                 * @describtion 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
+                 * @description 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
                  * @default 0
                  * @extends xCharts.series.line
                  */
@@ -485,7 +485,7 @@
                 /**
                  * @var yAxisIndex
                  * @type Number
-                 * @describtion 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
+                 * @description 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
                  * @default 0
                  * @extends xCharts.series.line
                  */
@@ -493,7 +493,7 @@
                 /**
                  * @var smooth
                  * @type Boolean
-                 * @describtion 折线是否开启平滑曲线,默认开启
+                 * @description 折线是否开启平滑曲线,默认开启
                  * @default true
                  * @extends xCharts.series.line
                  */
@@ -501,14 +501,14 @@
                 /**
                  * @var lineStyle
                  * @type Object
-                 * @describtion 线条样式控制
+                 * @description 线条样式控制
                  * @extends xCharts.series.line
                  */
                 lineStyle: {
                     /**
                      * @var color
                      * @type String
-                     * @describtion 折线颜色控制，不设或者设置为'auto',则由系统默认分配一个颜色
+                     * @description 折线颜色控制，不设或者设置为'auto',则由系统默认分配一个颜色
                      * @default 'auto'
                      * @values 'auto'|css颜色值
                      * @extends xCharts.series.line.lineStyle
@@ -517,7 +517,7 @@
                     /**
                      * @var width
                      * @type Number
-                     * @describtion 折线宽度控制，数字越大折线越粗，不允许负值
+                     * @description 折线宽度控制，数字越大折线越粗，不允许负值
                      * @default 2
                      * @extends xCharts.series.line.lineStyle
                      */
@@ -525,7 +525,7 @@
                     /**
                      * @var radius
                      * @type Number
-                     * @describtion 折线上圆点的大小，数字越大，圆点越大
+                     * @description 折线上圆点的大小，数字越大，圆点越大
                      * @default 5
                      * @extends xCharts.series.line.lineStyle
                      */
@@ -534,14 +534,14 @@
                 /**
                  * @var areaStyle
                  * @type Object
-                 * @describtion 面积图样式控制
+                 * @description 面积图样式控制
                  * @extends xCharts.series.line
                  */
                 areaStyle: {
                     /**
                      * @var show
                      * @type Boolean
-                     * @describtion 开启面积图，默认不开启
+                     * @description 开启面积图，默认不开启
                      * @default false
                      * @extends xCharts.series.line.areaStyle
                      */
@@ -549,7 +549,7 @@
                     /**
                      * @var color
                      * @type String
-                     * @describtion 面积图颜色值,不设或者设置为'auto'，颜色和折线一致
+                     * @description 面积图颜色值,不设或者设置为'auto'，颜色和折线一致
                      * @default 'auto'
                      * @values 'auto'|css颜色值
                      * @extends xCharts.series.line.areaStyle
@@ -558,7 +558,7 @@
                     /**
                      * @var opacity
                      * @type Number
-                     * @describtion 面积图颜色透明度控制
+                     * @description 面积图颜色透明度控制
                      * @default 0.3
                      * @values 0-1
                      * @extends xCharts.series.line.areaStyle
@@ -568,7 +568,7 @@
                 /**
                  * @var data
                  * @type Array
-                 * @describtion 折线图数据，提供给type=value的坐标轴使用
+                 * @description 折线图数据，提供给type=value的坐标轴使用
                  * @extends xCharts.series.line
                  * @example
                  * data: ['11%', 11, 15, 70, 12, 40, 60]
@@ -578,7 +578,7 @@
                 /**
                  * @var units
                  * @type String
-                 * @describtion 补全数据的单位配合data使用，提供给tooltip使用,也可以在tooltip里的formatter里自己配置格式化结果
+                 * @description 补全数据的单位配合data使用，提供给tooltip使用,也可以在tooltip里的formatter里自己配置格式化结果
                  * @extends xCharts.series.line
                  * @example
                  * units: '%'
@@ -588,7 +588,7 @@
                  * @var formatter
                  * @extends xCharts.series.line
                  * @type Function
-                 * @describtion 可以单独定义格式化函数来覆盖tooltip里面的函数
+                 * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
                  * @example
                  *  formatter: function (name,data) {
                  *   return '<p>'+name + ':&nbsp;' + data+'</p>';

@@ -261,14 +261,14 @@
          * @var pie
          * @type Object
          * @extends xCharts.series
-         * @describtion 饼图配置项
+         * @description 饼图配置项
          */
         var config = {
             /**
              * 定义图表类型是饼图
              * @var type
              * @type String
-             * @describtion 指定图表类型
+             * @description 指定图表类型
              * @values 'pie'
              * @extends xCharts.series.pie
              */
@@ -276,7 +276,7 @@
             /**
              * @var center
              * @type Array
-             * @describtion 饼图圆心位置，可为百分比或数值。若为百分比则center[0]（圆心x坐标）参照容器宽度，center[1]（圆心y坐标）参照容器高度。
+             * @description 饼图圆心位置，可为百分比或数值。若为百分比则center[0]（圆心x坐标）参照容器宽度，center[1]（圆心y坐标）参照容器高度。
              * @default ['50%','50%']
              * @extends xCharts.series.pie
              */
@@ -284,14 +284,14 @@
             /**
              * @var radius
              * @type Object
-             * @describtion 定义饼图的内半径和外半径
+             * @description 定义饼图的内半径和外半径
              * @extends xCharts.series.pie
              */
             radius: {
                 /**
                  * @var outerRadius
                  * @type String|Number
-                 * @describtion 定义饼图的外半径，可取百分比或数值，若为百分比则参照容器宽度进行计算。
+                 * @description 定义饼图的外半径，可取百分比或数值，若为百分比则参照容器宽度进行计算。
                  * @default '30%'
                  * @extends xCharts.series.pie.radius
                  */
@@ -299,7 +299,7 @@
                 /**
                  * @var innerRadius
                  * @type String|Number
-                 * @describtion 定义饼图的内半径，可取百分比或数值，若为百分比，则参照容器宽度进行计算。
+                 * @description 定义饼图的内半径，可取百分比或数值，若为百分比，则参照容器宽度进行计算。
                  * @default 0
                  * @extends xCharts.series.pie.radius
                  */
@@ -308,7 +308,7 @@
             /**
              * @var data
              * @type Array
-             * @describtion 饼图数据
+             * @description 饼图数据
              * @extends xCharts.series.pie
              */
             data: [
@@ -316,14 +316,14 @@
                     /**
                      * @var name
                      * @type String
-                     * @describtion 弧形名称
+                     * @description 弧形名称
                      * @extends xCharts.series.pie.data
                      */
                     name: '',
                     /**
                      * @var value
                      * @type Number
-                     * @describtion 弧形所代表的项的数据值
+                     * @description 弧形所代表的项的数据值
                      * @extends xCharts.series.pie.data
                      */
                     value: 0

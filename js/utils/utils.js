@@ -107,7 +107,7 @@
      * @var color
      * @extends xCharts
      * @type Array
-     * @describtion 全局color数组，如果设置会覆盖默认的颜色配置，系统会循环从数组中取色
+     * @description 全局color数组，如果设置会覆盖默认的颜色配置，系统会循环从数组中取色
      * @example
      *  [
      * '#2ec7c9', '#b6a2de', '#5ab1ef', '#ffb980', '#d87a80',

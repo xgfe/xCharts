@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/app.css"/>
     <link rel="stylesheet" href="css/bootstrap.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css"/>
-    <link rel="stylesheet" href="css/indx.css"/>
+    <link rel="stylesheet" href="css/index.css"/>
     <script src="bower_components/angular/angular.min.js"></script>
     <script src="js/index.js"></script>
     <style>
@@ -32,7 +32,7 @@
                         <p><span class="label label-info" ng-if="item.values">values:</span> {{item.values}}</p>
                         <p><span class="label label-primary" ng-if="item.default">默认值:</span> {{item.default}}</p>
                         <!-- describtion 每一个都用p包裹-->
-                        <p ng-repeat="d in item.describtion">{{d.string}}</p>
+                        <p ng-repeat="d in item.description">{{d.string}}</p>
 
                         <h6 ng-if="item.example">example:</h6>
                         <pre class="well" ng-repeat="example in item.example">{{example.string}}</pre>

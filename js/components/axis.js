@@ -304,14 +304,14 @@
         /**
          * @var axis
          * @type Object
-         * @describtion 坐标轴配置项
+         * @description 坐标轴配置项
          * @extends xCharts
          */
         var axis = {
             /**
              * @var type
              * @extends xCharts.axis
-             * @describtion 坐标轴的类型
+             * @description 坐标轴的类型
              * @type String
              * @values 'category'|'value'|'time'
              */
@@ -320,7 +320,7 @@
              * @var data
              * @extends xCharts.axis
              * @type Array
-             * @describtion
+             * @description
              *  依赖于type类型
              *  type=value时,data值无效
              *  type=category时，data里的值为String|Number
@@ -332,7 +332,7 @@
              * @var tickFormat
              * @extends xCharts.axis
              * @type Function
-             * @describtion
+             * @description
              * 对坐标轴上的每一个label进行格式化,需要返回一个字符串作为显示
              * @example
              *  function(value){
@@ -345,7 +345,7 @@
              * @var formatter
              * @extends xCharts.axis
              * @type Function
-             * @describtion
+             * @description
              * 对坐标轴上的每一个label进行格式化,需要返回一个字符串作为tooltip的title字段
              * @example
              *  function(value){
@@ -361,7 +361,7 @@
              * @extends xCharts.axis
              * @type String
              * @values x轴'top'|'bottom'；y轴'left'|'right'
-             * @describtion
+             * @description
              *  多X多Y轴使用，控制坐标轴位置
              * @default x轴'bottom';y轴'left'
              */
@@ -370,7 +370,7 @@
              * @var maxValue
              * @extends xCharts.axis
              * @type Number
-             * @describtion
+             * @description
              *  当type=value时有效
              *  控制坐标轴上最大值显示
              *  当传入值中的最大值超过maxValue时，以传入值为准
@@ -380,7 +380,7 @@
              * @var minValue
              * @extends xCharts.axis
              * @type Number
-             * @describtion
+             * @description
              *  当type=value时有效
              *  控制坐标轴上最小值显示
              *  当传入值中的最小值小于minValue时，以传入值为准
@@ -391,7 +391,7 @@
              * @extends xCharts.axis
              * @type Boolean
              * @default true
-             * @describtion
+             * @description
              * 当不需要显示坐标轴时，可以关掉这个选项
              */
             show:true
