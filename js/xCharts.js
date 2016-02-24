@@ -41,7 +41,7 @@
             this.div = container.append('div').attr('class', 'xc-container');
             this.svg = this.div.append('svg').attr('class', 'xc-svg').attr('width', this.originalWidth).attr('height', this.originalHeight);
             this.main = this.svg.append('g').attr('class', 'xc-main');
-            this.margin = {top: 30, left: 50, right: 50, bottom: 30};
+            this.margin = {top: 0, left: 50, right: 50, bottom: 30};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
             return this;
@@ -221,8 +221,8 @@
         //工具库
         utils: {
             extend: xCharts.extend
-        }
-    })
+        },
+    });
 
 
     /**

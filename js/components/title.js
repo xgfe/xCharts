@@ -3,64 +3,73 @@
  * extends Component
  */
 (function (window) {
+
+    // 获取必须的全局声明
     var xCharts = window.xCharts;
     var utils = xCharts.utils;
     var d3 = window.d3;
+
+    // 获取xCharts的components存储点
     var components = xCharts.components;
+
+    // 获取组件基类Component并继承方法
     var Component = components['Component'];
     utils.inherits(title, Component);
-    components.extend({title: title})
 
+    // 往xCharts.components上添加自己
+    components.extend({title: title});
+
+
+    /**
+     * title的构造函数
+     * @param messageCenter 消息中心
+     * @param config 配置文件
+     * @param type title
+     */
     function title(messageCenter, config, type) {
+
+        //继承Component的属性
         Component.call(this, messageCenter, config, type);
     }
 
     title.prototype.extend = xCharts.extend;//添加extends函数
 
     title.prototype.extend({
-        init: function (messageCenter, config, type) {
+        init: function (messageCenter) {
+
+            // 用户的配置覆盖默认的配置项
             this.titleConfig = utils.merage(defaultConfig(), this.config.title);
             this.height = messageCenter.originalHeight;
+            this.titlePosition = calculateTitlePosition.call(this);
         },
-        render: function (ease, time) {
+        render: function () {
             var _this = this,
-                textAnchor = 'start',
                 textFontSize = _this.titleConfig.textStyle.fontSize,
                 subtextFontSize = _this.titleConfig.subtextStyle.fontSize,
-                x = _this.titleConfig.x,
-                y = _this.titleConfig.y,
-                height = _this.height;
-            if (x == 'left') {
-                x = 0;
-                textAnchor = 'start';
-            } else if (x == 'center') {
-                x = '50%';
-                textAnchor = 'middle';
-            } else if (x == 'right') {
-                x = '100%';
-                textAnchor = 'end';
-            }
-
-            if (y == 'top') {
-                y = '1em';
-                //只有在y==top时，文本不浮动，需要调整margin.top 防止和charts重叠
-                _this.margin.top += parseFloat(textFontSize) + parseFloat(subtextFontSize);
-            } else if (y == 'center') {
-                y = '50%';
-            } else if (y == 'bottom') {
-                y = height - parseFloat(subtextFontSize);
-            }
+                x = _this.titlePosition.x,
+                y = _this.titlePosition.y,
+                textAnchor = _this.titlePosition.textAnchor;
 
             //第一步在svg下添加一个text，目的是为了能在浮动的时候能覆盖所有的charts
-            var title = _this.svg.selectAll('.xc-title').data([_this.titleConfig]);
-            title.enter().append('text').attr('class', 'xc-title');
+            var title = _this.svg.selectAll('.xc-title')
+                .data([_this.titleConfig]);
+
+            title.enter().append('text')
+                .attr('class', 'xc-title');
+
             //添加主标题
-            var titleText = title.selectAll('.xc-title-text').data([_this.titleConfig]);
-            titleText.enter().append('tspan').attr('class', 'xc-title-text');
-            ;
+            var titleText = title.selectAll('.xc-title-text')
+                .data([_this.titleConfig]);
+
+            titleText.enter().append('tspan')
+                .attr('class', 'xc-title-text');
+
             titleText.text(function (config) {
+
+                //设置主标题文字
                 return config.text;
             })
+                //设置主标题位置
                 .attr('x', x)
                 .attr('y', y)
                 .attr('font-size', textFontSize)
@@ -68,11 +77,17 @@
                     return config.textStyle.color;
                 })
                 .attr('text-anchor', textAnchor);
+
             //添加副标题
-            var subtitleText = title.selectAll('.xc-title-subtext').data([_this.titleConfig]);
-            subtitleText.enter().append('tspan').attr('class', 'xc-title-subtext');
+            var subtitleText = title.selectAll('.xc-title-subtext')
+                .data([_this.titleConfig]);
+
+            subtitleText.enter().append('tspan')
+                .attr('class', 'xc-title-subtext');
 
             subtitleText.text(function (config) {
+
+                // 设置副标题文字
                 return config.subtext;
             })
                 .attr('x', x)
@@ -86,7 +101,62 @@
         updateSeries: function () {
             //数据更新与title无关，不做处理
         }
-    })
+    });
+
+    /**
+     * 计算title的xy位置
+     * @returns {{x: *, y: *, textAnchor: string}}
+     */
+    function calculateTitlePosition() {
+        var _this = this,
+            textAnchor = 'start',
+            textFontSize = _this.titleConfig.textStyle.fontSize,
+            subtextFontSize = _this.titleConfig.subtextStyle.fontSize,
+            x = _this.titleConfig.x,
+            y = _this.titleConfig.y,
+            height = _this.height;
+
+        /**
+         * 计算title的x位置，默认center
+         * 预定位置有left,start,end 只有这些预定值会改变textAnchor
+         * 非预定值支持常用的css单位
+         */
+        if (x === 'left') {
+            x = 0;
+            textAnchor = 'start';
+        } else if (x === 'center') {
+            x = '50%';
+
+            // 只有设置textAnchor为middle才能实现完全居中，强迫症的福音O(∩_∩)O
+            textAnchor = 'middle';
+        } else if (x === 'right') {
+            x = '100%';
+            textAnchor = 'end';
+        }
+
+        /**
+         * 计算title的y位置
+         * 默认top位置
+         * 只有在top位置时会使margin.top增加，为了不和其他元素重叠
+         * 但是非top情况实在难以计算重叠情况，直接不管,称之为浮动(会出现title遮盖住图表或其他文字的现象)
+         */
+        if (y == 'top') {
+            y = '1em';
+
+            // 只有在y==top时，文本不浮动，需要调整margin.top 防止和charts重叠
+            _this.margin.top += parseFloat(textFontSize) + parseFloat(subtextFontSize);
+        } else if (y == 'center') {
+            y = '50%';
+        } else if (y == 'bottom') {
+            y = height - parseFloat(subtextFontSize) - parseFloat(textFontSize);
+        }
+
+        return {
+            x: x,
+            y: y,
+            textAnchor: textAnchor,
+        }
+    }
 
 
     function defaultConfig() {
