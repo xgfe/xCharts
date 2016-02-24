@@ -38,7 +38,7 @@
         refresh: function (animationEase, animationTime) {
 
             // 关闭显示的组件不进行刷新
-            if(!this.show) return true;
+            if(!this._show) return true;
 
             //当容器改变时，刷新当前组件
             this.margin = this.messageCenter.margin;//每次刷新时，重置margin
@@ -50,7 +50,7 @@
         updateSeries: function (series) {
 
             // 关闭显示的组件不更新数据
-            if(!this.show) return true;
+            if(!this._show) return true;
 
             //加载新数据
             this.init(this.messageCenter, this.config, this.type, series);//重新初始化
