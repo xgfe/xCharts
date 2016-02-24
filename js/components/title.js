@@ -28,6 +28,14 @@
      */
     function title(messageCenter, config, type) {
 
+        //show=false时不做显示处理
+        if(config.title.show === false) {
+            this.show = false;
+            return;
+        }else{
+            this.show = true;
+        }
+
         //继承Component的属性
         Component.call(this, messageCenter, config, type);
     }
@@ -49,6 +57,9 @@
                 x = _this.titlePosition.x,
                 y = _this.titlePosition.y,
                 textAnchor = _this.titlePosition.textAnchor;
+
+            /*===================================*/
+            /* 绘画开始 */
 
             //第一步在svg下添加一个text，目的是为了能在浮动的时候能覆盖所有的charts
             var title = _this.svg.selectAll('.xc-title')
@@ -172,10 +183,10 @@
              * @var show
              * @extends xCharts.title
              * @type Boolean
-             * @default false
+             * @default true
              * @description 是否显示标题
              */
-            show: false,
+            show: true,
             /**
              * @var text
              * @extends xCharts.title
