@@ -175,13 +175,13 @@
          * @var tooltip
          * @type Object
          * @extends xCharts
-         * @describtion 控制提示框
+         * @description 控制提示框
          */
         var tooltip = {
             /**
              * @var show
              * @extends xCharts.tooltip
-             * @describtion 是否显示tooltip提示框
+             * @description 是否显示tooltip提示框
              * @type Boolean
              * @default false
              */
@@ -192,14 +192,14 @@
              * @type String
              * @values 'axis'|'item'
              * @default 'item'
-             * @describtion 触发方式,'axis'只对单x轴有效
+             * @description 触发方式,'axis'只对单x轴有效
              */
             trigger: 'axis',
             /**
              * @var formatter
              * @extends xCharts.tooltip
              * @type Function
-             * @describtion 格式化函数，如果在各项series里面定义了formatter会覆盖此函数
+             * @description 格式化函数，如果在各项series里面定义了formatter会覆盖此函数
              * @default 请查看各个series里面的格式化函数
              */
             //formatter: function (name,data) {
@@ -210,8 +210,8 @@
              * @extends xCharts.tooltip
              * @type String
              * @default '#008ACD'
-             * @describtion 在trigger='axis'时有效
-             * @describtion 竖直线的颜色
+             * @description 在trigger='axis'时有效
+             * @description 竖直线的颜色
              */
             lineColor: '#008ACD',
             /**
@@ -219,8 +219,8 @@
              * @extends xCharts.tooltip
              * @type Number
              * @default 2
-             * @describtion 在trigger='axis'时有效
-             * @describtion 竖直线的宽度
+             * @description 在trigger='axis'时有效
+             * @description 竖直线的宽度
              */
             lineWidth: 2
         }

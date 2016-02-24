@@ -351,14 +351,14 @@
          * @var funnel
          * @type Object
          * @extends xCharts.series
-         * @describtion 漏斗图配置项
+         * @description 漏斗图配置项
          */
         var funnel = {
             /**
              * @var name
              * @type String
              * @extends xCharts.series.funnel
-             * @describtion 漏斗图代表的名字
+             * @description 漏斗图代表的名字
              */
             name: '漏斗图',
             /**
@@ -366,7 +366,7 @@
              * @type String
              * @extends xCharts.series.funnel
              * @default funnel
-             * @describtion 漏斗图指定类型
+             * @description 漏斗图指定类型
              */
             type: 'funnel',
             /**
@@ -374,7 +374,7 @@
              * @type String
              * @values 'top'|'down'
              * @defautl 'down'
-             * @describtion 漏斗图尖角朝向
+             * @description 漏斗图尖角朝向
              * @extends xCharts.series.funnel
              */
             sort: 'down',
@@ -382,8 +382,8 @@
              * @var size
              * @extends xCharts.series.funnel
              * @type Array
-             * @describtion 漏斗图大小
-             * @describtion 可以为百分比，也可以为具体数字，默认单位px
+             * @description 漏斗图大小
+             * @description 可以为百分比，也可以为具体数字，默认单位px
              * @default ['50%', '50%']
              * @example
              *  size:['50%','50%']//百分比
@@ -396,7 +396,7 @@
              *  @type String|Number
              *  @default 'center'
              *  @values 'left'|'right'|'center'|Number(单位像素)|Percentage
-             *  @describtion 漏斗图左上角在x轴方向的偏移量
+             *  @description 漏斗图左上角在x轴方向的偏移量
              */
             x: 'center',
             /**
@@ -405,14 +405,14 @@
              *  @type String|Number
              *  @default 'center'
              *  @values 'top'|'middle'|'bottom'|Number(单位像素)|Percentage
-             *  @describtion 漏斗图左上角在y轴方向的偏移量
+             *  @description 漏斗图左上角在y轴方向的偏移量
              */
             y: 'middle',
             /**
              * @var data
              * @type Array
              * @extends xCharts.series.funnel
-             * @describtion 一个装有漏斗图数据的二维数组
+             * @description 一个装有漏斗图数据的二维数组
              * @example
              *   [
              *      {name: '腾讯', value: '80'},
@@ -427,7 +427,7 @@
              * @var formatter
              * @extends xCharts.series.funnel
              * @type Function
-             * @describtion 可以单独定义格式化函数来覆盖tooltip里面的函数
+             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
              * @example
              *  formatter: function (name,x,y) {
              *      return '<p>'+name + ':&nbsp;' + value+' 占比:'+percentage+'%</p>';
@@ -438,7 +438,7 @@
              * @var itemStyle
              * @extends xCharts.series.funnel
              * @type Object
-             * @describtion 每个漏斗图区块的样式
+             * @description 每个漏斗图区块的样式
              */
             itemStyle:{
                 /**
@@ -446,7 +446,7 @@
                  * @extends xCharts.series.funnel.itemStyle
                  * @type Number
                  * @values 0-1
-                 * @describtion 鼠标移入时，变化的透明度
+                 * @description 鼠标移入时，变化的透明度
                  * @default 0.5
                  */
                 opacity:0.5

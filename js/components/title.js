@@ -165,7 +165,7 @@
          * @var title
          * @type Object
          * @extends xCharts
-         * @describtion 标题配置项，设置标题文本，位置相关的属性
+         * @description 标题配置项，设置标题文本，位置相关的属性
          */
         var title = {
             /**
@@ -173,21 +173,21 @@
              * @extends xCharts.title
              * @type Boolean
              * @default false
-             * @describtion 是否显示标题
+             * @description 是否显示标题
              */
             show: false,
             /**
              * @var text
              * @extends xCharts.title
              * @type String
-             * @describtion 主标题文本
+             * @description 主标题文本
              */
             text: '',
             /**
              * @var subtext
              * @extends xCharts.title
              * @type String
-             * @describtion 副标题文本
+             * @description 副标题文本
              */
             subtext: '', //副标题文本
             /**
@@ -196,7 +196,7 @@
              * @type String|Number
              * @values 'center'|'left'|'right'|number(单位px或百分比)
              * @default 'center'
-             * @describtion
+             * @description
              * 控制标题水平位置
              * @example
              * x:'90'和x:90结果一样都是以x=0为基准向右偏移90px
@@ -209,8 +209,8 @@
              * @type String|Number
              * @values 'top'|'center'|'bottom'|number(单位px或百分比)
              * @default 'top'
-             * @describtion 控制标题垂直位置
-             * @describtion 注意：修改y的位置会造成标题浮动，与图表重叠在一起
+             * @description 控制标题垂直位置
+             * @description 注意：修改y的位置会造成标题浮动，与图表重叠在一起
              * @example
              * y:'90'和y:90结果一样，以y=0为基准想下偏移90px
              * y:'50%' 表示以y=0为基准向下偏移容器高度的50%,居中请用center
@@ -220,7 +220,7 @@
              * @var textStyle
              * @type Object
              * @extends xCharts.title
-             * @describtion 主标题样式控制,也可以通过设置.xc-title-text的css属性控制样式
+             * @description 主标题样式控制,也可以通过设置.xc-title-text的css属性控制样式
              * @example
              *  textStyle{
              *      fontSize:14,
@@ -233,7 +233,7 @@
                  * @extends xCharts.title.textStyle
                  * @type Number
                  * @default 14
-                 * @describtion 主标题字号大小，可设置.xc-title-text的css属性控制
+                 * @description 主标题字号大小，可设置.xc-title-text的css属性控制
                  */
                 fontSize: 14,
                 /**
@@ -241,7 +241,7 @@
                  * @extends xCharts.title.textStyle
                  * @type String
                  * @default '#000'
-                 * @describtion 主标题颜色,可设置.xc-title-text的css属性控制
+                 * @description 主标题颜色,可设置.xc-title-text的css属性控制
                  */
                 color: '#000', //默认颜色
             },
@@ -249,7 +249,7 @@
              * @var subtextStyle
              * @type Object
              * @extends xCharts.title
-             * @describtion 副标题样式控制,也可以通过设置.xc-title-subtext的css属性控制样式
+             * @description 副标题样式控制,也可以通过设置.xc-title-subtext的css属性控制样式
              * @example
              *  subtextStyle{
              *      fontSize:14,
@@ -262,7 +262,7 @@
                  * @extends xCharts.title.subtextStyle
                  * @type Number
                  * @default 12
-                 * @describtion 副标题字号大小，可设置.xc-title-subtext的css属性控制
+                 * @description 副标题字号大小，可设置.xc-title-subtext的css属性控制
                  */
                 fontSize: 12,
                 /**
@@ -270,7 +270,7 @@
                  * @extends xCharts.title.subtextStyle
                  * @type String
                  * @default '#000'
-                 * @describtion 副标题颜色,可设置.xc-title-subtext的css属性控制
+                 * @description 副标题颜色,可设置.xc-title-subtext的css属性控制
                  */
                 color: '#00',
             }

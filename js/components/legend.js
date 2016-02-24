@@ -437,7 +437,7 @@
              * @type Boolean
              * @extends xCharts.legend
              * @default false
-             * @describtion 是否显示图例(legend)
+             * @description 是否显示图例(legend)
              */
             show: true,
             /**
@@ -446,7 +446,7 @@
              * @extends xCharts.legend
              * @default 'horizontal'
              * @values 'horizontal'| 'vertical'
-             * @describtion 图例是水平排列还是垂直排列
+             * @description 图例是水平排列还是垂直排列
              */
             orient: 'horizontal',
             /**
@@ -455,8 +455,8 @@
              * @extends xCharts.legend
              * @default 'left'
              * @valuse 'left'|'center'|'right'
-             * @describtion 水平布局时支持'left','center','right';垂直布局时支持'left','right'
-             * @describtion 注：center只在图例只有一行有效，多行第二行开始会自动从最左边开始排
+             * @description 水平布局时支持'left','center','right';垂直布局时支持'left','right'
+             * @description 注：center只在图例只有一行有效，多行第二行开始会自动从最左边开始排
              */
             x: 'left',
             /**
@@ -465,7 +465,7 @@
              * @extends xCharts.legend
              * @default 'bottom'
              * @valuse 'top'|'bottom'
-             * @describtion 水平布局时支持'top','bottom',垂直布局无效
+             * @description 水平布局时支持'top','bottom',垂直布局无效
              */
             y: 'bottom',
             /**
@@ -473,14 +473,14 @@
              * @extends xCharts.legend
              * @type Number
              * @default 10
-             * @describtion 图例与图例之间的间距，单位是像素。水平布局时是水平之间的间距，垂直是上下之间的间距
+             * @description 图例与图例之间的间距，单位是像素。水平布局时是水平之间的间距，垂直是上下之间的间距
              */
             itemGap: 10,
             /**
              * @var formatter
              * @type Function
              * @extends xCharts.legend
-             * @describtion 传入data中的每一个name值，返回一个以供显示的字符串
+             * @description 传入data中的每一个name值，返回一个以供显示的字符串
              * @default 默认不处理
              * @example
              *  function(name){
@@ -495,7 +495,7 @@
              * @type String
              * @default 'multiple'
              * @extends xCharts.legend
-             * @describtion 选择模式，multiple表示可以同时存在多个选中状态，single表示同一时间只能一个被选中
+             * @description 选择模式，multiple表示可以同时存在多个选中状态，single表示同一时间只能一个被选中
              * @values 'multiple'|'single'
              */
             selectedMode: 'multiple',
@@ -503,14 +503,14 @@
              * @var data
              * @type Array
              * @extends xCharts.legend
-             * @describtion 要显示哪些legend，Array里面对应series里的name值
+             * @description 要显示哪些legend，Array里面对应series里的name值
              */
             data: [],
             /**
              * @var item
              * @extends xCharts.legend
              * @type Object
-             * @describtion 控制每个图例的样式
+             * @description 控制每个图例的样式
              */
             item: {
                 /**
@@ -518,7 +518,7 @@
                  * @extends xCharts.legend.item
                  * @type String|Number
                  * @default 14
-                 * @describtion 图例文字的大小
+                 * @description 图例文字的大小
                  */
                 fontSize: 14,
                 /**
@@ -526,7 +526,7 @@
                  * @extends xCharts.legend.item
                  * @type String
                  * @default '#000'
-                 * @describtion 图例文字的颜色
+                 * @description 图例文字的颜色
                  */
                 color: '#000',
                 /**
@@ -534,7 +534,7 @@
                  * @extends xCharts.legend.item
                  * @type Number
                  * @default 20
-                 * @describtion 图例图标的宽度
+                 * @description 图例图标的宽度
                  */
                 chartSize: 20,
                 /**
@@ -542,7 +542,7 @@
                  * @extends xCharts.legend.item
                  * @type Number
                  * @default 0.3
-                 * @describtion 图例未被选中时的透明程度
+                 * @description 图例未被选中时的透明程度
                  */
                 opacity: 0.3,
                 /**

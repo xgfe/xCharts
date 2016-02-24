@@ -4,16 +4,17 @@
  */
 var dox = require('dox');
 var fs = require('fs');
+var Path = require('path');
 
-
-var path='../js'//起始目录
-var outputName='api.json';
+var path=Path.join(__dirname,'../js')//起始目录
+var outputName=Path.join(__dirname,'api.json');
 var apiData=[];
 fs.writeFile(outputName,'');
+
 function hadle(path){
     fs.stat(path,function(err,stats){
         if (err) {
-            console.log('stat error');
+            console.log('stat error',err);
         } else {
             if (stats.isDirectory()) {
                 return;
@@ -56,7 +57,7 @@ function walk(path, floor, handleFile) {
     floor++;
     fs.readdir(path, function(err, files) {
         if (err) {
-            console.log('read dir error');
+            console.log('read dir error',err);
         } else {
             files.forEach(function(item) {
                 var tmpPath = path + '/' + item;

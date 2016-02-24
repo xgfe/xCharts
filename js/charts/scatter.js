@@ -186,28 +186,28 @@
          * @var scatter
          * @type Object
          * @extends xCharts.series
-         * @describtion 散点图(气泡图)配置项
+         * @description 散点图(气泡图)配置项
          */
        var scatter= {
             /**
              * @var name
              * @type String
              * @extends xCharts.series.scatter
-             * @describtion 散点图(气泡图)代表的名字
+             * @description 散点图(气泡图)代表的名字
              */
             name: '业绩',
             /**
              * @var type
              * @type String
              * @extends xCharts.series.scatter
-             * @describtion 散点图(气泡图)指定类型
+             * @description 散点图(气泡图)指定类型
              */
             type: 'scatter',
             /**
              * @var data
              * @type Array
              * @extends xCharts.series.scatter
-             * @describtion 一个装有散点图(气泡图)数据的二维数组,第一个为x轴数据，第二个为y轴数据
+             * @description 一个装有散点图(气泡图)数据的二维数组,第一个为x轴数据，第二个为y轴数据
              * @example
              *   [
              *      [161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
@@ -220,7 +220,7 @@
              * @var size
              * @type Number|Function
              * @extends xCharts.series.scatter
-             * @describtion 散点图(气泡图)的大小，数字表示所有气泡运用同一个大小，函数需计算返回一个表示气泡大小的数值
+             * @description 散点图(气泡图)的大小，数字表示所有气泡运用同一个大小，函数需计算返回一个表示气泡大小的数值
              * @default 5
              * @example
              *  function(data){
@@ -232,7 +232,7 @@
             /**
              * @var xAxisIndex
              * @type Number
-             * @describtion 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
+             * @description 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
              * @default 0
              * @extends xCharts.series.scatter
              */
@@ -240,7 +240,7 @@
             /**
              * @var yAxisIndex
              * @type Number
-             * @describtion 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
+             * @description 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
              * @default 0
              * @extends xCharts.series.scatter
              */
@@ -249,7 +249,7 @@
              * @var opacity
              * @type Number
              * @values 0-1
-             * @describtion 散点（气泡）的透明程度
+             * @description 散点（气泡）的透明程度
              * @default 0.6
              * @extends xCharts.series.scatter
              */
@@ -258,7 +258,7 @@
              * @var formatter
              * @extends xCharts.series.scatter
              * @type Function
-             * @describtion 可以单独定义格式化函数来覆盖tooltip里面的函数
+             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
              * @example
              *  formatter: function (name,x,y) {
              *      var html = "<p>"+name+"</p>";

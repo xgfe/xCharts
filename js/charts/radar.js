@@ -473,13 +473,13 @@
          * @var radar
          * @type Object
          * @extends xCharts.series
-         * @describtion 雷达图配置项
+         * @description 雷达图配置项
          */
         var config = {
             /**
              * @var type
              * @type String
-             * @describtion 指定图表类型
+             * @description 指定图表类型
              * @values 'radar'
              * @extends xCharts.series.radar
              */
@@ -487,7 +487,7 @@
             /**
              * @var levels
              * @type Number
-             * @describtion 标记雷达图网轴有几层，取值必须为大于0的整数
+             * @description 标记雷达图网轴有几层，取值必须为大于0的整数
              * @default 4
              * @extends xCharts.series.radar
              */
@@ -495,7 +495,7 @@
             /**
              * @var radius
              * @type Number|String
-             * @describtion 定义雷达图的半径
+             * @description 定义雷达图的半径
              * @default '15%'
              * @extends xCharts.series.radar
              */
@@ -503,7 +503,7 @@
             /**
              * @var fill
              * @type Boolean
-             * @describtion 定义雷达图的区域是否填充，true为填充，false为不填充
+             * @description 定义雷达图的区域是否填充，true为填充，false为不填充
              * @default false
              * @extends xCharts.series.radar
              */
@@ -511,7 +511,7 @@
             /**
              * @var center
              * @type Array
-             * @describtion 雷达图中心位置，可为百分比或数值。若为百分比则center[0]（中心x坐标）参照容器宽度，center[1]（中心y坐标）参照容器高度。
+             * @description 雷达图中心位置，可为百分比或数值。若为百分比则center[0]（中心x坐标）参照容器宽度，center[1]（中心y坐标）参照容器高度。
              * @default ['50%','50%']
              * @extends xCharts.series.radar
              */
@@ -519,7 +519,7 @@
             /**
              * @var indicator
              * @type Array
-             * @describtion 雷达图各项指标
+             * @description 雷达图各项指标
              * @extends xCharts.series.radar
              */
             indicator: [
@@ -527,21 +527,21 @@
                     /**
                      * @var text
                      * @type String
-                     * @describtion 指标名称
+                     * @description 指标名称
                      * @extends xCharts.series.radar.indicator
                      */
                     text: '',
                     /**
                      * @var max
                      * @type Number
-                     * @describtion 指标取值范围的最大值
+                     * @description 指标取值范围的最大值
                      * @extends xCharts.series.radar.indicator
                      */
                     max: 100,
                     /**
                      * @var min
                      * @type Number
-                     * @describtion 指标取值范围的最大值
+                     * @description 指标取值范围的最大值
                      * @extends xCharts.series.radar.indicator
                      */
                     min: 0
@@ -550,7 +550,7 @@
             /**
              * @var data
              * @type Array
-             * @describtion 雷达图数据
+             * @description 雷达图数据
              * @extends xCharts.series.radar
              */
             data: [
@@ -558,14 +558,14 @@
                     /**
                      * @var name
                      * @type String
-                     * @describtion 数据项名称
+                     * @description 数据项名称
                      * @extends xCharts.series.radar.data
                      */
                     name: '',
                     /**
                      * @var value
                      * @type Array
-                     * @describtion 数据项对应所有指标的值的集合，其中的顺序必须和indicator中指标的顺序相对应。
+                     * @description 数据项对应所有指标的值的集合，其中的顺序必须和indicator中指标的顺序相对应。
                      * @extends xCharts.series.radar.data
                      */
                     value: []
