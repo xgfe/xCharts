@@ -13,7 +13,15 @@
     components.extend({legend: legend});
 
     function legend(messageCenter, config, type) {
-        if (!config.legend.show) return;
+
+        //show=false时不做显示处理
+        if(config.title.show === false) {
+            this._show = false;
+            return;
+        }else{
+            this._show = true;
+        }
+
         Component.call(this, messageCenter, config, type);
     }
 
@@ -439,10 +447,10 @@
              * @var show
              * @type Boolean
              * @extends xCharts.legend
-             * @default false
+             * @default true
              * @description 是否显示图例(legend)
              */
-            show: false,
+            show: true,
             /**
              * @var orient
              * @type String
