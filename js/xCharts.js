@@ -182,7 +182,7 @@
             //如果有相同的namespace，移除该事件
             for (var i = 0, l; l = list[eventName][i++];) {
                 if (l.nameSpace == nameSpace) {
-                    list[type].splice(i - 1, 1);
+                    list[eventName].splice(i - 1, 1);
                     break;
                 }
             }
