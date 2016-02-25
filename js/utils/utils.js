@@ -85,7 +85,6 @@
     }
 
     //原型继承
-    //TODO 修改覆盖
     function inherits(clazz, baseClazz) {
         var clazzPrototype = clazz.prototype;
 
@@ -117,8 +116,8 @@
      * ]
      */
     function getColor(palette) {
-        // TODO 判断palette的正确性
-        if (!palette) {
+
+        if (!palette && !Array.isArray(palette) ) {
             palette = [
                 '#2ec7c9', '#b6a2de', '#5ab1ef', '#ffb980', '#d87a80',
                 '#8d98b3', '#e5cf0d', '#97b552', '#95706d', '#dc69aa',
