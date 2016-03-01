@@ -15,11 +15,11 @@
     function legend(messageCenter, config, type) {
 
         //show=false时不做显示处理
-        if(config.title.show === false) {
-            this._show = false;
+        if (config.legend.show === false) {
+            this.show = false;
             return;
-        }else{
-            this._show = true;
+        } else {
+            this.show = true;
         }
 
         Component.call(this, messageCenter, config, type);
@@ -27,44 +27,68 @@
 
     legend.prototype.extend = xCharts.extend;
     legend.prototype.extend({
-        init: function (messageCenter, config, type) {
+        init: function (messageCenter, config) {
+
+            // 合并默认配置项
             this.legendConfig = utils.merage(defaultConfig(), config.legend);
-            this._series = config.series;
-            this.series = parseSeries(config.series, this.legendConfig.data, messageCenter, this.legendConfig);
+
+            this.legendSeries = parseSeries(config.series, this.legendConfig.data, messageCenter);
             this.originalHeight = messageCenter.originalHeight;
             this.originalWidth = messageCenter.originalWidth
             this.width = this.originalWidth - this.margin.left - this.margin.right;
             this.height = this.originalHeight - this.margin.top - this.margin.bottom;
 
+            //计算位置
+            this.groupPosition = calcPosition.call(this);
+
         },
-        render: function (ease, time) {
+        render: function () {
             var _this = this,
                 fontSize = _this.legendConfig.item.fontSize,
                 chartSize = _this.legendConfig.item.chartSize,
                 itemHeight = fontSize > chartSize ? fontSize : chartSize,
-                color = _this.legendConfig.item.color;
+                color = _this.legendConfig.item.color,
+                groupPosition = _this.groupPosition;
 
-            var groupPosition = _this.__calcPosition();//计算位置
+            // 添加g.xc-legend-group
+            var legendGroup = _this.svg.selectAll('.xc-legend-group')
+                .data([_this]);
+            legendGroup.enter().append('g')
+                .attr('class', 'xc-legend-group');
 
-
-            var legendGroup = _this.svg.selectAll('.xc-legend-group').data([_this]);
-            legendGroup.enter().append('g').attr('class', 'xc-legend-group');
+            // 设置group的偏移值
             legendGroup.attr('transform', "translate(" + groupPosition + ")");
-            var itemList = legendGroup.selectAll('.xc-legend-item').data(_this.series);
-            itemList.enter().append('g').attr("class", "xc-legend-item");
+
+            // 添加每个legendItemGroup
+            var itemList = legendGroup.selectAll('.xc-legend-item')
+                .data(_this.legendSeries);
+
+            itemList.enter().append('g')
+                .attr("class", "xc-legend-item");
+
+            // 如果动态更新数据时可能会出现item减少的情况，这里去掉多余的
             itemList.exit().remove();
+
             itemList.attr('transform', function (serie) {
-                this.isChecked = this.isChecked == undefined ? true : this.isChecked;//默认选中状态，给click事件用
-                return 'translate(' + serie.position + ')';
-            }).attr('fill', color)
+
+                    // 这里保存点击状态，默认选中
+                    // 为了刷新时只刷新位置，选中状态不变化
+                    this.isChecked = this.isChecked == undefined ?
+                        true : this.isChecked;
+
+                    return 'translate(' + serie.position + ')';
+                })
+                .attr('fill', color)
                 .attr('opacity', function () {
-                    return this.isChecked ? 1 : _this.legendConfig.item.opacity;
+                    return this.isChecked ?
+                        1 : _this.legendConfig.item.opacity;
                 });
 
             //因为事件是绑定在g上，所以里面的path和text可以删掉节约代码
             itemList.html("");
             //添加文字
-            itemList.append('text').attr('x', chartSize * 1.1)
+            itemList.append('text')
+                .attr('x', chartSize * 1.1)
                 .attr('y', function () {
                     return fontSize * 0.9;//减去一个偏移量,使其居中
                 })
@@ -72,29 +96,36 @@
                 .append('tspan')
                 .attr('dy', function () {
                     //为了文字和图居中
-                    if (fontSize > chartSize)
-                        return 0;
-                    else
-                        return (chartSize - fontSize) * 0.5;
+                    if (fontSize > chartSize) return 0;
+                    else return (chartSize - fontSize) * 0.5;
                 })
                 .text(function (serie) {
                     return serie.name;
-                })
+                });
+
 
             //添加图案
-            itemList.append('path').attr('d', function (serie) {
-                if (!pathD[serie.type]) {
-                    throw new Error("pathD." + serie.type + " not found")
-                }
-                ;
-                return pathD[serie.type](chartSize, itemHeight);
-            })
+            var legendPathD={};
+            itemList.append('path')
+                .attr('d', function (serie) {
+
+                    //这里新添一个图表需要在这里添加自己独特的图案路径
+                    if (!pathD[serie.type]) {
+                        throw new Error("pathD." + serie.type + " not found")
+                    }
+
+                    // 节约性能，因为图例的大小都是统一的，计算一次就够了
+                    if(!legendPathD[serie.type])  legendPathD[serie.type]=pathD[serie.type](chartSize, itemHeight);
+
+                    return legendPathD[serie.type];
+                })
                 .attr('stroke', function (serie) {
                     return serie.color;
                 })
                 .attr('fill', function (serie) {
                     return serie.color;
-                })
+                });
+
             _this.itemList = itemList;
         },
         ready: function () {
@@ -103,22 +134,39 @@
                 hoverColor = config.item.hoverColor,
                 defaultColor = config.item.color,
                 multiple = config.selectedMode != 'single',
-                opacity = config.item.opacity
+                opacity = config.item.opacity;
 
 
+            var nameList = multiple ?
+                this.legendSeries.map(function (serie) {
+                    return serie.name;
+                }) : [];
+
+            /**
+             * 点击legend事件
+             * 有多选和单选模式，
+             * 多选模式下，初始状态是全部选中，点击某一个legend，状态翻转
+             * 单选模式下，初始状态是全部选中，第一次点击某一个legend这个legend保持高亮，其他取消选中。这种模式下除了初始状态，其他都是有且仅有一个legend处于选中状态
+             * 刷新图例状态，触发legendClick事件
+             */
             _this.itemList.on('click.legend', function (data) {
                 this.isChecked = !this.isChecked;
                 if (multiple) {
                     //多选的情况下
                     d3.select(this).attr('opacity', this.isChecked ? 1 : opacity)
                 } else {
+                    // 单选，高亮自己，灰掉别人
                     _this.itemList.attr('opacity', opacity);
                     d3.select(this).attr('opacity', 1);
                 }
 
-                reload(data.name);
+                reload.call(_this,data.name,multiple,nameList);
             });
 
+            /**
+             * 鼠标移入，高亮对应的图表
+             * 触发legendMouseenter
+             */
             _this.itemList.on('mouseenter.legend', function (data) {
                 var color;
                 if (hoverColor == 'auto')
@@ -129,162 +177,236 @@
                 item.attr('fill', color);
                 _this.fire('legendMouseenter', data.name);
             });
+
+            /**
+             * 鼠标移除，移除高亮状态
+             * 触发 legendMouseleave
+             */
             _this.itemList.on('mouseleave.legend', function (data) {
                 var item = d3.select(this);
                 item.attr('fill', defaultColor);
 
                 _this.fire('legendMouseleave', data.name);
-            })
+            });
 
 
-            var nameList = multiple ? this.series.map(function (serie) {
-                return serie.name;
-            }) : [];
 
-            /**
-             * 分两种模式处理
-             * @param name
-             */
-            function reload(name) {
-                if (multiple) {
-                    //如果存在则删除，不存在则从_series中拿出添加
-                    var isAdd = true;
-                    for (var i = 0, s; s = nameList[i++];) {
-                        if (s == name) {
-                            nameList.splice(i - 1, 1);
-                            isAdd = false;
-                            break;
-                        }
-                    }
-                    if (isAdd)
-                        nameList.push(name);
 
-                    if (nameList.length == 0) _this.fire('tooltipNone');
-                    else _this.fire('tooltipShow');
 
-                } else {
-                    nameList = [name];
+        }
+    });
+
+    /**
+     * 分两种模式处理刷新
+     * 传递给接受者一个 name的数组
+     * @param name
+     */
+    function reload(name,multiple,nameList) {
+        if (multiple) {
+            //如果存在则删除，不存在则从_series中拿出添加
+            var isAdd = true;
+            for (var i = 0, s; s = nameList[i++];) {
+                if (s == name) {
+                    nameList.splice(i - 1, 1);
+                    isAdd = false;
+                    break;
                 }
-
-                _this.fire('legendClick', nameList);
             }
+            if (isAdd)
+                nameList.push(name);
 
-        },
-        //计算每一个serie的位置，并根据配置计算返回group位置
-        __calcPosition: function () {
-            var config = this.legendConfig,
-                _this = this,
-                series = _this.series,
-                itemGap = config.itemGap,
-                width = _this.width,
-                height = _this.height,
-                fontSize = _this.legendConfig.item.fontSize,
-                chartSize = _this.legendConfig.item.chartSize,
-                itemHeight = fontSize > chartSize ? fontSize : chartSize,
-                x = config.x,
-                y = config.y,
-                orient = config.orient,
-                margin = _this.margin,
-                originalWidth = _this.originalWidth,
-                originalHeight = _this.originalHeight
+            if (nameList.length == 0) this.fire('tooltipNone');
+            else this.fire('tooltipShow');
 
-            //TODO 拆分下
-            var offsetLength = config.item.chartSize * 1.1,
-                textSpan = document.createElement('span');
-            textSpan.style.fontSize = config.item.fontSize + 'px';
-            textSpan.style.margin = "0px";
-            textSpan.style.padding = "0px";
-            textSpan.style.border = "none";
-            textSpan.style.position = 'absolute';
-            textSpan.style.visibility = "hidden";
-            document.body.appendChild(textSpan);
+        } else {
+            nameList = [name];
+        }
 
-            var totalWidth = 0, totoalHeight = 0, maxWidth, maxHeight, colWidth = 0;
-            series.forEach(function (serie) {
-                textSpan.innerText == undefined ? textSpan.textContent = serie.name : textSpan.innerText = serie.name; //兼容firefox
-                //计算name的长度
-                var itemWidth = parseFloat(textSpan.offsetWidth) + offsetLength;
-                serie.position = [totalWidth, totoalHeight];
+        this.fire('legendClick', nameList);
+    }
 
-                if (orient != 'vertical') {
-                    //水平布局的情况
-                    totalWidth += itemWidth + itemGap;
-                    if (totalWidth > width) {
-                        maxWidth = width;
-                        totalWidth = 0;
-                        totoalHeight += itemHeight * 1.1;//加上高度的0.1的偏移量做分割
-                    }
-                } else {
-                    //垂直布局
-                    colWidth = d3.max([colWidth, itemWidth])
-                    totoalHeight += itemHeight + itemGap;
-                    if (totoalHeight > height) {
-                        maxHeight = height;
-                        totoalHeight = 0;
-                        totalWidth += colWidth * 1.1;
-                    }
-                }
-            })
-            //document.body.removeChild(textSpan);
-            var posX, posY, gap = 30;
-            maxWidth = maxWidth ? maxWidth : totalWidth;
-            maxHeight = maxHeight ? maxHeight : totoalHeight;
+
+    /**
+     * 计算每一个serie的位置，并根据配置计算返回group位置
+     * 此函数会根据计算结果修改margin的值
+     * @returns {[x,y]} 返回g.xc-legend-group 的xy位置
+     */
+    function calcPosition() {
+        var _this = this,
+            config = _this.legendConfig,
+            series = _this.legendSeries,
+            itemGap = config.itemGap,
+            width = _this.width,
+            height = _this.height,
+            fontSize = _this.legendConfig.item.fontSize,
+            chartSize = _this.legendConfig.item.chartSize,
+            itemHeight = fontSize > chartSize ? fontSize : chartSize,
+            configX = config.x,
+            configY = config.y,
+            orient = config.orient,
+            margin = _this.margin,
+            originalWidth = _this.originalWidth;
+
+
+        var offsetLength = config.item.chartSize * 1.1;
+        var nameList = series.map(function(serie){
+           return serie.name;
+        });
+
+        //计算name的长度
+        var widthList = calcTextWidth(nameList,config.item.chartSize,offsetLength);
+
+        // 计算每个legendSerie的x,y位置
+        var totalWidth = 0, totoalHeight = 0, maxWidth=0, maxHeight=0, colWidth = 0;
+        series.forEach(function (serie,index) {
+
+            var itemWidth = widthList[index];
+            serie.position = [totalWidth, totoalHeight];
+
             if (orient != 'vertical') {
-                maxHeight += itemHeight;//最后一行高度未算到
-                if (x == 'right')
-                    posX = originalWidth - margin.right - maxWidth;
-                else if (x == 'center')
-                    posX = (width - maxWidth) / 2 + margin.left;
-                else
-                    posX = margin.left;//left
+                //水平布局的情况
+                totalWidth += itemWidth + itemGap;
 
-                if (y == "top") {
-                    posY = margin.top;
-                    margin.top += totoalHeight + gap;
-                }
-                else {
-                    posY = height - totoalHeight + margin.top;
-                    margin.bottom += totoalHeight + gap;
+                // 如果当前行的宽度已经大于当前可绘画区域的最大宽度，进行换行
+                if (totalWidth > width) {
+                    maxWidth = width;
+                    totalWidth = 0;
+                    totoalHeight += itemHeight * 1.1;//加上高度的0.1的偏移量做分割
                 }
             } else {
-                maxWidth += colWidth;//最后一列的宽度未算到
-                if (x == 'right') {
-                    posX = originalWidth - margin.right - maxWidth;
-                    margin.right += maxWidth + gap;
-                } else {
-                    posX = 0;
-                    margin.left += maxWidth + gap;
-                }
+                //垂直布局
 
-                if (y == 'center') {
-                    posY = (height - maxHeight) / 2 + margin.top;
-                } else if (y == 'bottom') {
-                    posY = (height - maxHeight) + margin.top;
+                // 一列的宽度取决于当前列所有元素的最大宽度
+                colWidth = d3.max([colWidth, itemWidth]);
+                totoalHeight += itemHeight + itemGap;
+
+                // 一列已经超过最大高度，起一列新列
+                if (totoalHeight > height) {
+                    maxHeight = height;
+                    totoalHeight = 0;
+                    totalWidth += colWidth * 1.1;
                 }
-                else
-                    posY = margin.top;
             }
-            return [posX, posY]
-        }
-    })
 
-    function parseSeries(series, data, messageCenter, config) {
+        });
+
+        var posX, posY, gap = 30;
+        maxWidth = maxWidth ? maxWidth : totalWidth; // 只有一行时，maxWidth为0，取totalWidth为这一行的宽度，高度同理
+        maxHeight = maxHeight ? maxHeight : totoalHeight;
+
+        if (orient != 'vertical') {
+            maxHeight += itemHeight;//最后一行高度未算到
+            if (configX == 'right')
+                posX = originalWidth - margin.right - maxWidth;
+            else if (configX == 'center')
+                posX = (width - maxWidth) / 2 + margin.left;
+            else
+                posX = margin.left;//left
+
+            if (configY == "top") {
+                posY = margin.top;
+                margin.top += totoalHeight + gap;
+            }
+            else {
+                posY = height - totoalHeight + margin.top;
+                margin.bottom += totoalHeight + gap;
+            }
+        } else {
+            maxWidth += colWidth;//最后一列的宽度未算到
+            if (configX == 'right') {
+                posX = originalWidth - margin.right - maxWidth;
+                margin.right += maxWidth + gap;
+            } else {
+                posX = 0;
+                margin.left += maxWidth + gap;
+            }
+
+            if (configY == 'center') {
+                posY = (height - maxHeight) / 2 + margin.top;
+            } else if (configY == 'bottom') {
+                posY = (height - maxHeight) + margin.top;
+            }
+            else
+                posY = margin.top;
+        }
+        return [posX, posY]
+    }
+
+    /**
+     * 计算当前文字的长度，放入浏览器中计算
+     * @param fontSize 文字大小
+     * @param offsetWidth 需要追加的长度
+     * @param {Array} list 需要计算的文字
+     */
+    function calcTextWidth(list,fontSize,offsetWidth){
+        if(!Array.isArray(list)){
+            list=[list];
+        }
+
+        if(offsetWidth === undefined){
+            offsetWidth=0;
+        }
+
+        /**
+         * 添加一个隐藏的span
+         * 设置span的文字来获取文字在浏览器里实际的宽高
+         */
+        var textSpan = document.createElement('span');
+        textSpan.style.fontSize = fontSize + 'px';
+        textSpan.style.margin = "0px";
+        textSpan.style.padding = "0px";
+        textSpan.style.border = "none";
+        textSpan.style.position = 'absolute';
+        textSpan.style.visibility = "hidden";
+        document.body.appendChild(textSpan);
+
+        var widthList=[];
+        list.forEach(function(text){
+
+            // 给span设置文字
+            textSpan.innerText === undefined ? textSpan.textContent = text : textSpan.innerText = text; //兼容firefox
+
+            //获取实际宽度,并在实际宽度上加上偏移宽度
+            var itemWidth = parseFloat(textSpan.offsetWidth) + offsetWidth;
+            widthList.push(itemWidth);
+        });
+
+        //移除这个span,因为用不到了
+        document.body.removeChild(textSpan);
+        return widthList;
+    }
+
+    /**
+     * 对不同图表类型的serie进行提取成legendSereis统一类型
+     * @param series
+     * @param data
+     * @param messageCenter
+     * @param config
+     * @returns {Array}
+     */
+    function parseSeries(series, data, messageCenter) {
         //首先对series按照类型分类，方便针对不同的chart做不同的处理
-        var seriesObj = {}, ret = [];
+        var seriesClassify = {}, legendSeries = [];
+
+        // 对series按照type类型进行分类,
+        // 这里是为后续的多图联动做铺垫
         series.forEach(function (serie) {
             var type = serie.type;
             if (!type) return;
-            seriesObj[type] || (seriesObj[type] = []);
-            seriesObj[type].push(serie);
+            seriesClassify[type] || (seriesClassify[type] = []);
+            seriesClassify[type].push(serie);
         });
-        for (var k in seriesObj)
-            if (seriesObj.hasOwnProperty(k)) {
-                var parseFn = parseObj[k];
-                if (parseFn) ret = ret.concat(parseFn(seriesObj[k], data, messageCenter));
+
+
+        for (var type in seriesClassify)
+            if (seriesClassify.hasOwnProperty(type)) {
+                var parseFn = speciallyParseFn(type);
+                if (parseFn) legendSeries = legendSeries.concat(parseFn(seriesClassify[type], data, messageCenter));
             }
 
+        //多图表共存时，需要对legendList的name去重，否则会出现name一样，legend图例颜色不一样的情况
 
-        return ret;
+        return legendSeries;
     }
 
     /**
@@ -292,58 +414,75 @@
      * 其实就是加入了一个color属性，顺便把idx加上了
      * // TODO 不支持name重复问题，待解决
      */
-    var parseObj = {
-        line: lineParse,
-        pie: pieAndRadar,
-        radar: pieAndRadar,
-        scatter: lineParse,
-        funnel: pieAndRadar,
-        bar: lineParse,
+    function speciallyParseFn(type) {
+        switch (type) {
+            case "radar":
+            case "funnel":
+            case "pie":
+                return multiple;
+                break;
+            default:
+                return defaultParse;
+        }
     }
 
     /**
-     * 处理饼图和雷达图
+     * 处理饼图和雷达图之类，一个serie里面包括多个legend实例
      * @param series
      * @param data
      * @param messageCenter
      */
-    function pieAndRadar(series, data, messageCenter) {
-        var ret = [];
+    function multiple(series, data, messageCenter) {
+        var legendList = [];
         series.forEach(function (serie) {
             var nameIdx = {}, colorIdx = 0, type = serie.type;
             serie.data.forEach(function (d) {
                 var name = d.name, dIdx;
+
+                // 防止重复的名字出现
                 if (nameIdx[name] == undefined) {
-                    nameIdx[name] = colorIdx;
+                    nameIdx[name] = colorIdx++;
                     dIdx = colorIdx;
-                    colorIdx++;
                 } else {
+                    // 重复出现的名字赋予同一种颜色
                     dIdx = nameIdx[name];
                 }
                 d.idx = dIdx;
 
                 if (valueInArray(name, data)) {
                     d.color = messageCenter.getColor(dIdx);
+
+                    //携带type类型，后面绘制legend图例有需要
                     d.type = type;
-                    ret.push(d);
+                    legendList.push(d);
                 }
 
             });
         });
-        return ret;
+        return legendList;
     }
 
-    function lineParse(series, data, messageCenter) {
+    /**
+     * 默认转化规则，适合折线图这种一个serie对象一个图形的图表
+     * @param series
+     * @param data
+     * @param messageCenter
+     * @returns {Array}
+     */
+    function defaultParse(series, data, messageCenter) {
         var dataInSeries = [], getColor = messageCenter.getColor;
         series.forEach(function (serie, idx) {
-            if (!serie.idx)
-                serie.idx = idx;
+            if (serie.idx === undefined) serie.idx = idx;
+
+            //name出现在legend.data中
             if (valueInArray(serie.name, data)) {
-                //name出现在legend.data中
+
+                // TODO  这里只有折线图可用，等把其他图表的源码看完后回来修改
                 if (serie.lineStyle && serie.lineStyle.color !== 'auto')
                     serie.color = serie.lineStyle.color;
                 else
                     serie.color = getColor(idx);
+
                 dataInSeries.push(serie);
             }
         });
@@ -372,7 +511,7 @@
         'funnel': getFunnelPath,
         'bar': getBarPath,
     }
-    // TODO 改成闭包，节约性能
+
     /**
      * 折线图图例
      * @param size 正方形 宽度
@@ -447,10 +586,10 @@
              * @var show
              * @type Boolean
              * @extends xCharts.legend
-             * @default true
+             * @default false
              * @description 是否显示图例(legend)
              */
-            show: true,
+            show: false,
             /**
              * @var orient
              * @type String
