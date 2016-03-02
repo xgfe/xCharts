@@ -94,7 +94,7 @@
                 var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
                 var formatter = data._serie.formatter||tooltipFormatter||defaultFormatter;
                 tooltip.show();
-                tooltip.html(formatter(data._serie.name,data.data[0],data.data[1]));
+                tooltip.setTooltipHtml(formatter(data._serie.name,data.data[0],data.data[1]));
                 tooltip.setPosition([x, y]);
             })
 

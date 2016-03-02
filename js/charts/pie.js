@@ -236,7 +236,7 @@
                 var tooltipFormatter = tooltip.tooltipConfig.formatter,
                     pieFormatter = _self.pieConfig.formatter;
                 var formatter = pieFormatter || tooltipFormatter || defaultFormatter;
-                tooltip.html(formatter(bindData.data.name, bindData.data.value));
+                tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
                 tooltip.setPosition([x,y], 10, 10);
                 tooltip.show();
 

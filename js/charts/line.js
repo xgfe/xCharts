@@ -283,7 +283,7 @@
                         xData = axisConfig[data._serie.xAxisIndex].tickFormat(xData);
                         var title = "<p>" + xData + "</p>";
                         tooltip.show();
-                        tooltip.html(title + html);
+                        tooltip.setTooltipHtml(title + html);
                         var event = d3.event;
                         var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
                         tooltip.setPosition([x, y]);

@@ -439,7 +439,7 @@
                         });
                     }
                 }
-                tooltip.html(formatter(indicator, valueList));
+                tooltip.setTooltipHtml(formatter(indicator, valueList));
                 tooltip.setPosition([x,y], 10, 10);
                 tooltip.show();
                 var areaPointsList = _self.areaList.selectAll('.xc-radar-area-point');

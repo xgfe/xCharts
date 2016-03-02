@@ -122,7 +122,7 @@
                 var formatter = data._serie.formatter||tooltipFormatter||defaultFormatter;
 
                 var title="<p>"+data._serie.name+"</p>";
-                tooltip.html(title+formatter(data.name,data.value, (data.percentage*100).toFixed(1) ));
+                tooltip.setTooltipHtml(title+formatter(data.name,data.value, (data.percentage*100).toFixed(1) ));
                 tooltip.setPosition([x, y]);
 
             })
