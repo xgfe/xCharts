@@ -290,9 +290,9 @@
              * @extends xCharts.tooltip
              * @description 是否显示tooltip提示框
              * @type Boolean
-             * @default false
+             * @default true
              */
-            show: false,
+            show: true,
             /**
              * @var trigger
              * @extends xCharts.tooltip

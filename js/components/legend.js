@@ -229,7 +229,7 @@
     /**
      * 计算每一个serie的位置，并根据配置计算返回group位置
      * 此函数会根据计算结果修改margin的值
-     * @returns {[x,y]} 返回g.xc-legend-group 的xy位置
+     * @returns {Array} 返回g.xc-legend-group 的xy位置
      */
     function calcPosition() {
         var _this = this,
