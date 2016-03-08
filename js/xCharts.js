@@ -1,5 +1,6 @@
 /**
  * Created by liuyang on 15/10/23.
+ * TODO 当出现不支持的参数时，忽略还是报错关闭绘制
  */
 (function (window) {
 
@@ -52,7 +53,15 @@
             //深复制config
             this.config = xCharts.utils.copy(config, true);
             this.getColor = xCharts.utils.getColor(config.color);
+
             this.firstDrawing(this.config);
+
+            //try{
+            //    this.firstDrawing(this.config);
+            //}catch(e){
+            //    console.error(e.stack);
+            //}
+
             // console.timeEnd("draw charts");
         },
         firstDrawing: function (config) {

@@ -20,18 +20,23 @@ function hadle(path){
                 return;
             }
             var data=fs.readFileSync(path,"utf-8");
-            var parseData= dox.parseComments(data);
-            parseData.forEach(function(d){
-                //delete d.code;
-                var tags= d.tags;
-                for(var i=0;i<tags.length;i++){
-                    if(tags[i].type=='var'){ //var特有属性表示是xCharts.config中的一员
-                        apiData.push(tags);
-                        break;
-                    }
-                }
 
-            })
+            try {
+                var parseData = dox.parseComments(data);
+                parseData.forEach(function (d) {
+                    //delete d.code;
+                    var tags = d.tags;
+                    for (var i = 0; i < tags.length; i++) {
+                        if (tags[i].type == 'var') { //var特有属性表示是xCharts.config中的一员
+                            apiData.push(tags);
+                            break;
+                        }
+                    }
+
+                })
+            } catch (e) {
+                console.log(e)
+            }
 
             //apiData.push(parseData);
 
