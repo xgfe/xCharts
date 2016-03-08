@@ -219,7 +219,7 @@
             __tooltipReady: function () {
                 var _this = this;
 
-                if (!this.config.tooltip || !this.config.tooltip.show) return;//未开启tooltip
+                if (!this.config.tooltip || this.config.tooltip.show === false) return;//未开启tooltip
 
                 if (this.config.tooltip.trigger == 'axis') {
 
