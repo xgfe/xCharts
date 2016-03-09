@@ -31,6 +31,8 @@
     utils['inherits']=inherits;
     utils['loop']=loop;
     utils['getColor']=getColor;
+    utils['calcTextWidth']=calcTextWidth;
+
     /**
      * 复制函数
      * @param form 需要复制的对象
@@ -130,6 +132,60 @@
         return function (idx) {
             return palette[idx % palette.length];
         }
+    }
+
+    /**
+     * 计算当前文字的长度，放入浏览器中计算
+     * @param fontSize 文字大小
+     * @param offsetWidth 需要追加的长度
+     * @param {Array} list 需要计算的文字
+     */
+    function calcTextWidth(list,fontSize,offsetWidth,offsetHeight){
+        if(!Array.isArray(list)){
+            list=[list];
+        }
+
+        if(offsetWidth === undefined){
+            offsetWidth=0;
+        }
+
+        if(offsetHeight === undefined){
+            offsetHeight=0;
+        }
+
+
+        /**
+         * 添加一个隐藏的span
+         * 设置span的文字来获取文字在浏览器里实际的宽高
+         */
+        var textSpan = document.createElement('span');
+        textSpan.style.fontSize = fontSize + 'px';
+        textSpan.style.margin = "0px";
+        textSpan.style.padding = "0px";
+        textSpan.style.border = "none";
+        textSpan.style.position = 'absolute';
+        textSpan.style.visibility = "hidden";
+        document.body.appendChild(textSpan);
+
+        var widthList=[],heightList=[];
+        list.forEach(function(text){
+
+            // 给span设置文字
+            textSpan.innerText === undefined ? textSpan.textContent = text : textSpan.innerText = text; //兼容firefox
+
+            //获取实际宽度,并在实际宽度上加上偏移宽度
+            var itemWidth = parseFloat(textSpan.offsetWidth) + offsetWidth;
+            var itemHeight = parseFloat(textSpan.offsetHeight) + offsetHeight;
+            widthList.push(itemWidth);
+            heightList.push(itemHeight);
+        });
+
+        //移除这个span,因为用不到了
+        document.body.removeChild(textSpan);
+        return {
+            widthList:widthList,
+            heightList:heightList
+        };
     }
 
 }())

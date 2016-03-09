@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>折线图</title>
+    <script src="../bower_components/d3/d3.js"></script>
+    <script src="../js/xCharts.js"></script>
+    <script src="../js/utils/utils.js"></script>
+    <script src="../js/components/Component.js"></script>
+    <script src="../js/components/axis.js"></script>
+    <script src="../js/charts/Chart.js"></script>
+    <script src="../js/charts/line.js"></script>
+    <link rel="stylesheet" href="../js/css/xCharts.css"/>
+    <style>
+        h1,h2,p{
+            text-align: center;
+        }
+        .chart{
+            margin:0 auto;
+            width: 700px;
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+<h2>y轴是value</h2>
+<div class="chart one"></div>
+
+<script>
+    //单轴折线图
+    var one = xCharts(document.querySelector('.one'));
+    var config_one={
+        xAxis: [
+            {
+                type: 'time',
+                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
+                tickFormat: function (d, i) { //格式化每个x显示
+                    d = new Date(d);
+                    return d.getMonth() + '/' + d.getDay();
+                },
+
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value',
+            }
+        ],
+        series: [
+            {
+                name: '叠加1',
+                type: 'line',
+                lineStyle:{
+                    color:'red',
+                    width:5,
+                    radius:7
+                },
+                smooth: false,
+                data: [20, 20, 20, 20, 20, 20, 20]
+            }
+        ]
+    }
+    one.loadConfig(config_one)
+
+</script>
+</body>
+</html>

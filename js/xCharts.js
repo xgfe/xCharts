@@ -42,7 +42,7 @@
             this.div = container.append('div').attr('class', 'xc-container');
             this.svg = this.div.append('svg').attr('class', 'xc-svg').attr('width', this.originalWidth).attr('height', this.originalHeight);
             this.main = this.svg.append('g').attr('class', 'xc-main');
-            this.margin = {top: 0, left: 50, right: 50, bottom: 30};
+            this.margin = {top: 7, left: 10, right: 10, bottom: 20};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
             return this;
@@ -66,7 +66,7 @@
         },
         firstDrawing: function (config) {
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
-            var componentsList = ['title', 'tooltip', 'legend', 'animation', 'xAxis', 'yAxis', 'autoRefresh'];
+            var componentsList = ['title', 'tooltip', 'legend', 'animation', 'yAxis', 'xAxis', 'autoRefresh'];
             var component, i = 0;
             this.components = {};
             this.charts = {};
