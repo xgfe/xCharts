@@ -19,7 +19,7 @@
             var _this = this;
             _this.series = parseSeries(series, _this);
         },
-        render: function (ease, time) {
+        render: function (animationEase, animationTime) {
             //注意一个serie就是一个图
             var _this = this;
             var funnelGroup = _this.main.selectAll('.xc-funnel-group').data(_this.series);
@@ -112,7 +112,7 @@
             });
         },
         __tooltipReady:function(){
-            if (!this.config.tooltip || !this.config.tooltip.show || this.config.tooltip.trigger=='axis') return;//未开启tooltip
+            if (!this.config.tooltip || this.config.tooltip.show===false || this.config.tooltip.trigger=='axis') return;//未开启tooltip
             var _this=this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
@@ -128,11 +128,11 @@
             })
             _this.funnelSection.on('mouseenter.funnel',function(data){
                 d3.select(this).attr('opacity',data._serie.itemStyle.opacity);
-                tooltip.show();
+                tooltip.showTooltip();
             })
             _this.funnelSection.on('mouseleave.funnel',function(){
                 d3.select(this).attr('opacity',1);
-                tooltip.hidden();
+                tooltip.hiddenTooltip();
             })
         }
 
