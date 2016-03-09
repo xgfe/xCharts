@@ -117,13 +117,15 @@
 
             this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
 
+            var animationTime = this.animationTime;
+            var animationEase = this.animationEase;
 
             //第二步 通知已有组件刷新
             var components = this.components, charts = this.charts;
             for (var k in components) {
                 if (components.hasOwnProperty(k)) {
                     var component = components[k];
-                    component.refresh();
+                    component.refresh(animationEase,animationTime);
                 }
             }
 
@@ -133,7 +135,7 @@
             for (var k in charts) {
                 if (charts.hasOwnProperty(k)) {
                     var chart = charts[k];
-                    chart.refresh();
+                    chart.refresh(animationEase,animationTime);
                 }
             }
 

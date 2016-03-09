@@ -45,7 +45,7 @@
             this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
             this.originalWidth = this.messageCenter.originalWidth
             this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
-            this.render('linear', 0);//刷新
+            this.render(animationEase, animationTime);//刷新
         },
         updateSeries: function (series) {
 

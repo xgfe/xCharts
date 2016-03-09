@@ -18,6 +18,7 @@
         line.prototype.extend = xCharts.extend;
         line.prototype.extend({
             init: function (messageCenter, config, type, series) {
+
                 this.xAxisScale = messageCenter.xAxisScale;
                 this.yAxisScale = messageCenter.yAxisScale;
                 this.series = this.__parseSeries(series, config);

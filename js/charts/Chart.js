@@ -22,10 +22,22 @@
         Component.call(this,messageCenter,config,type);
     }
 
-    Chart.prototype={
-        constructor:Chart
-    }
+    utils.inherits(Chart,Component);
+
+    Chart.prototype.extend = xCharts.extend;//添加extends函数
+
+    Chart.prototype.extend({
+        refresh: function (animationEase, animationTime) {
+
+            //当容器改变时，刷新当前图表
+            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
+            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
+            this.originalWidth = this.messageCenter.originalWidth
+            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
+            this.render(animationEase, animationTime);//刷新
+        }
+    })
 
     xCharts.charts.extend({Chart:Chart});
-    utils.inherits(Chart,Component);
+
 }(window))

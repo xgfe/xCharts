@@ -17,7 +17,8 @@
 
     var chartList={};
 
-    d3.select(window).on('resize.refresh',function(e){
+    d3.select(window).on('resize.refresh',function(){
+
         for(var k in chartList){
             if(chartList.hasOwnProperty(k)) chartList[k].resize();
         }
@@ -33,6 +34,8 @@
     resize.prototype.extend({
         init:function(messageCenter, config, type, series){
             this.config = utils.merage(defaultConfig,config[type]);
+            messageCenter.animationEase = this.config.animationEase;
+            messageCenter.animationTime = this.config.animationTime;
         },
         ready:function(){
             // 比动画时间多1S
@@ -42,7 +45,7 @@
 
             var resizeFn = utils.throttle(function(){
                 _this.messageCenter.refresh();
-            },animationTime+1000,true);
+            },animationTime+300,true);
 
             _this.resize = resizeFn;
 
@@ -92,9 +95,9 @@
          * @type Number
          * @description 当容器改变时，刷新动画时间,单位ms
          * @extends xCharts
-         * @default 2000
+         * @default 500
          */
-        animationTime:2000
+        animationTime:500
     }
 
 }(window))
