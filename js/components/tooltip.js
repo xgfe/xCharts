@@ -171,7 +171,7 @@
             _this.tooltipShow = true;
             _this.tooltip.style( {visibility: 'visible'} );
             // 显示线条
-            _this.axisLine.attr('opacity', 1);
+            if(this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 1);
 
 
         },
@@ -184,7 +184,7 @@
             _this.tooltip.style({visibility: 'hidden'});
 
             // 隐藏线条
-            _this.axisLine.attr('opacity', 0);
+            if(this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 0);
             _this.main.selectAll('.xc-tooltip-line').attr('opacity', 0);
         },
         setPosition: function (position, offsetX, offsetY) {
