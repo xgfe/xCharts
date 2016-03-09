@@ -15,7 +15,7 @@
         /**
          * 这里跟其他组件不一样，即使用户不愿意显示坐标轴，也必须初始化(init)，不然其他图表会拿不到比例尺导致绘图失败
          */
-        this._show=true;
+        this._show = true;
         components['Component'].call(this, messageCenter, config, type);
 
     }
@@ -26,12 +26,7 @@
         init: function (messageCenter, config, type, series) {
             this.isXAxis = type === 'xAxis';
             this.axisConfig = config[type];
-            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
-            this.height = messageCenter.originalHeight - messageCenter.margin.top - messageCenter.margin.bottom;//计算剩余容器高
-
-
             this.series = series;
-
 
             var scales = [];
             for (var i = 0; i < this.axisConfig.length; i++) {
@@ -44,7 +39,11 @@
                 // 计算比例尺scale
                 var scale = axisScale(config, i, this);
 
-                calcAxisMargin(this, this.isXAxis, config, scale);
+                // 这里判断，如果domain是NAN证明是legend取消了所有显示，保持上一个不变
+                var doamin = scale.domain();
+                if (isNaN(doamin[0]) && isNaN(doamin[1])) scale = this.scales[i];
+
+                if (!this.legendRefresh) calcAxisMargin(this, this.isXAxis, config, scale);
 
 
                 this.axisConfig[i] = config;
@@ -59,7 +58,7 @@
             this.height = messageCenter.originalHeight - messageCenter.margin.top - messageCenter.margin.bottom;//计算剩余容器高
             this.range = this.isXAxis ? [0, this.width] : [this.height, 0];
 
-            setScaleRange(scales,this.range);
+            setScaleRange(scales, this.range);
 
             this.messageCenter[this.type + 'Scale'] = scales;
             this.scales = scales;
@@ -134,8 +133,11 @@
                     }
 
                 });
+                // 给个标识，这样就不用去计算margin的值
+                _this.legendRefresh = true;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render('linear', 0);
+                _this.render('linear', 1000);
+                _this.legendRefresh = false;
             });
         }
     });
@@ -144,12 +146,12 @@
      * 设置scale
      * @param scales
      */
-    function setScaleRange(scales,range) {
+    function setScaleRange(scales, range) {
 
         scales.forEach(function (scale) {
             if (scale.scaleType === "value" || scale.scaleType === "time") scale.range(range);
-            else if(scale.scaleType === "barCategory") scale.rangeRoundBands(range, 0, 0.1);
-            else if(scale.scaleType === "category")  scale.rangeRoundPoints(range);
+            else if (scale.scaleType === "barCategory") scale.rangeRoundBands(range, 0, 0.1);
+            else if (scale.scaleType === "category")  scale.rangeRoundPoints(range);
 
         });
     }
@@ -171,6 +173,8 @@
             // 这里默认14的字体大小，也不知道有没有影响，囧
             var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
             var maxWidth = d3.max(widthList);
+
+            maxWidth = maxWidth == undefined ? 0 : maxWidth;
 
             if (config.position === 'right') {
                 ctx.margin.right += maxWidth;
