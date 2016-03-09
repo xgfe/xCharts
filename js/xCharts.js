@@ -49,24 +49,16 @@
         },
         loadConfig: function (config) {
             //加入时间测试
-            // console.time("draw charts")
             //深复制config
             this.config = xCharts.utils.copy(config, true);
             this.getColor = xCharts.utils.getColor(config.color);
 
             this.firstDrawing(this.config);
 
-            //try{
-            //    this.firstDrawing(this.config);
-            //}catch(e){
-            //    console.error(e.stack);
-            //}
-
-            // console.timeEnd("draw charts");
         },
         firstDrawing: function (config) {
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
-            var componentsList = ['title', 'tooltip', 'legend', 'animation', 'yAxis', 'xAxis', 'autoRefresh'];
+            var componentsList = ['title', 'tooltip', 'legend', 'animation', 'yAxis', 'xAxis', 'resize'];
             var component, i = 0;
             this.components = {};
             this.charts = {};
@@ -113,6 +105,7 @@
 
                 this.charts[type] = new chartClass(this, config);
             }
+
         },
         refresh: function () {
             //console.time("refresh time");
@@ -123,6 +116,7 @@
             this.margin = xCharts.utils.copy(this.originMargin);
 
             this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
+
 
             //第二步 通知已有组件刷新
             var components = this.components, charts = this.charts;
@@ -210,7 +204,9 @@
                 l.callback.apply('', args);
             })
         }
-    })
+    });
+
+
 
     //和jquery类似，这样做new init的实例能访问到xCharts.prototype上的属性和方法
     xCharts.prototype.init.prototype = xCharts.prototype;

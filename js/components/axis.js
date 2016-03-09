@@ -15,7 +15,8 @@
         /**
          * 这里跟其他组件不一样，即使用户不愿意显示坐标轴，也必须初始化(init)，不然其他图表会拿不到比例尺导致绘图失败
          */
-        xCharts.components['Component'].call(this, messageCenter, config, type);
+        this._show=true;
+        components['Component'].call(this, messageCenter, config, type);
 
     }
 
@@ -64,7 +65,7 @@
             this.scales = scales;
 
         },
-        render: function (ease, durationTime) {
+        render: function (animationEase, animationTime) {
             var type = this.type;
             var scales = this.scales;
 
@@ -90,8 +91,8 @@
 
                 axisGroup.attr('transform', translate.call(this, config))
                     .transition()
-                    .ease(ease)
-                    .duration(durationTime)
+                    .ease(animationEase)
+                    .duration(animationTime)
                     .call(axis);
 
 
