@@ -18,10 +18,10 @@
 
         //show=false时不做显示处理
         if (config.tooltip.show === false) {
-            this.show = false;
+            this._show = false;
             return;
         } else {
-            this.show = true;
+            this._show = true;
         }
 
         //继承属性
