@@ -34,8 +34,8 @@
     resize.prototype.extend({
         init:function(messageCenter, config, type, series){
             this.config = utils.merage(defaultConfig,config[type]);
-            messageCenter.animationEase = this.config.animationEase;
-            messageCenter.animationTime = this.config.animationTime;
+            messageCenter.refreshAnimationEase = this.config.animationEase;
+            messageCenter.refreshAnimationTime = this.config.animationTime;
         },
         ready:function(){
             // 比动画时间多1S
