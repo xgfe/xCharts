@@ -94,9 +94,9 @@
          * @type Number
          * @description 当容器改变时，刷新动画时间,单位ms
          * @extends xCharts.resize
-         * @default 500
+         * @default 300
          */
-        animationTime:500
+        animationTime:300
     }
 
 }(window))

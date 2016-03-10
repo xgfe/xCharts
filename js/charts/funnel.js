@@ -22,8 +22,13 @@
         render: function (animationEase, animationTime) {
             //注意一个serie就是一个图
             var _this = this;
-            var funnelGroup = _this.main.selectAll('.xc-funnel-group').data(_this.series);
-            funnelGroup.enter().append('g').attr('class', 'xc-funnel-group');
+            var animationConfig = _this.config.animation;
+
+            var funnelGroup = _this.main.selectAll('.xc-funnel-group')
+                .data(_this.series);
+
+            funnelGroup.enter().append('g')
+                .attr('class', 'xc-funnel-group');
             funnelGroup.exit().remove();//updateSeries时，删除多余的组
 
             funnelGroup.attr('transform', function (serie) {
@@ -33,54 +38,86 @@
             var funnelSection = funnelGroup.selectAll('.xc-funnel-section').data(function (serie) {
                 return serie.data;
             });
-            funnelSection.enter().append('path').attr('class','xc-funnel-section');
+            funnelSection.enter().append('path')
+                .attr('class','xc-funnel-section');
 
-            funnelSection.attr('d', function (d, i) {
-                return buildFunnelPath(d.pathArr);
-            })
-                .attr('fill', function (d) {
+            funnelSection.attr('fill', function (d) {
                     return _this.getColor(d.idx);
+                })
+                .transition()
+                .ease(animationEase)
+                .duration(animationTime)
+                .attrTween('d', function (d) {
+                    this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
+                    var interpolate = d3.interpolate(this.pathArr, d.pathArr);
+                    this.pathArr = d.pathArr;
+                    return function(t){
+                        return buildFunnelPath(interpolate(t));
+                    }
                 });
 
             //画label
-            var funnelLabel = funnelGroup.selectAll('.xc-funnel-label').data(function (serie) {
-                return serie.data;
-            });
-            funnelLabel.enter().append('g').attr('class', 'xc-funnel-label');
+            var funnelLabel = funnelGroup.selectAll('.xc-funnel-label')
+                .data(function (serie) {
+                    return serie.data;
+                });
+
+            var transitionStr = "opacity "+animationConfig.animationTime+"ms linear";
+
+            funnelLabel.enter().append('g')
+                .attr('class', 'xc-funnel-label')
+                .style("transition",transitionStr);
+
             funnelLabel.exit().remove();
-            funnelLabel.attr('transform', function (d) {
-                return 'translate(' + d.labelPosition + ')';
-            })
-                .attr('opacity',function(d){
+            funnelLabel.attr('opacity',function(d){
                     if(d.show==false)
                         return 0;
                     else
                         return 1;
                 })
-            var labelLine = funnelLabel.selectAll('.xc-funnel-label-line').data(function (d) {
-                if(d.show!=false)
-                    return [d]
-                else
-                    return [];
-            });
-            labelLine.enter().append('path').attr('class', 'xc-funnel-label-line');
+                .transition()
+                .ease(animationEase)
+                .duration(animationTime)
+                .attrTween('transform', function (d) {
+                    this.labelPosition = this.labelPosition===undefined? d.labelPosition : this.labelPosition;
+                    var interpolate = d3.interpolate(this.labelPosition, d.labelPosition);
+                    this.labelPosition = d.labelPosition;
+                    return function(t){
+                        return 'translate(' + interpolate(t) + ')';
+                    }
+
+                })
+
+            var labelLine = funnelLabel.selectAll('.xc-funnel-label-line')
+                .data(function (d) {
+                    if(d.show!=false)
+                        return [d]
+                    else
+                        return [];
+                });
+
+            labelLine.enter().append('path')
+                .attr('class', 'xc-funnel-label-line');
             labelLine.attr('d', function (d) {
-                return 'M0,0 L' + d.labelWidth + ',0';
-            })
+                    return 'M0,0 L' + d.labelWidth + ',0';
+                })
                 .attr('stroke', function (d) {
                     return _this.getColor(d.idx);
                 });
 
-            var labelText = funnelLabel.selectAll('.xc-funnel-label-text').data(function (d) {
-                if(d.show!=false)
-                    return [d]
-                else
-                    return [];
-            });
-            labelText.enter().append('text').attr('class', 'xc-funnel-label-text');
+            var labelText = funnelLabel.selectAll('.xc-funnel-label-text')
+                .data(function (d) {
+                    if(d.show!=false)
+                        return [d]
+                    else
+                        return [];
+                });
+
+            labelText.enter().append('text')
+                .attr('class', 'xc-funnel-label-text');
             labelText.text(function (d) {
-                return d.name
-            })
+                    return d.name
+                })
                 .attr('font-size', 14)
                 .attr('x', function (d) {
                     return d.labelWidth + 5;
@@ -102,13 +139,14 @@
                     return op;
                 });
             });
-            _this.on('legendMouseleave.funnel', function (name) {
+            _this.on('legendMouseleave.funnel', function () {
                 _this.funnelSection.attr('opacity',1);
             });
             _this.on('legendClick.funnel', function (nameList) {
                 var series=legendClickSeries(_this.config.series,nameList);
+                var animationConfig = _this.config.animation;
                 _this.init(_this.series,_this.config,_this.type,series);
-                _this.render('linear',0);
+                _this.render(animationConfig.animationEase,animationConfig.animationTime);
             });
         },
         __tooltipReady:function(){
@@ -245,10 +283,17 @@
         for (var i = 0, len = position.length; i < len; i++) {
             var p = position[i];
             if (p != undefined) continue;
-            if (sort == 'top')
-                position[i] = position[i - 1];
-            else
-                position[i] = position[i + 1];
+            var j=1;
+            //防止偏移后还是undefined
+            while(position[i] === undefined){
+                if (sort == 'top')
+                    position[i] = position[i - j];
+                else
+                    position[i] = position[i + j];
+
+                j++;
+            }
+
         }
         return function (idx) {
             //传入一个区块index，获取区块的4个点，依次是左上，又上，右下，左下
@@ -373,7 +418,7 @@
              * @var sort
              * @type String
              * @values 'top'|'down'
-             * @defautl 'down'
+             * @default 'down'
              * @description 漏斗图尖角朝向
              * @extends xCharts.series.funnel
              */

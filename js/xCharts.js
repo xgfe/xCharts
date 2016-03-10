@@ -49,16 +49,13 @@
         },
         loadConfig: function (config) {
             //加入时间测试
-            //深复制config
-            this.config = xCharts.utils.copy(config, true);
-            this.getColor = xCharts.utils.getColor(config.color);
-
+            defaultConfigMerage.call(this,config);
             this.firstDrawing(this.config);
 
         },
         firstDrawing: function (config) {
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
-            var componentsList = ['title', 'tooltip', 'legend', 'animation', 'yAxis', 'xAxis', 'resize'];
+            var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'resize'];
             var component, i = 0;
             this.components = {};
             this.charts = {};
@@ -84,6 +81,7 @@
             //计算折线图之类的charts实际可用空间
             this.width = this.originalWidth - this.margin.left - this.margin.right;
             this.height = this.originalHeight - this.margin.top - this.margin.bottom;
+
             //mainGroup设置偏移量
             this.main.attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
             //调用图表
@@ -131,6 +129,7 @@
 
             this.width = this.originalWidth - this.margin.left - this.margin.right;
             this.height = this.originalHeight - this.margin.top - this.margin.bottom;
+            console.log(this.width);
             //第三步 通知已有图表刷新
             for (var k in charts) {
                 if (charts.hasOwnProperty(k)) {
@@ -281,6 +280,58 @@
         return height;
     }
 
+    /**
+     * 合并一些全局性质的config
+     * @param config
+     */
+    function defaultConfigMerage(config){
+        //深复制config
+        var utils = xCharts.utils;
+        this.config = utils.copy(config, true);
+        this.getColor = utils.getColor(config.color);
+
+        // 如果动画效果关闭，设置animationTime=0即可
+        if(!this.config.animation || !this.config.animation.enable){
+            this.config.animation = utils.copy(animationConfig);
+            this.config.animation.animationTime=0;
+        }else{
+            this.config.animation = utils.merage(this.config.animation,animationConfig);
+        }
+    }
+
+    /**
+     * @var animation
+     * @type Object
+     * @description 动画参数
+     * @extends xCharts
+     * @default true
+     */
+    var animationConfig={
+        /**
+         * @var enable
+         * @type Boolean
+         * @description 是否开启动画
+         * @extends xCharts.animation
+         * @default false
+         */
+        enable:false,
+        /**
+         * @var animationTime
+         * @type Number
+         * @description 动画时间,单位ms
+         * @extends xCharts.animation
+         * @default 500ms
+         */
+        animationTime:500,
+        /**
+         * @var animationEase
+         * @type String
+         * @description 动画类型
+         * @extends xCharts.animation
+         * @default linear
+         */
+        animationEase:'linear'
+    }
 
     window.xCharts = xCharts;
 }(window))
