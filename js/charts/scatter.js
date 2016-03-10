@@ -2,7 +2,7 @@
  *  scatter 散点图
  *  继承自 Chart
  */
-(function(window){
+(function (window) {
     var xCharts = window.xCharts;
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
@@ -10,68 +10,78 @@
     xCharts.charts.extend({scatter: scatter});
     utils.inherits(scatter, Chart);
 
-    function scatter(messageCenter, config){
+    function scatter(messageCenter, config) {
         Chart.call(this, messageCenter, config, 'scatter');
     }
-    scatter.prototype.extend=xCharts.extend;
+
+    scatter.prototype.extend = xCharts.extend;
     scatter.prototype.extend({
-        init:function(messageCenter, config, type, series){
-            var _this=this;
+        init: function (messageCenter, config, type, series) {
+            var _this = this;
             _this.xAxisScale = messageCenter.xAxisScale;
             _this.yAxisScale = messageCenter.yAxisScale;
-            _this.series=parseSeries(series,_this.xAxisScale,_this.yAxisScale);
-            _this.data=getData(_this.series);
-            console.log(messageCenter.margin);
+            _this.series = parseSeries(series, _this.xAxisScale, _this.yAxisScale);
+            _this.data = getData(_this.series);
+
         },
-        render:function(ease,time){
-            var _this=this;
-            var scatterGroup=_this.main.selectAll('.xc-scatter-group').data([1]);
-            scatterGroup.enter().append('g').attr('class','xc-scatter-group');
-            var scatterItem=scatterGroup.selectAll('.xc-scatter-item').data(_this.data);
+        render: function (animationEase, animationTime) {
+            var _this = this;
+            var animationConfig = _this.config.animation;
+            var scatterGroup = _this.main.selectAll('.xc-scatter-group')
+                .data([1]);
+
+            scatterGroup.enter().append('g')
+                .attr('class', 'xc-scatter-group');
+
+            var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
+                .data(_this.data);
+
+            var transitionStr = "r "+animationConfig.animationTime+"ms linear,cx "+animationTime+"ms linear,cy "+animationTime+"ms linear";
+
             scatterItem.enter().append('circle');
             scatterItem.exit().remove();
 
-            scatterItem.attr('cx',function(d){
-                return d._serie.xScale(d.data[0]);
-            })
-                .attr('cy',function(d){
+            scatterItem.style("transition",transitionStr)
+                .attr('cx', function (d) {
+                    return d._serie.xScale(d.data[0]);
+                })
+                .attr('cy', function (d) {
                     return d._serie.yScale(d.data[1]);
                 })
-                .attr('r',function(d){
+                .attr('r', function (d) {
                     //这里如果是不显示的话，直接返回一个半径0
-                    if(d._serie.show!=false)
+                    if (d._serie.show != false)
                         return d.radius;
                     else
                         return 0;
                 })
-                .attr('fill',function(d){
-
+                .attr('fill', function (d) {
                     return _this.getColor(d._serie.idx);
                 })
-                .attr('opacity',function(d){
+                .attr('opacity', function (d) {
                     return d._serie.opacity;
                 })
-                .attr('class',function(d){
-                    var classStr='xc-scatter-item';
-                    classStr+=' xc-scatter-group-'+ d._serie.idx;
+                .attr('class', function (d) {
+                    var classStr = 'xc-scatter-item';
+                    classStr += ' xc-scatter-group-' + d._serie.idx;
                     return classStr;
-                })
+                });
 
-            _this.scatterItem=scatterItem;//暴露出去，为了tooltip事件
+            _this.scatterItem = scatterItem;//暴露出去，为了tooltip事件
         },
-        ready:function(){
+        ready: function () {
             this.__legendReady();
             this.__tooltipReady();
         },
-        __legendReady:function(){
-            var _this=this,selectGroup=null;
+        __legendReady: function () {
+            var _this = this, selectGroup = null;
             _this.on('legendMouseenter.scatter', function (name) {
-                var serie=getSeriesByName(_this.series,name);
-                selectGroup=_this.main.selectAll('.xc-scatter-group-'+serie.idx);
-                selectGroup.attr('opacity',1);
+                var serie = getSeriesByName(_this.series, name);
+                selectGroup = _this.main.selectAll('.xc-scatter-group-' + serie.idx);
+                selectGroup.attr('opacity', 1);
             });
-            _this.on('legendMouseleave.scatter',function(name){
-                selectGroup.attr('opacity',function(d){
+            _this.on('legendMouseleave.scatter', function (name) {
+                selectGroup.attr('opacity', function (d) {
                     return d._serie.opacity;
                 });
             });
@@ -81,28 +91,28 @@
                 _this.render('linear', 0);
             });
         },
-        __tooltipReady:function(){
-            if (!this.config.tooltip || !this.config.tooltip.show || this.config.tooltip.trigger=='axis') return;//未开启tooltip
-            var _this=this;
+        __tooltipReady: function () {
+            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
+            var _this = this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            _this.scatterItem.on('mouseenter.scatter',function(data){
+            _this.scatterItem.on('mouseenter.scatter', function (data) {
 
-                d3.select(this).attr('opacity',1);
+                d3.select(this).attr('opacity', 1);
                 //设置tooltip
                 var event = d3.event;
                 var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                var formatter = data._serie.formatter||tooltipFormatter||defaultFormatter;
-                tooltip.show();
-                tooltip.setTooltipHtml(formatter(data._serie.name,data.data[0],data.data[1]));
+                var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+                tooltip.showTooltip();
+                tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
                 tooltip.setPosition([x, y]);
             })
 
-            _this.scatterItem.on('mouseleave.scatter',function(data){
-                d3.select(this).attr('opacity',function(d){
+            _this.scatterItem.on('mouseleave.scatter', function (data) {
+                d3.select(this).attr('opacity', function (d) {
                     return d._serie.opacity;
                 });
-                tooltip.hidden();
+                tooltip.hiddenTooltip();
             })
         }
     })
@@ -112,7 +122,7 @@
      * @param name
      * @returns {*}
      */
-    function getSeriesByName(series,name){
+    function getSeriesByName(series, name) {
         for (var i = 0, s; s = series[i++];)
             if (s.name == name) return s;
     }
@@ -124,25 +134,25 @@
      * @param yScale yAxisScale
      * @returns {Array}
      */
-    function parseSeries(series,xScale,yScale){
-        var scatterSeries=[];
-        for(var i= 0,s;s=series[i++];){
+    function parseSeries(series, xScale, yScale) {
+        var scatterSeries = [];
+        for (var i = 0, s; s = series[i++];) {
             //第一步，判断是否是type=scatter，不是，则直接跳过
-            if(s.type!='scatter') continue;
+            if (s.type != 'scatter') continue;
 
             //加入默认config
-            s=utils.merage(defaultConfig(),s);
-            var size= s.size;
-            s.idx= s.idx==null?i-1: s.idx;//分配一个idx，用来获取颜色
-            s.xScale=xScale[s.xAxisIndex];
-            s.yScale=yScale[s.yAxisIndex];
+            s = utils.merage(defaultConfig(), s);
+            var size = s.size;
+            s.idx = s.idx == null ? i - 1 : s.idx;//分配一个idx，用来获取颜色
+            s.xScale = xScale[s.xAxisIndex];
+            s.yScale = yScale[s.yAxisIndex];
             //处理散点图的每个data,格式化成一个object对象，保存一些绘画数据
-            s.data=s.data.map(function(d,idx){
-                var radius=typeof size=='function'?size(d):size;
-                var obj={};
-                obj.data=d;
-                obj.radius=radius;
-                obj._serie=s;
+            s.data = s.data.map(function (d, idx) {
+                var radius = typeof size == 'function' ? size(d) : size;
+                var obj = {};
+                obj.data = d;
+                obj.radius = radius;
+                obj._serie = s;
                 return obj;
             })
 
@@ -156,14 +166,14 @@
      * @param series
      * @returns {Array} [object,object]
      */
-    function getData(series){
-        var data=[];
-        series.forEach(function(serie){
-            data =data.concat(serie.data);
+    function getData(series) {
+        var data = [];
+        series.forEach(function (serie) {
+            data = data.concat(serie.data);
         })
-        data=data.sort(function(a,b){
+        data = data.sort(function (a, b) {
             //将每个点按半径从大到小的顺序排序，尽可能的避免小点被大点盖住，鼠标无法点击的情况
-            return b.radius- a.radius;
+            return b.radius - a.radius;
         })
         return data;
     }
@@ -175,20 +185,20 @@
      * @param y
      * @returns {string}
      */
-    function defaultFormatter(name,x,y){
-        var html = "<p>"+name+"</p>";
-        html+="<p>"+x+","+y+"</p>";
+    function defaultFormatter(name, x, y) {
+        var html = "<p>" + name + "</p>";
+        html += "<p>" + x + "," + y + "</p>";
         return html;
     }
 
-    function defaultConfig(){
+    function defaultConfig() {
         /**
          * @var scatter
          * @type Object
          * @extends xCharts.series
          * @description 散点图(气泡图)配置项
          */
-       var scatter= {
+        var scatter = {
             /**
              * @var name
              * @type String
@@ -228,7 +238,7 @@
              *      return data[0];
              *  }
              */
-            size:5,
+            size: 5,
             /**
              * @var xAxisIndex
              * @type Number
@@ -253,7 +263,7 @@
              * @default 0.6
              * @extends xCharts.series.scatter
              */
-            opacity:0.6,
+            opacity: 0.6,
             /**
              * @var formatter
              * @extends xCharts.series.scatter
