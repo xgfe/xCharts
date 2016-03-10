@@ -117,8 +117,8 @@
 
             this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
 
-            var animationTime = this.animationTime;
-            var animationEase = this.animationEase;
+            var animationTime = this.refreshAnimationTime;
+            var animationEase = this.refreshAnimationEase;
 
             //第二步 通知已有组件刷新
             var components = this.components, charts = this.charts;
