@@ -25,8 +25,7 @@
     });
 
     function resize(messageCenter, config, type) {
-
-        components['Component'].call(this, messageCenter, config, type);
+        if(config.resize.enable) components['Component'].call(this, messageCenter, config, type);
     }
 
     resize.prototype.extend = xCharts.extend;
@@ -78,15 +77,15 @@
          * @var refresh
          * @type Boolean
          * @description 当容器改变时，是否自动刷新当前图表
-         * @extends xCharts
+         * @extends xCharts.resize
          * @default false
          */
-        refresh:false,
+        enable:false,
         /**
          * @var animationEase
          * @type String
          * @description 当容器改变时，刷新动画
-         * @extends xCharts
+         * @extends xCharts.resize
          * @default 'linear'
          */
         animationEase:'linear',
@@ -94,7 +93,7 @@
          * @var animationEase
          * @type Number
          * @description 当容器改变时，刷新动画时间,单位ms
-         * @extends xCharts
+         * @extends xCharts.resize
          * @default 500
          */
         animationTime:500
