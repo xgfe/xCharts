@@ -129,7 +129,7 @@
 
             this.width = this.originalWidth - this.margin.left - this.margin.right;
             this.height = this.originalHeight - this.margin.top - this.margin.bottom;
-            console.log(this.width);
+
             //第三步 通知已有图表刷新
             for (var k in charts) {
                 if (charts.hasOwnProperty(k)) {
@@ -295,7 +295,7 @@
             this.config.animation = utils.copy(animationConfig);
             this.config.animation.animationTime=0;
         }else{
-            this.config.animation = utils.merage(this.config.animation,animationConfig);
+            this.config.animation = utils.merage(utils.copy(animationConfig),this.config.animation);
         }
     }
 
