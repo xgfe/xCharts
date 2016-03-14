@@ -8,7 +8,7 @@
      * @var series
      * @extends xCharts
      * @type Array
-     * @example 包含图表数据
+     * @description 包含图表数据
      */
 
     var xCharts=window.xCharts;
