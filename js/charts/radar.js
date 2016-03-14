@@ -441,7 +441,7 @@
                 }
                 tooltip.setTooltipHtml(formatter(indicator, valueList));
                 tooltip.setPosition([x,y], 10, 10);
-                tooltip.show();
+                tooltip.showTooltip();
                 var areaPointsList = _self.areaList.selectAll('.xc-radar-area-point');
                 for(var i=0;i<areaPointsList.length;i++) {
                     var areaPoints = areaPointsList[i];
@@ -449,7 +449,7 @@
                 }
             });
             this.coverPolygonList.on('mouseout.radar', function() {
-                tooltip.hidden();
+                tooltip.hiddenTooltip();
                 var index = d3.select(this).datum().index;
                 var areaPointsList = _self.areaList.selectAll('.xc-radar-area-point');
                 for(var i=0;i<areaPointsList.length;i++) {

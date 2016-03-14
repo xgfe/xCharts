@@ -24,6 +24,7 @@
             var _self = this;
             if(!this.barSeries) {
                 // 提出type为bar的series的子元素对象
+                // 提出type为bar的series的子元素对象
                 this.barSeries = new Array();
                 for(var i=0;i<series.length;i++) {
                     if(series[i].type == 'bar') {
