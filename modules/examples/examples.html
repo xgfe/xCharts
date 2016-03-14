@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>xCharts · Example</title>
+        <script src="../../lib/jquery-2.2.1.min.js"></script>
+        <link rel="stylesheet" href="../../lib/bootstrap-3.3.5/css/bootstrap.min.css"/>
+        <script src="../../lib/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+        <link rel="stylesheet" href="../../lib/codemirror-5.12/lib/codemirror.css"/>
+        <script src="../../lib/codemirror-5.12/lib/codemirror.js"></script>
+        <script src="../../lib/codemirror-5.12/mode/javascript/javascript.js"></script>
+        <script src="../../lib/d3/d3.js"></script>
+        <script src="../../lib/xCharts/xCharts.js"></script>
+        <link rel="stylesheet" href="../../lib/xCharts/xCharts.css"/>
+        <link rel="stylesheet" href="./examples.css"/>
+    </head>
+    <body>
+        <nav class="navbar navbar-default navbar-fixed-top">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">xCharts</a>
+                </div>
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="#">首页</a></li>
+                    <li><a href="../documents/api.html">API文档</a></li>
+                    <li class="active"><a href="javascript:void(0)">实例</a></li>
+                </ul>
+            </div>
+        </nav>
+        <ul id="chart-nav" class="nav nav-pills nav-stacked">
+            <li role="presentation">
+                <a class="chartsType" href="javascript:void(0)">折线图</a>
+                <ul class="close list-group">
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#line-singleAxis">单轴折线图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#line-multipleAxis">多轴折线图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#line-area">面积图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#line-stack">堆积图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#line-areaAndStack">面积堆积图</a>
+                    </li>
+                </ul>
+            </li>
+            <li role="presentation">
+                <a class="chartsType" href="javascript:void(0)">柱状图</a>
+                <ul class="close list-group">
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#bar-normal">标准柱状图</a>
+                    </li>
+                </ul>
+            </li>
+            <li role="presentation">
+                <a class="chartsType" href="javascript:void(0)">饼图</a>
+                <ul class="close list-group">
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#pie-normal">标准饼图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#pie-loop">环形图</a>
+                    </li>
+                </ul>
+            </li>
+            <li role="presentation">
+                <a class="chartsType" href="javascript:void(0)">散点图</a>
+                <ul class="close list-group">
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#scatter">标准散点图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#bubble">气泡图</a>
+                    </li>
+                </ul>
+            </li>
+            <li role="presentation">
+                <a class="chartsType" href="javascript:void(0)">漏斗图</a>
+                <ul class="close list-group">
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#funnel-normal">标准漏斗图</a>
+                    </li>
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#funnel-pyramid">金字塔图</a>
+                    </li>
+                </ul>
+            </li>
+            <li role="presentation">
+                <a class="chartsType" href="javascript:void(0)">雷达图</a>
+                <ul class="close list-group">
+                    <li class="list-group-item">
+                        <a class="chartLink" href="#radar-normal">标准雷达图</a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+        <div id="main-container" class="clearfix">
+            <div id="codeWrap">
+                <div id="codeHeader" class="clearfix">
+                    <button id="refresh" class="btn btn-default pull-right" type="button">刷新</button>
+                </div>
+                <div id="code">
+                    <textarea name="codeText" id="codeText"></textarea>
+                </div>
+            </div>
+            <div id="chartWrap"></div>
+        </div>
+        <script src="./examples.js"></script>
+    </body>
+</html>
