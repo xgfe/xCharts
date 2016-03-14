@@ -13,10 +13,11 @@
     <script src="../js/components/tooltip.js"></script>
     <script src="../js/components/legend.js"></script>
     <script src="../js/components/axis.js"></script>
+    <script src="../js/components/resize.js"></script>
 
     <script src="../js/charts/Chart.js"></script>
     <script src="../js/charts/line.js"></script>
-    <script src="../js/charts/bar.js"></script>
+    <script src="../js/charts/funnel.js"></script>
 
     <link rel="stylesheet" href="../js/css/xCharts.css"/>
     <style>
@@ -36,48 +37,48 @@
 <script>
     //单轴折线图
     var one = xCharts(document.getElementById("test"));
-    var option = {
-        tooltip: {
-            show: true,
-            trigger: 'axis'
+    var option={
+        title:{
+            text:"门户网站访问人数",
+            subtext:"每周统计"
         },
-        legend: {
-            x: 'center',
-            y: 'top',
-            show: true,
-            data: ["李雷", "韩梅梅"]
+        legend:{
+            data:['网易','腾讯'],
+            x:'center'
+        },
+        tooltip:{
+            trigger:"axis"
+        },
+        resize:{
+            enable:true
         },
         xAxis: [
             {
                 type: 'category',
-                data: ['语文','数学','外语','物理','生物','化学']
+                data: ["一", "二", "三", "四", "五", "六", "日"],
+                tickFormat:function(data){
+                    return "周"+data;
+                }
             }
         ],
         yAxis: [
             {
                 type: 'value',
-                maxValue: 100,
-                minValue: 0
             }
         ],
         series: [
             {
-                name: '李雷',
-                type: 'bar',
-                data: [10, 20, 30, 40, 50, 60]
+                type:"line",
+                name: '网易',
+                data:[100,230,500,160,402,340,380]
             },
             {
-                name: '韩梅梅',
-                type: 'bar',
-                data: [60, 50, 40, 30, 20, 10],
-                formatter: function(name, value) {
-                    var htmlStr = '';
-                    htmlStr += "<div>" + name + "：" + value + "分</div>";
-                    return htmlStr;
-                }
+                type:"line",
+                name:"腾讯",
+                data:[300,450,347,792,325,683,123]
             }
         ]
-    };
+    }
     one.loadConfig(option)
 
 </script>

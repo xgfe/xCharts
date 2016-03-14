@@ -41,7 +41,7 @@
 
                 // 这里判断，如果domain是NAN证明是legend取消了所有显示，保持上一个不变
                 var doamin = scale.domain();
-                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.type==='value') scale = this.scales[i];
+                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType==='value') scale = this.scales[i];
 
                 if (!this.legendRefresh) calcAxisMargin(this, this.isXAxis, config, scale);
 
@@ -136,7 +136,7 @@
                 // 给个标识，这样就不用去计算margin的值
                 _this.legendRefresh = true;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render('linear', 1000);
+                _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
                 _this.legendRefresh = false;
             });
         }
