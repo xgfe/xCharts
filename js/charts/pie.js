@@ -238,14 +238,14 @@
                 var formatter = pieFormatter || tooltipFormatter || defaultFormatter;
                 tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
                 tooltip.setPosition([x,y], 10, 10);
-                tooltip.show();
+                tooltip.showTooltip();
 
                 d3.select(this).attr('d', function(d) {
                     return _self.bigArcFunc(d);
                 });
             });
             this.arcList.on('mouseout.pie', function() {
-                tooltip.hidden();
+                tooltip.hiddenTooltip();
                 d3.select(this).attr('d', function(d) {
                     return _self.arcFunc(d);
                 });

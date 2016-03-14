@@ -4,12 +4,20 @@
     <meta charset="UTF-8">
     <title>折线图</title>
     <script src="../bower_components/d3/d3.js"></script>
+
     <script src="../js/xCharts.js"></script>
     <script src="../js/utils/utils.js"></script>
+
     <script src="../js/components/Component.js"></script>
+    <script src="../js/components/title.js"></script>
+    <script src="../js/components/tooltip.js"></script>
+    <script src="../js/components/legend.js"></script>
     <script src="../js/components/axis.js"></script>
+
     <script src="../js/charts/Chart.js"></script>
     <script src="../js/charts/line.js"></script>
+    <script src="../js/charts/bar.js"></script>
+
     <link rel="stylesheet" href="../js/css/xCharts.css"/>
     <style>
         h1,h2,p{
@@ -23,235 +31,55 @@
     </style>
 </head>
 <body>
-<h2>单轴折线图</h2>
-<div class="chart one"></div>
-<h2>单轴面积图</h2>
-<div class="chart two"></div>
-<h2>单轴堆积图</h2>
-<div class="chart three"></div>
-<h2>多Y轴折线图</h2>
-<div class="chart four"> </div>
-<h2>多Y轴面积图</h2>
-<div class="chart five"></div>
+<!--<h2>单轴折线图</h2>-->
+<div id="test" class="chart one"></div>
 <script>
     //单轴折线图
-    var one = xCharts(document.querySelector('.one'));
-    var config_one={
+    var one = xCharts(document.getElementById("test"));
+    var option = {
+        tooltip: {
+            show: true,
+            trigger: 'axis'
+        },
+        legend: {
+            x: 'center',
+            y: 'top',
+            show: true,
+            data: ["李雷", "韩梅梅"]
+        },
         xAxis: [
             {
-                type: 'time',
-                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
-                tickFormat: function (d, i) { //格式化每个x显示
-                    d = new Date(d);
-                    return d.getMonth() + '/' + d.getDay();
-                },
-               
+                type: 'category',
+                data: ['语文','数学','外语','物理','生物','化学']
             }
         ],
         yAxis: [
             {
                 type: 'value',
+                maxValue: 100,
+                minValue: 0
             }
         ],
         series: [
             {
-                name: '叠加1',
-                type: 'line',
-                lineStyle:{
-                  color:'red',
-                    width:5,
-                    radius:7
-                },
-                smooth: false,
-                data: [20, 30, 45, 33, 22, 26, 40]
+                name: '李雷',
+                type: 'bar',
+                data: [10, 20, 30, 40, 50, 60]
             },
             {
-                stack:'one',
-                type:'line',
-                name:'我是叠加',
-                data:[40,10,23,25,17,34,10]
-            }
-        ]
-    }
-    one.loadConfig(config_one)
-    //单轴面积图
-    var two = xCharts(document.querySelector('.two'));
-    var config_two={
-        xAxis: [
-            {
-                type: 'time',
-                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
-                tickFormat: function (d, i) { //格式化每个x显示
-                    d = new Date(d);
-                    return d.getMonth() + '/' + d.getDay();
-                },
-               
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value',
-            }
-        ],
-        series: [
-            {
-                name: '叠加1',
-                type: 'line',
-                smooth: true,
-                areaStyle:{
-                  show:true,
-                },
-                data: [20, 30, 45, 33, 22, 26, 40]
-            },
-            {
-                stack:'one',
-                type:'line',
-                name:'我是叠加',
-                areaStyle:{
-                    show:true,
-                    color:'#000',
-                    opacity:1
-                },
-                smooth:true,
-                data:[40,10,23,25,17,34,10]
-            }
-        ]
-    }
-    two.loadConfig(config_two);
-    //单轴堆积图
-    var three= xCharts('.three');
-
-    var option_three = {
-
-        xAxis: [
-            {
-                type: 'time',
-                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
-                tickFormat: function (d, i) { //格式化每个x显示
-                    d = new Date(d);
-                    return d.getMonth() + '/' + d.getDay();
-                },
-               
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value',
-               
-            }
-        ],
-        series: [
-            {
-                name: '叠加1',
-                type: 'line',
-                stack:'one',
-                areaStyle:{
-                    show:true,
-                },
-                smooth: false,
-                data: [20, 30, 45, 33, 22, 26, 40]
-            },
-            {
-                stack:'one',
-                name:'我是叠加',
-                type:'line',
-                smooth:true,
-                areaStyle:{
-                    show:true,
-                },
-
-                data:[40,10,23,25,17,34,10]
+                name: '韩梅梅',
+                type: 'bar',
+                data: [60, 50, 40, 30, 20, 10],
+                formatter: function(name, value) {
+                    var htmlStr = '';
+                    htmlStr += "<div>" + name + "：" + value + "分</div>";
+                    return htmlStr;
+                }
             }
         ]
     };
-    three.loadConfig(option_three);
-    //多Y轴折线图
-    var four=xCharts('.four');
-    var option_four = {
+    one.loadConfig(option)
 
-        xAxis: [
-            {
-                type: 'time',
-                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
-                tickFormat: function (d, i) { //格式化每个x显示
-                    d = new Date(d);
-                    return d.getMonth() + '/' + d.getDay();
-                },
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value',
-            },
-            {
-                position:'right',
-                type: 'value',
-            }
-        ],
-        series: [
-            {
-                name: '叠加1',
-                type: 'line',
-                smooth: false,
-                data: [20, 30, 45, 33, 22, 26, 40]
-            },
-            {
-                name:'我是叠加',
-                yAxisIndex:1,
-                type:'line',
-                smooth:true,
-                data:[40,10,23,25,17,34,10]
-            }
-        ]
-    };
-    four.loadConfig(option_four);
-    //多Y轴面积图
-    var five=xCharts('.five');
-    var option_five = {
-
-        xAxis: [
-            {
-                type: 'time',
-                data: [1438444800000, 1438531200000, 1438617600000, 1438704000000, 1438790400000, 1438876800000, 1438963200000],
-                tickFormat: function (d, i) { //格式化每个x显示
-                    d = new Date(d);
-                    return d.getMonth() + '/' + d.getDay();
-                },
-
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value',
-            },
-            {
-                position:'right',
-                type: 'value',
-            }
-        ],
-        series: [
-            {
-                name: '叠加1',
-                type: 'line',
-                smooth: false,
-                areaStyle:{
-                    show:true
-                },
-                data: [20, 30, 45, 33, 22, 26, 40]
-            },
-            {
-                name:'我是叠加',
-                yAxisIndex:1,
-                type:'line',
-                smooth:true,
-                data:[40,10,23,25,17,34,10],
-                areaStyle:{
-                    show:true
-                },
-            }
-        ]
-    };
-    five.loadConfig(option_five);
 </script>
 </body>
 </html>

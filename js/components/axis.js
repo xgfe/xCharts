@@ -41,7 +41,7 @@
 
                 // 这里判断，如果domain是NAN证明是legend取消了所有显示，保持上一个不变
                 var doamin = scale.domain();
-                if (isNaN(doamin[0]) && isNaN(doamin[1])) scale = this.scales[i];
+                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.type==='value') scale = this.scales[i];
 
                 if (!this.legendRefresh) calcAxisMargin(this, this.isXAxis, config, scale);
 
@@ -278,6 +278,12 @@
         domain[1] = d3.max(values, function (value) {
             return value[1]
         });
+
+        // 虽然设置轴，但是并没有使用，查看是否设置了最大最小值
+        //if(domain[0] === undefined){
+        //    domain[0] = singleConfig.min;
+        //    domain[1] = singleConfig.max;
+        //}
 
         // 如果最大最小值是相等的,手动将domain的一个值设为0
         if (domain[0] === domain[1]) {
