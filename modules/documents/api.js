@@ -26,6 +26,9 @@ $(document).ready(function() {
             findChildren(newData);
             console.log(newData);
 
+            $('#apiNav')[0].appendChild(getAPINavDOM(newData));
+            $('#apiNav .list-group-item .list-group').addClass('hidden');
+
             var docfrag = document.createDocumentFragment();
 
             appendChildrenToFather(newData, docfrag);
@@ -33,6 +36,42 @@ $(document).ready(function() {
             $('#content')[0].appendChild(docfrag);
         }
     });
+
+
+
+    $('#apiNav').on('click', function(event) {
+        if($(event.target).hasClass('glyphicon')) {
+            if($(event.target).hasClass('glyphicon-chevron-right')) {
+                $(event.target).removeClass('glyphicon-chevron-right');
+                $(event.target).addClass('glyphicon-chevron-down');
+                $($(event.target).siblings()[1]).removeClass('hidden');
+            } else if($(event.target).hasClass('glyphicon-chevron-down')) {
+                $(event.target).removeClass('glyphicon-chevron-down');
+                $(event.target).addClass('glyphicon-chevron-right');
+                $($(event.target).siblings()[1]).addClass('hidden');
+            }
+        }
+    });
+
+    function getAPINavDOM(arr) {
+        var docfrag = document.createDocumentFragment();
+        var listGroup = $('<ul></ul>').addClass('list-group');
+        for(var i=0;i<arr.length;i++) {
+            var listGroupItem = $('<li></li>').addClass('list-group-item');
+            if(arr[i].children.length) {
+                listGroupItem.append($('<span></span>').addClass('glyphicon glyphicon-chevron-right'));
+            } else {
+                listGroupItem.append($('<span></span>').addClass('glyphicon glyphicon-asterisk invisible'));
+            }
+            listGroupItem.append($('<a></a>').text(arr[i].var).attr('href', '#' + arr[i].extends + '.' + arr[i].var));
+            if(arr[i].children.length) {
+                listGroupItem[0].appendChild(getAPINavDOM(arr[i].children));
+            }
+            listGroup.append(listGroupItem);
+        }
+        docfrag.appendChild(listGroup[0]);
+        return docfrag;
+    }
 
     // 递归寻找子节点
     function findChildren(arr) {
@@ -51,7 +90,7 @@ $(document).ready(function() {
         var panelBody;
         for(var i=0;i<arr.length;i++) {
             if(arr[i].children.length) {
-                var panel = $('<div></div>').addClass('panel panel-default');
+                var panel = $('<div></div>').addClass('panel panel-default').attr('id', arr[i].extends + '.' + arr[i].var);
                 var panelHeading = $('<div></div>').addClass('panel-heading');
                 panelHeading.append($('<h4></h4>').text(arr[i].var));
                 if(arr[i].type != undefined) {
@@ -68,7 +107,7 @@ $(document).ready(function() {
                      .append(panelBody);
                 dom.appendChild(panel[0]);
             } else {
-                panelBody = $('<div></div>').addClass('bs-callout bs-callout-info');
+                panelBody = $('<div></div>').addClass('bs-callout bs-callout-info').attr('id', arr[i].extends + '.' + arr[i].var);
                 if(i == 0) {
                     panelBody.addClass('m-t-0');
                 }
