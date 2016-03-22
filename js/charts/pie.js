@@ -61,8 +61,11 @@
             this.arcList = this.__renderArcs();
         },
         ready: function() {
+            // TODO 这里应该考虑在一些极简应用场景下(没有legend或tooltip的配置)是否还需要进行事件绑定
             this.__legendReady();
-            this.__tooltipReady();
+            if(this.messageCenter.components.tooltip && this.messageCenter.components.tooltip._show) {
+                this.__tooltipReady();
+            }
         },
         /*refresh: function() {
 
@@ -139,7 +142,14 @@
                     .enter()
                     .append('path')
                     .classed('xc-pie-arc', true)
-                    .style('fill', function(d) {
+                    .style('fill', function(d, i) {
+                        // TODO 等刘洋把idx和color的添加做统一处理后 这段代码就不要了
+                        if(!d.data.color) {
+                            d.data.idx = i;
+                            d.data.color = _self.getColor(d.data.idx);
+                        }
+                        // ----- End -----
+
                         return d.data.color;
                     });
                 arcList.transition()

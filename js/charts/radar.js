@@ -71,8 +71,11 @@
             this.coverPolygonList = this.__renderCoverPolygons();
         },
         ready: function() {
+            // TODO 这里应该考虑在一些极简应用场景下(没有legend或tooltip的配置)是否还需要进行事件绑定
             this.__legendReady();
-            this.__tooltipReady();
+            if(this.messageCenter.components.tooltip && this.messageCenter.components.tooltip._show) {
+                this.__tooltipReady();
+            }
         },
         __getPolygonWebs: function() {
             // 计算图的中心坐标
@@ -260,13 +263,21 @@
                     .data(this.areas)
                     .enter()
                     .append('g')
-                    .attr('class', function(d) {
+                    .attr('class', function(d, i) {
+                        // TODO 等刘洋将idx的添加统一提前后,这段代码将删除
+                        if(!d.originalData.idx) {
+                            d.originalData.idx = i;
+                        }
                         return 'xc-radar-area xc-radar-area' + d.originalData.idx;
                     });
                 areaList.append('polygon')
                     .attr('points', function(d) { return d.areaString; })
                     .style({
                         stroke: function(d) {
+                            // TODO 等刘洋将color的添加统一提前后,这段代码将删除
+                            if(!d.originalData.color) {
+                                d.originalData.color = _self.getColor(d.originalData.idx);
+                            }
                             return d.originalData.color;
                         },
                         fill: !this.radarConfig.fill ? '' : function(d) {
