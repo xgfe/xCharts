@@ -1,0 +1,62 @@
+#main {
+    position: relative;
+    top: 51px;
+}
+#firstEye {
+    height:400px;
+    position: relative;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+#chart,
+#chartCover,
+#textWrap {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+#chart {
+    padding: 20px 50px;
+    z-index: 111;
+}
+#chartCover {
+    background-color: #fff;
+    opacity: 0.7;
+    z-index: 222;
+}
+#textWrap {
+    z-index: 333;
+    text-align: center;
+    padding-top: 100px;
+}
+#textWrap h1 {
+    font-size: 58px;
+}
+#textWrap p {
+    font-size: 26px;
+}
+.fixedWidth {
+    width: 100px;
+}
+#introduce {
+    padding: 0 50px;
+}
+#charts {
+    padding: 30px 20px 10px;
+}
+.chart {
+    height: 180px;
+}
+.thumbnail {
+    padding: 20px;
+}
+#contact {
+    height: 100px;
+    background-color: #F8F8F8;
+    text-align: center;
+}
+#contact p {
+    line-height: 100px;
+    margin: 0;
+}
