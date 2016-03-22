@@ -2,27 +2,27 @@
   "name": "xCharts",
   "version": "0.1.0",
   "description": "基于D3的图表库",
-  "main": "js/xCharts.js",
-  "directories": {
-    "doc": "doc",
-    "example": "example",
-    "test": "test"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "./build.sh",
-    "build2": "./build2.sh"
-  },
-  "repository": {
-    "type": "git",
-    "url": "ssh://git@git.sankuai.com/xg/xgfe.git"
-  },
   "keywords": [
     "d3",
     "charts"
   ],
-  "author": "scliuyang,chenwubai",
+  "homepage": "http://xgfe.github.io/xCharts",
+  "contributors": [
+    "scliuyang",
+    "chenwubai"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "./build.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xgfe/xCharts.git"
+  },
   "license": "ISC",
+  "dependencies": {
+    "d3": "^3.5.16"
+  },
   "devDependencies": {
     "browserify": "^13.0.0",
     "dox": "^0.8.0",
