@@ -1,5 +1,5 @@
 #!/bin/sh
 
 rm -rf dist/ && mkdir -p dist/ &&
-browserify js/xCharts.js js/utils/*.js js/components/*.js js/charts/*.js  -o dist/xCharts.js &&
-cat js/css/*.css > dist/xCharts.css
+browserify src/xCharts.js src/utils/*.js src/components/*.js src/charts/*.js  -o dist/xCharts.js &&
+cat src/css/*.css > dist/xCharts.css
