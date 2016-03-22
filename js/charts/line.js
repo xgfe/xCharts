@@ -21,57 +21,38 @@
 
                 this.xAxisScale = messageCenter.xAxisScale;
                 this.yAxisScale = messageCenter.yAxisScale;
-                this.series = this.__parseSeries(series, config);
-                this.timeModel = config.xAxis[0].type=='time';//时间轴模式
-            },
 
-            __parseSeries: function (series, config) {
-                //先剔除不属于line的serie
-                var _this = this, stacks = {}, idx = 0, lineSeries = [];
-                series.map(function (serie) {
-                    if (serie.type == 'line') {
-                        serie = utils.merage(defaultConfig(), serie);//与默认参数合并
-                        serie.idx = serie.idx == null ? idx++ : serie.idx;
-                        if (!serie.stack) {
-                            lineSeries.push(serie);
-                            return;
-                        }
-                        stacks[serie.stack] || ( stacks[serie.stack] = [])
-                        stacks[serie.stack].push(serie);
-                    }
-                });
-                //处理堆积情况
-                var stackSeries = parseStacksSeries(_this, stacks, config);
-                //非堆积情况
-                lineSeries = parseNoramlSeries(_this, lineSeries, config);
-                return lineSeries.concat(stackSeries);//反转一下是为了解决堆积面积图时会产生重叠覆盖问题
+                // 处理折线图数据
+                this.series = parseSeries(this,series, config);
+
+                // 判断是否是时间轴
+                this.timeModel = config.xAxis[0].type=='time';
             },
-            render: function (ease, durationTime) {
-                this.__renderArea(ease, durationTime);
-                this.__renderLine(ease, durationTime);
-                if(!this.timeModel) this.__renderCircle(ease, durationTime);
+            render: function (animationEase, animationTime) {
+                this.__renderArea(animationEase, animationTime);
+                this.__renderLine(animationEase, animationTime);
+                if(!this.timeModel) this.__renderCircle(animationEase, animationTime);
             },
-            __renderLine: function (ease, time) {
+            __renderLine: function (animationEase, animationTime) {
                 var id = this.id, _this = this;
+
+                var transitionStr = "opacity "+animationTime+"ms linear";
+
                 var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
-                lineGroup.enter().append('g').attr('class', 'xc-line-group');
+                lineGroup.enter().append('g').attr('class', 'xc-line-group')
                 lineGroup.exit().remove();
+
                 var lineScale = d3.svg.line()
                     .x(function (d) {
-                        return d.xScale(d.x);
+                        return d.x;
                     })
                     .y(function (d) {
-                        return d.yScale(d.y);
+                        return d.y;
                     });
                 var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series)
                 linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none');
                 linePath.exit().remove();
-                linePath.attr('d', function (d) {
-                    if (d.show === false) return "";
-                    lineScale.interpolate(d.interpolate);
-                    return lineScale(d.data);
-                })
-                    .attr('stroke', function (d, i) {
+                linePath.attr('stroke', function (d) {
                         if (d.lineStyle.color != 'auto')
                             return d.lineStyle.color;
                         return _this.getColor(d.idx);
@@ -82,14 +63,54 @@
                     .attr('id', function (d) {
                         return 'xc-line-path-id' + id + "-" + d.idx;
                     })
+                    .style("transition",transitionStr)
+                    .style("opacity",function(d){
+                       if(d.show === false){
+                           return 0;
+                       } else {
+                           return 1;
+                       }
+                    });
+
+                linePath.transition()
+                    .duration(animationTime)
+                    .ease(animationEase)
+                    .attrTween("d", function (serie) {
+
+                        var ctx = this;
+                        if (serie.show === false) return function(){
+                            return ctx.linePath;
+                        };
+
+
+                        var lineData = serie.data.map(function(dataItem){
+                            return {
+                                x:serie.xScale(dataItem.x),
+                                y:serie.yScale(dataItem.y)
+                            }
+                        });
+
+                        this.lineData = this.lineData == undefined ? lineData : this.lineData;
+                        var interpolate = d3.interpolate(this.lineData, lineData);
+                        this.lineData = lineData;
+
+                        return function(t){
+                            var interpolateData = interpolate(t);
+                            lineScale.interpolate(serie.interpolate);
+                            var path = lineScale(interpolateData);
+                            if(t==1){
+                                ctx.linePath = path;
+                            }
+                            return path
+                        }
+                    });
             },
-            __renderArea: function (ease, time) {
+            __renderArea: function (animationEase, animationTime) {
                 //面积
                 // DONE 不用d3.svg.area，重写一个以满足需求
                 // FIXME 当y轴=category时，无法满足
                 var id = this.id, _this = this;
-
-                area(_this.series);//计算面积path路径
+                var transitionStr = "opacity "+animationTime+"ms linear";
 
                 var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
                 areaGroup.enter().append('g').attr('class', 'xc-area-group');
@@ -97,11 +118,7 @@
                 var areaPath = areaGroup.selectAll('.xc-line-area-path').data(_this.series);
                 areaPath.enter().append('path').attr('class', 'xc-line-area-path').attr('stroke', 'none');
                 areaPath.exit().remove();
-                areaPath.attr('d', function (d) {
-                    if (d.areaStyle.show === false) return;
-                    return d.areaPath;
-                })
-                    .attr('fill', function (d) {
+                areaPath.attr('fill', function (d) {
                         if (d.areaStyle.color == 'auto') {
                             //当面积的颜色为auto时，和折线保持一致
                             if (d.lineStyle.color == 'auto')
@@ -112,20 +129,61 @@
                         else
                             return d.areaStyle.color;
                     })
-                    .attr('opacity', function (d) {
-                        return d.areaStyle.opacity
-                    })
                     .attr('id', function (d) {
                         return 'xc-line-area-path-id' + id + "-" + d.idx;
                     })
+                    .style("transition",transitionStr)
+                    .style("opacity",function(d){
+                        if(d.show === false){
+                            return 0;
+                        } else {
+                            return d.areaStyle.opacity;
+                        }
+                    });
+
+
+                // 动画
+                areaPath.transition()
+                    .duration(animationTime)
+                    .ease(animationEase)
+                    .attrTween("d",function(serie){
+                        var ctx = this;
+
+                        if(serie.show === false){
+                            return function(){
+                                return ctx.areaPath;
+                            }
+                        }
+
+                        var areaData = serie.data.map(function(dataItem){
+                            return {
+                                x: serie.xScale( dataItem.x ),
+                                y: serie.yScale( dataItem.y ),
+                                y0: serie.yScale( dataItem.y0 )
+                            }
+                        });
+                        ctx.areaData = ctx.areaData == undefined? areaData : ctx.areaData;
+                        var interpolate = d3.interpolate(this.areaData, areaData);
+                        ctx.areaData = areaData;
+
+                        return function(t){
+                            var data = interpolate(t);
+                            var areaPath = area(data,serie);
+                            if(t==1){
+                                ctx.areaPath = areaPath;
+                            }
+                            return areaPath;
+                        }
+                    });
             },
-            __renderCircle: function (ease, time) {
+            __renderCircle: function (animationEase, animationTime) {
                 //画点
                 //最后画点，防止面积遮盖
                 var id = this.id, _this = this;
+                var transitionStr = "opacity "+animationTime+"ms linear";
                 var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
                 circleGroup.enter().append('g').attr('class', function (serie) {
-                    return 'xc-circle-group'
+                    return 'xc-circle-group';
                 });
                 circleGroup.exit().remove();
 
@@ -136,24 +194,69 @@
                         if (serie.lineStyle.color != 'auto')
                             return serie.lineStyle.color;
                         return _this.getColor(serie.idx);
-                    })
+                    });
 
                 var circle = circleGroup.selectAll('circle').data(function (d) {
-                    return d.show === false ? "" : d.data
+                    return d.data;
                 });
                 circle.enter().append('circle').attr('class', function (d, i) {
                     return 'xc-point xc-point-' + i;
                 });
                 circle.exit().remove();
-                circle.attr('r', function (d) {
-                    return d._serie.lineStyle.radius;
-                })
-                    .attr('cx', function (d) {
-                        return d.xScale(d.x);
+                circle.style("transition",transitionStr)
+                    .style("opacity",function(d){
+                        if(typeof d !== 'object'){
+                            return 0;
+                        } else {
+                            return 1;
+                        }
                     })
-                    .attr('cy', function (d) {
-                        return d.yScale(d.y);
+                    .attr('r', function (d) {
+                        if(typeof d === 'object') {
+                            this.circleRadius = d._serie.lineStyle.radius;
+                        }
+                        return this.circleRadius;
+                    });
+
+                //动画
+                circle.transition()
+                    .duration(animationTime)
+                    .ease(animationEase)
+                    .attrTween("cx",function(d){
+                        var ctx = this;
+                        if(typeof d !== 'object') {
+                            return function () {
+                                return ctx.circleCX
+                            }
+                        }
+
+
+                        var circleCX = d._serie.xScale(d.x);
+                        ctx.circleCX = ctx.circleCX == undefined ? circleCX:ctx.circleCX;
+                        var interpolate = d3.interpolate(ctx.circleCX, circleCX);
+                        ctx.circleCX = circleCX;
+                        return function(t){
+                            return interpolate(t);
+                        }
                     })
+                    .attrTween("cy",function(d){
+                        var ctx = this;
+
+                        if(typeof d !== 'object') {
+                            return function () {
+                                return ctx.circleCY;
+                            }
+                        }
+
+                        var circleCY = d._serie.yScale(d.y);
+                        ctx.circleCY = ctx.circleCY == undefined ? circleCY:ctx.circleCY;
+                        var interpolate = d3.interpolate(ctx.circleCY, circleCY);
+                        ctx.circleCY = circleCY;
+                        return function(t){
+                            return interpolate(t);
+                        }
+                    })
+
                 _this.circleGroup = circle;
             },
             ready: function () {
@@ -212,9 +315,9 @@
 
                 this.on('legendClick.line', function (nameList) {
                     var series = _this.config.series;
-
+                    var animationConfig = _this.config.animation;
                     _this.init(_this.messageCenter, _this.config, _this.type, series);
-                    _this.render('linear', 0);
+                    _this.render(animationConfig.animationEase,animationConfig.animationTime);
                 });
             },
             __tooltipReady: function () {
@@ -240,7 +343,7 @@
                                         return d._serie.lineStyle.radius;
                                     })
                                     .attr('cx', function (d) {
-                                        return d.xScale(d.x);
+                                        return d._serie.xScale(d.x);
                                     })
                                     .attr('cy', function (d) {
                                         return d.yScale(d.y);
@@ -300,44 +403,68 @@
 
         });
 
+        function parseSeries(ctx,series, config) {
+            //先剔除不属于line的serie
+            var stacks = {}, idx = 0, lineSeries = [];
+            series.map(function (serie) {
+                if (serie.type == 'line') {
+                    serie = utils.merage(defaultConfig(), serie);//与默认参数合并
+                    serie.idx = serie.idx == null ? idx++ : serie.idx;
+                    if (!serie.stack) {
+                        lineSeries.push(serie);
+                        return;
+                    }
+                    stacks[serie.stack] || ( stacks[serie.stack] = []);
+                    stacks[serie.stack].push(serie);
+                }
+            });
+            //处理堆积情况
+            var stackSeries = parseStacksSeries(ctx, stacks, config);
+            //非堆积情况
+            lineSeries = parseNoramlSeries(ctx, lineSeries, config);
+            return lineSeries.concat(stackSeries);//反转一下是为了解决堆积面积图时会产生重叠覆盖问题
+        }
+
         /**
-         * todo 干掉这两个神似的函数
+         *
          * 处理堆积状态下的series
          * @param _this
          * @param stacks
          * @param config
          * @returns {Array}
          */
-        function parseStacksSeries(_this, stacks, config) {
+        function parseStacksSeries(ctx, stacksSeries, config) {
             var stackSeries = [];
-            for (var k in stacks) {
-                if (stacks.hasOwnProperty(k)) {
+            for (var k in stacksSeries) {
+                if (stacksSeries.hasOwnProperty(k)) {
                     var oldData = null, oldInterpolate = 'linear';
-                    stacks[k].forEach(function (serie) {
+                    stacksSeries[k].forEach(function (serie) {
                         if (serie.show !== false) {
-                            var _serie = serie;
-                            var xConfig = config['xAxis'][serie.xAxisIndex];
-                            var yConfig = config['yAxis'][serie.yAxisIndex];
-                            var xScale = _this.xAxisScale[serie.xAxisIndex];
-                            var yScale = _this.yAxisScale[serie.yAxisIndex];
+                            var xAxisIndex = serie.xAxisIndex,
+                                yAxisIndex = serie.yAxisIndex;
+                            var xConfig = config['xAxis'][xAxisIndex];
+                            var yConfig = config['yAxis'][yAxisIndex];
+                            var xScale = ctx.xAxisScale[xAxisIndex];
+                            var yScale = ctx.yAxisScale[yAxisIndex];
                             var serieIdx = serie.idx;
                             serie.interpolate = serie.smooth ? 'monotone' : 'linear';
                             serie.y0Interpolate = oldInterpolate;
+                            serie.xScale = xScale;
+                            serie.yScale = yScale;
                             oldInterpolate = serie.interpolate;
-                            serie.data = serie.data.map(function (d, idx) {
+                            serie.data = serie.data.map(function (dataValue, idx) {
                                 var data = {};
+
+                                // TODO 这里好像只能满足category
                                 if (xConfig.type != 'value') {
                                     data.x = xConfig.data[idx];
                                     data.y0 = oldData ? oldData[idx].y : yScale.domain()[0];
-                                    data.y = parseFloat(d) + (oldData ? oldData[idx].y : 0);
-                                    data.value = d;
+                                    data.y = parseFloat(dataValue) + (oldData ? oldData[idx].y : 0);
                                 }
-                                // TODO 改下这些繁琐的东东 通过_series引用就行了
 
+                                data.value = dataValue;
                                 data.idx = serieIdx;
-                                data.xScale = xScale;
-                                data.yScale = yScale;
-                                data._serie = _serie;
+                                data._serie = serie;
                                 return data;
                             })
                             oldData = serie.data;
@@ -359,36 +486,35 @@
          * @returns {*}
          */
         function parseNoramlSeries(_this, lineSeries, config) {
-            var oldData = null;
+
             lineSeries = lineSeries.map(function (serie) {
                 if (serie.show !== false) {
-                    var xConfig = config['xAxis'][serie.xAxisIndex];
-                    var yConfig = config['yAxis'][serie.yAxisIndex];
-                    var xScale = _this.xAxisScale[serie.xAxisIndex];
-                    var yScale = _this.yAxisScale[serie.yAxisIndex];
+
+                    var xAxisIndex = serie.xAxisIndex,
+                        yAxisIndex = serie.yAxisIndex;
+
+                    var xConfig = config['xAxis'][xAxisIndex];
+                    var yConfig = config['yAxis'][yAxisIndex];
+                    var xScale = _this.xAxisScale[xAxisIndex];
+                    var yScale = _this.yAxisScale[yAxisIndex];
                     var serieIdx = serie.idx;
                     serie.interpolate = serie.smooth ? 'monotone' : 'linear';
                     serie.y0Interpolate = 'linear';
-                    var _serie = serie;
-                    serie.data = serie.data.map(function (d, idx) {
+                    serie.xScale = xScale;
+                    serie.yScale = yScale;
+
+                    serie.data = serie.data.map(function (dataValue, idx) {
 
                         var data = {};
                         if (xConfig.type != 'value') {
                             data.x = xConfig.data[idx];
-                            data.y = parseFloat(d);
+                            data.y = parseFloat(dataValue);
                             data.y0 = yScale.domain()[0];
-                            data.value = d;
                         }
-                        else {
-                            data.y = yConfig.data[idx];
-                            data.x0 = xScale.domain()[0];
-                            data.x = parseFloat(d);
-                        }
-                        data.xScale = xScale;
-                        data.yScale = yScale;
-                        oldData = serie.data;
+
+                        data.value = dataValue;
                         data.idx = serieIdx;
-                        data._serie = _serie;
+                        data._serie = serie;
                         return data;
                     })
                 }
@@ -401,44 +527,42 @@
          * 替换d3.svg.area函数
          * @param data
          */
-        function area(series) {
+        function area(data,serie) {
             var lineScale = d3.svg.line()
                 .x(function (d) {
-                    return d.xScale(d.x);
+                    return d.x;
                 })
                 .y(function (d) {
-                    return d.yScale(d.y);
+                    return d.y;
                 });
             var line0Scale = d3.svg.line()
                 .x(function (d) {
-                    return d.xScale(d.x);
+                    return d.x;
                 })
                 .y(function (d) {
-                    return d.yScale(d.y0);
-                })
+                    return d.y0;
+                });
 
-            series.forEach(function (serie) {
-                if (serie.show === false) return;
-                lineScale.interpolate(serie.interpolate);
-                serie.path = lineScale(serie.data);
-                line0Scale.interpolate(serie.y0Interpolate);
-                serie.path0 = line0Scale(serie.data.reverse());
-                serie.data.reverse()//再次翻转，恢复原状
-                serie.areaPath = joinPath(serie);
-            });
-            /**
-             * 将path和path0拼接成一个areaPath
-             * @param serie
-             */
-            function joinPath(serie) {
-                var path = serie.path,
-                    path0 = serie.path0,
-                    firstData = serie.data[0], lastData = serie.data[serie.data.length - 1];
-                var leftTop = [firstData.xScale(firstData.x), firstData.yScale(firstData.y)],
-                    rightBottom = [lastData.xScale(lastData.x), lastData.yScale(lastData.y0)];
 
-                return path + 'L' + rightBottom + path0 + 'L' + leftTop;
-            }
+            lineScale.interpolate(serie.interpolate);
+            var path = lineScale(data);
+            line0Scale.interpolate(serie.y0Interpolate);
+            var path0 = line0Scale(data.reverse());
+            data.reverse()//再次翻转，恢复原状
+            //serie.areaPath = joinPath(serie);
+           return joinPath(path,path0,data);
+        }
+
+        /**
+         * 将path和path0拼接成一个areaPath
+         * @param serie
+         */
+        function joinPath(path,path0,data) {
+            var firstData = data[0], lastData = data[data.length - 1];
+            var leftTop = [firstData.x, firstData.y],
+                rightBottom = [lastData.x, lastData.y0];
+
+            return path + 'L' + rightBottom + path0 + 'L' + leftTop;
         }
 
         /**

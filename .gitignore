@@ -3,7 +3,7 @@
 **/.DS_Store
 js/test.html
 node_modules
-siren/**
+siren/
 /dist
 build2.sh
 logs.md

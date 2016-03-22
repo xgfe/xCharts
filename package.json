@@ -25,6 +25,7 @@
   "license": "ISC",
   "devDependencies": {
     "browserify": "^13.0.0",
+    "cz-conventional-changelog": "^1.1.5",
     "dox": "^0.8.0",
     "jasmine": "^2.3.2",
     "jasmine-core": "^2.3.4",
