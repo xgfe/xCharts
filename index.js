@@ -246,21 +246,12 @@ $(document).ready(function() {
         }
     });
     options.push({
-        tooltip: {
-            show: true
-        },
-        legend: {
-            orient: 'vertical',
-            x: 'right',
-            show: true,
-            data: ["section1", "section2", "section3", "section4", "section5", "section6"]
-        },
         series: [
             {
                 type: 'pie',
                 center: ['50%', '50%'],
                 radius: {
-                    outerRadius: '30%',
+                    outerRadius: '23%',
                     innerRadius: 0
                 },
                 data: [
@@ -315,20 +306,11 @@ $(document).ready(function() {
         ]
     });
     options.push({
-        tooltip: {
-            show: true
-        },
-        legend: {
-            orient: 'vertical',
-            x: 'right',
-            show: true,
-            data: ["李雷", "韩梅梅"]
-        },
         series: [
             {
                 type: 'radar',
                 levels: 4,
-                radius: '25%',
+                radius: '16%',
                 fill: false,
                 center: ['50%', '50%'],
                 indicator: [
