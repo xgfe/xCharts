@@ -34,6 +34,9 @@
 <body>
 <!--<h2>单轴折线图</h2>-->
 <div id="test" class="chart one"></div>
+
+
+
 <script>
     //单轴折线图
     var one = xCharts(document.getElementById("test"));
@@ -43,7 +46,7 @@
             subtext:"每周统计"
         },
         legend:{
-            data:['网易','腾讯'],
+            data:["网易1",'网易','腾讯'],
             x:'center'
         },
         tooltip:{
@@ -61,20 +64,32 @@
                 }
             }
         ],
+        animation:{
+          enable:true,
+        },
         yAxis: [
             {
                 type: 'value',
             }
         ],
+
         series: [
             {
                 type:"line",
                 name: '网易',
+                stack:1,
+                areaStyle:{
+                    show:true
+                },
                 data:[100,230,500,160,402,340,380]
             },
             {
                 type:"line",
                 name:"腾讯",
+                areaStyle:{
+                  show:true
+                },
+                stack:1,
                 data:[300,450,347,792,325,683,123]
             }
         ]
