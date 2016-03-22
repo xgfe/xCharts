@@ -399,7 +399,7 @@
 
                 // 防止重复的名字出现
                 if (nameIdx[name] == undefined) {
-                    nameIdx[name] = colorIdx++;
+                    nameIdx[name] = colorIdx;
                     dIdx = colorIdx;
                 } else {
                     // 重复出现的名字赋予同一种颜色
@@ -415,6 +415,7 @@
                     legendList.push(d);
                 }
 
+                colorIdx++;
             });
         });
         return legendList;
