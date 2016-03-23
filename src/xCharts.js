@@ -28,13 +28,20 @@
                 this[k] = obj[k];
         }
     }
-
+    var chartsList={};
     xCharts.prototype.extend({
         //初始化方法
         // TODO 当在同一个容器里进行初始化时，会使前面的图表还留存在内存中，当监听refresh时，会造成获取不到宽高报NAN错,这里想个办法辨识容器是否有以前的charts，然后解除引用
         init: function (container) {
             container = d3.select(container);
+
+            var xcContainer = container.select(".xc-container")
+            if(xcContainer.node()){
+                removeBind(xcContainer);
+            }
+
             container.html('');//清理容器里面的所有节点
+
             this.container = container;
             this.originalWidth = getWidth(container.node());
             this.originalHeight = getHeight(container.node());
@@ -45,6 +52,12 @@
             this.margin = {top: 7, left: 10, right: 10, bottom: 20};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
+
+            // 生成随机字符串
+            var chartID = Math.random().toString(36).substr(2);
+            this.div.attr('xcharts-id',chartID);
+            //保留引用
+            chartsList[chartID] = this;
             return this;
         },
         loadConfig: function (config) {
@@ -340,6 +353,18 @@
         }else{
             this.config.animation = utils.merage(utils.copy(animationConfig),this.config.animation);
         }
+    }
+
+    /**
+     * 解除上一个图表的绑定事件
+     * @param container
+     */
+    function removeBind(container){
+        var chartID = container.attr("xcharts-id");
+        var chart = chartsList[chartID];
+        chart.fire("chartRemoveBind");
+        //删除引用
+        delete chartsList[chartID];
     }
 
     /**
