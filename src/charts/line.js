@@ -36,7 +36,7 @@
             __renderLine: function (animationEase, animationTime) {
                 var id = this.id, _this = this;
 
-                var transitionStr = "opacity "+animationTime+"ms linear";
+                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
 
                 var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
                 lineGroup.enter().append('g').attr('class', 'xc-line-group')
@@ -110,7 +110,7 @@
                 // DONE 不用d3.svg.area，重写一个以满足需求
                 // FIXME 当y轴=category时，无法满足
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+animationTime+"ms linear";
+                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
 
                 var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
                 areaGroup.enter().append('g').attr('class', 'xc-area-group');
@@ -180,7 +180,7 @@
                 //画点
                 //最后画点，防止面积遮盖
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+animationTime+"ms linear";
+                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
                 var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
                 circleGroup.enter().append('g').attr('class', function (serie) {
                     return 'xc-circle-group';
