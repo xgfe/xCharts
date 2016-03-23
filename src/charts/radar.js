@@ -56,7 +56,7 @@
             // 计算覆盖整个网轴的多边形的点坐标
             this.coverPolygons = this.__getCoverPolygons();
         },
-        render: function(ease, durationTime) {
+        render: function(animationEase, animationTime) {
             // 添加雷达图的g容器
             this.radar = this.__renderRadarWrapper();
             // 添加网轴
@@ -64,7 +64,7 @@
             // 添加网轴线
             this.lineList = this.__renderLines();
             // 添加雷达图形
-            this.areaList = this.__renderAreas();
+            this.areaList = this.__renderAreas(animationEase, animationTime);
             // 添加文字标签
             this.textList = this.__renderText();
             // 添加覆盖的多边形
@@ -88,6 +88,12 @@
             // 计算最大的多边形的半径
             if(typeof this.radarConfig.radius == 'string') {
                 this.radarConfig.radius = parseFloat(this.radarConfig.radius) * 0.01 * this.width;
+            }
+            // 添加对雷达图大小的处理,如果半径太大,自动把半径保持在可控的最大值
+            var minLength = this.width<this.height ? this.width : this.height;
+            // 减20是考虑到还有文字标签占着位置
+            if(this.radarConfig.radius*2+20 > minLength) {
+                this.radarConfig.radius = minLength/2 - 20;
             }
 
             // 计算网轴多边形的点
@@ -252,7 +258,7 @@
             }
             return lineList;
         },
-        __renderAreas: function() {
+        __renderAreas: function(animationEase, animationTime) {
             var _self = this;
             var areas, areaList;
             if(!this.radar.select('.xc-radar-areas').node()) {
@@ -271,7 +277,11 @@
                         return 'xc-radar-area xc-radar-area' + d.originalData.idx;
                     });
                 areaList.append('polygon')
-                    .attr('points', function(d) { return d.areaString; })
+                    .attr('points', function(d) {
+                        return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
+                            return '0,0';
+                        }).join(' ');
+                    })
                     .style({
                         stroke: function(d) {
                             // TODO 等刘洋将color的添加统一提前后,这段代码将删除
@@ -283,6 +293,12 @@
                         fill: !this.radarConfig.fill ? '' : function(d) {
                             return d.originalData.color;
                         }
+                    })
+                    .transition()
+                    .duration(animationTime)
+                    .ease(animationEase)
+                    .attr('points', function(d) {
+                        return d.areaString;
                     });
                 // 添加雷达图形的点
                 for(var i=0;i<this.areas.length;i++) {
@@ -293,10 +309,17 @@
                         .append('circle')
                         .classed('xc-radar-area-point', true)
                         .attr({
+                            cx: 0,
+                            cy: 0
+                        })
+                        .style('stroke', _self.areas[i].originalData.color)
+                        .transition()
+                        .duration(animationTime)
+                        .ease(animationEase)
+                        .attr({
                             cx: function(d) { return d.x; },
                             cy: function(d) { return d.y; }
-                        })
-                        .style('stroke', _self.areas[i].originalData.color);
+                        });
                 }
             } else {
                 // 重绘
@@ -306,9 +329,15 @@
                 for(var i=0;i<this.areas.length;i++) {
                     var area = areas.select('.xc-radar-area' + this.areas[i].originalData.idx);
                     area.select('polygon')
+                        .transition()
+                        .duration(animationTime)
+                        .ease(animationEase)
                         .attr('points', this.areas[i].areaString);
                     area.selectAll('.xc-radar-area-point')
                         .data(this.areas[i].areaPoints)
+                        .transition()
+                        .duration(animationTime)
+                        .ease(animationEase)
                         .attr({
                             cx: function(d) { return d.x; },
                             cy: function(d) { return d.y; }
