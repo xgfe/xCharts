@@ -67,6 +67,10 @@
 
         },
         firstDrawing: function (config) {
+
+            // 开始设置this.div 透明度为0
+            this.div.style("opacity",0);
+
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
             var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'resize'];
             var component, i = 0;
@@ -119,6 +123,12 @@
 
                 this.charts[type] = new chartClass(this, config);
             }
+
+            // 绘画结束,淡入动画
+            var transitionStr = "opacity "+this.config.animation.animationTime+"ms linear";
+            this.div.style("transition",transitionStr);
+            this.div.style("opacity",1);
+
 
         },
         refresh: function () {
