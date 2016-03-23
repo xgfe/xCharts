@@ -970,7 +970,7 @@
             __renderLine: function (animationEase, animationTime) {
                 var id = this.id, _this = this;
 
-                var transitionStr = "opacity "+animationTime+"ms linear";
+                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
 
                 var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
                 lineGroup.enter().append('g').attr('class', 'xc-line-group')
@@ -1044,7 +1044,7 @@
                 // DONE 不用d3.svg.area，重写一个以满足需求
                 // FIXME 当y轴=category时，无法满足
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+animationTime+"ms linear";
+                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
 
                 var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
                 areaGroup.enter().append('g').attr('class', 'xc-area-group');
@@ -1114,7 +1114,7 @@
                 //画点
                 //最后画点，防止面积遮盖
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+animationTime+"ms linear";
+                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
                 var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
                 circleGroup.enter().append('g').attr('class', function (serie) {
                     return 'xc-circle-group';
@@ -1815,13 +1815,9 @@
                     .append('path')
                     .classed('xc-pie-arc', true)
                     .style('fill', function(d, i) {
-                        // TODO 等刘洋把idx和color的添加做统一处理后 这段代码就不要了
                         if(!d.data.color) {
-                            d.data.idx = i;
                             d.data.color = _self.getColor(d.data.idx);
                         }
-                        // ----- End -----
-
                         return d.data.color;
                     });
                 arcList.transition()
@@ -2291,10 +2287,6 @@
                     .enter()
                     .append('g')
                     .attr('class', function(d, i) {
-                        // TODO 等刘洋将idx的添加统一提前后,这段代码将删除
-                        if(!d.originalData.idx) {
-                            d.originalData.idx = i;
-                        }
                         return 'xc-radar-area xc-radar-area' + d.originalData.idx;
                     });
                 areaList.append('polygon')
@@ -2305,7 +2297,6 @@
                     })
                     .style({
                         stroke: function(d) {
-                            // TODO 等刘洋将color的添加统一提前后,这段代码将删除
                             if(!d.originalData.color) {
                                 d.originalData.color = _self.getColor(d.originalData.idx);
                             }
@@ -4286,6 +4277,10 @@
             _this.resize = resizeFn;
 
             add(_this);
+
+            _this.on("chartRemoveBind",function(){
+                _this.unBind();
+            })
         },
         unBind:function(){
             remove(this);
@@ -5246,13 +5241,20 @@
                 this[k] = obj[k];
         }
     }
-
+    var chartsList={};
     xCharts.prototype.extend({
         //初始化方法
         // TODO 当在同一个容器里进行初始化时，会使前面的图表还留存在内存中，当监听refresh时，会造成获取不到宽高报NAN错,这里想个办法辨识容器是否有以前的charts，然后解除引用
         init: function (container) {
             container = d3.select(container);
+
+            var xcContainer = container.select(".xc-container")
+            if(xcContainer.node()){
+                removeBind(xcContainer);
+            }
+
             container.html('');//清理容器里面的所有节点
+
             this.container = container;
             this.originalWidth = getWidth(container.node());
             this.originalHeight = getHeight(container.node());
@@ -5263,6 +5265,12 @@
             this.margin = {top: 7, left: 10, right: 10, bottom: 20};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
+
+            // 生成随机字符串
+            var chartID = Math.random().toString(36).substr(2);
+            this.div.attr('xcharts-id',chartID);
+            //保留引用
+            chartsList[chartID] = this;
             return this;
         },
         loadConfig: function (config) {
@@ -5272,6 +5280,10 @@
 
         },
         firstDrawing: function (config) {
+
+            // 开始设置this.div 透明度为0
+            this.div.style("opacity",0);
+
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
             var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'resize'];
             var component, i = 0;
@@ -5296,6 +5308,9 @@
                 this.components[component] = new componentClass(this, config, component);
 
             }
+
+            seriesColor(config.series,this);
+
             //计算折线图之类的charts实际可用空间
             this.width = this.originalWidth - this.margin.left - this.margin.right;
             this.height = this.originalHeight - this.margin.top - this.margin.bottom;
@@ -5321,6 +5336,12 @@
 
                 this.charts[type] = new chartClass(this, config);
             }
+
+            // 绘画结束,淡入动画
+            var transitionStr = "opacity "+this.config.animation.animationTime+"ms linear";
+            this.div.style("transition",transitionStr);
+            this.div.style("opacity",1);
+
 
         },
         refresh: function () {
@@ -5499,6 +5520,46 @@
     }
 
     /**
+     * 处理图表sereis的color
+     * @param series
+     */
+    function seriesColor(series,ctx){
+        var serieClassify={},getColor = ctx.getColor;
+        series.forEach(function(serie){
+            var type = serie.type;
+            serieClassify[type] = serieClassify[type] == undefined?
+                serieClassify[type]=[]:
+                serieClassify[type];
+            serieClassify[type].push(serie);
+        });
+
+        for(var k in serieClassify){
+            if(serieClassify.hasOwnProperty(k) ){
+                switch (k){
+                    case "line":
+                    case "scatter":
+                    case "bar":
+                        serieClassify[k].forEach(function(serie,index){
+                            serie.idx = index;
+                        });
+                        break;
+                    case "pie":
+                    case "funnel":
+                    case "radar":
+                        serieClassify[k].forEach(function(serie){
+                            serie.data.forEach(function(dataValue,index){
+                                dataValue.idx = index;
+                            });
+                        });
+                        break;
+                    default :
+                        console.error("type=%d not supported")
+                }
+            }
+        }
+    }
+
+    /**
      * 合并一些全局性质的config
      * @param config
      */
@@ -5515,6 +5576,18 @@
         }else{
             this.config.animation = utils.merage(utils.copy(animationConfig),this.config.animation);
         }
+    }
+
+    /**
+     * 解除上一个图表的绑定事件
+     * @param container
+     */
+    function removeBind(container){
+        var chartID = container.attr("xcharts-id");
+        var chart = chartsList[chartID];
+        chart.fire("chartRemoveBind");
+        //删除引用
+        delete chartsList[chartID];
     }
 
     /**

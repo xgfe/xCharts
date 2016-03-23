@@ -149,13 +149,9 @@
                     .append('path')
                     .classed('xc-pie-arc', true)
                     .style('fill', function(d, i) {
-                        // TODO 等刘洋把idx和color的添加做统一处理后 这段代码就不要了
                         if(!d.data.color) {
-                            d.data.idx = i;
                             d.data.color = _self.getColor(d.data.idx);
                         }
-                        // ----- End -----
-
                         return d.data.color;
                     });
                 arcList.transition()
