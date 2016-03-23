@@ -49,6 +49,10 @@
             _this.resize = resizeFn;
 
             add(_this);
+
+            _this.on("chartRemoveBind",function(){
+                _this.unBind();
+            })
         },
         unBind:function(){
             remove(this);

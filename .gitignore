@@ -6,8 +6,6 @@ node_modules
 build2.sh
 siren/**
 logs.md
-<<<<<<< HEAD
 kaifa
-=======
 demo.html
->>>>>>> d0d623b65a67926563679897923e5e39226098b3
+
