@@ -54,11 +54,11 @@
             this.arcFunc = this.__getArcFunc();
             this.bigArcFunc = this.__getBigArcFunc();
         },
-        render: function(ease, durationTime) {
+        render: function(animationEase, animationTime) {
             // 添加饼图g容器
             this.pieWrapper = this.__renderPieWrapper();
             // 添加弧形
-            this.arcList = this.__renderArcs();
+            this.arcList = this.__renderArcs(animationEase, animationTime);
         },
         ready: function() {
             // TODO 这里应该考虑在一些极简应用场景下(没有legend或tooltip的配置)是否还需要进行事件绑定
@@ -90,6 +90,12 @@
             }
             if(typeof radius.outerRadius == 'string') {
                 radius.outerRadius = parseInt(radius.outerRadius) * 0.01 * this.width;
+            }
+
+            // 添加对饼图大小的处理,如果半径太大,自动把半径保持在可控的最大值
+            var minLength = this.width<this.height ? this.width : this.height;
+            if(radius.outerRadius*2 > minLength) {
+                radius.outerRadius = minLength/2;
             }
 
             this.pieConfig.data.forEach(function(d) {
@@ -131,7 +137,7 @@
             pieWrapper.attr('transform', 'translate(' + this.pieConfig.center[0] + ',' + this.pieConfig.center[1] + ')');
             return pieWrapper;
         },
-        __renderArcs: function() {
+        __renderArcs: function(animationEase, animationTime) {
             var _self = this;
             var arcs;
             if(!this.pieWrapper.select('.xc-pie-arcs').node()) {
@@ -153,7 +159,8 @@
                         return d.data.color;
                     });
                 arcList.transition()
-                    .duration(500)
+                    .duration(animationTime)
+                    .ease(animationEase)
                     .attrTween('d', function(d) {
                         this._current = this._current || {startAngle: 0, endAngle: 0};
                         var interpolate = d3.interpolate(this._current, d);
@@ -164,16 +171,17 @@
                     });
                 return arcList;
             } else {
-                return this.__changeArcs();
+                return this.__changeArcs(animationEase, animationTime);
             }
         },
-        __changeArcs: function() {
+        __changeArcs: function(animationEase, animationTime) {
             var _self = this;
             var arcs = this.pieWrapper.select('.xc-pie-arcs');
             var arcList = arcs.selectAll('.xc-pie-arc')
                 .data(this.pieData)
                 .transition()
-                .duration(500)
+                .duration(animationTime)
+                .ease(animationEase)
                 .attrTween('d', function(d) {
                     this._current = this._current || {startAngle: 0, endAngle: 0};
                     var interpolate = d3.interpolate(this._current, d);
@@ -209,6 +217,7 @@
                 }
             });
             this.on('legendClick.pie', function(nameList) {
+                var animationConfig = _self.config.animation;
                 if(!nameList.length) {
                     _self.pieData.forEach(function(d) {
                         d.startAngle = 0;
@@ -232,7 +241,7 @@
                     }
                     _self.pieData = _self.__getPieData();
                 }
-                _self.__changeArcs();
+                _self.__changeArcs(animationConfig.animationEase, animationConfig.animationTime);
             });
         },
         __tooltipReady: function() {

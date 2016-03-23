@@ -70,13 +70,13 @@
                 }
             }
         },
-        render: function(ease, durationTime) {
+        render: function(animationEase, animationTime) {
             // 添加柱状图容器
             this.bar = this.__renderBarWrapper();
             // 添加每组矩形的容器
             this.rectWrapperList = this.__renderRectWrapper();
             // 添加柱状
-            this.rectList = this.__renderRect();
+            this.rectList = this.__renderRect(animationEase, animationTime);
         },
         ready: function() {
             this.__legendReady();
@@ -189,7 +189,7 @@
             }
             return rectWrapperList;
         },
-        __renderRect: function() {
+        __renderRect: function(animationEase, animationTime) {
             var rectList;
             if(!this.rectWrapperList.select('.xc-bar-rect').node()) {
                 rectList = this.rectWrapperList
@@ -212,7 +212,8 @@
                         return d.color;
                     })
                     .transition()
-                    .duration(500)
+                    .duration(animationTime)
+                    .ease(animationEase)
                     .attr('y', function(d) {
                         return d.y;
                     })
@@ -226,16 +227,17 @@
                     .data(function(d) {
                         return d.rectsData;
                     });
-                return this.__changeRect();
+                return this.__changeRect(animationEase, animationTime);
             }
         },
-        __changeRect: function() {
+        __changeRect: function(animationEase, animationTime) {
             for(var i=0;i<this.rectList.length;i++) {
                 var rectArr = this.rectList[i];
                 for(var k=0;k<rectArr.length;k++) {
                     d3.select(rectArr[k])
                         .transition()
-                        .duration(500)
+                        .duration(animationTime)
+                        .ease(animationEase)
                         .attr('x', function(d) {
                             return d.x;
                         })
@@ -285,6 +287,7 @@
                 });
             });
             this.on('legendClick.bar', function(nameList) {
+                var animationConfig = _self.config.animation;
                 // 先把所有series的isShow属性设为false
                 _self.barSeries.forEach(function(series) {
                     series.isShow = false;
@@ -300,7 +303,7 @@
                 }
                 // 根据新的isShow配置进行计算
                 _self.__changeRectsData();
-                _self.__changeRect();
+                _self.__changeRect(animationConfig.animationEase, animationConfig.animationTime);
             });
         },
         __tooltipReady: function() {
