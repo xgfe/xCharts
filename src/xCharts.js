@@ -78,6 +78,9 @@
                 this.components[component] = new componentClass(this, config, component);
 
             }
+
+            seriesColor(config.series,this);
+
             //计算折线图之类的charts实际可用空间
             this.width = this.originalWidth - this.margin.left - this.margin.right;
             this.height = this.originalHeight - this.margin.top - this.margin.bottom;
@@ -278,6 +281,46 @@
             - css(container, 'paddingBottom', true)
             - css(container, 'borderBottomWidth', true);
         return height;
+    }
+
+    /**
+     * 处理图表sereis的color
+     * @param series
+     */
+    function seriesColor(series,ctx){
+        var serieClassify={},getColor = ctx.getColor;
+        series.forEach(function(serie){
+            var type = serie.type;
+            serieClassify[type] = serieClassify[type] == undefined?
+                serieClassify[type]=[]:
+                serieClassify[type];
+            serieClassify[type].push(serie);
+        });
+
+        for(var k in serieClassify){
+            if(serieClassify.hasOwnProperty(k) ){
+                switch (k){
+                    case "line":
+                    case "scatter":
+                    case "bar":
+                        serieClassify[k].forEach(function(serie,index){
+                            serie.idx = index;
+                        });
+                        break;
+                    case "pie":
+                    case "funnel":
+                    case "radar":
+                        serieClassify[k].forEach(function(serie){
+                            serie.data.forEach(function(dataValue,index){
+                                dataValue.idx = index;
+                            });
+                        });
+                        break;
+                    default :
+                        console.error("type=%d not supported")
+                }
+            }
+        }
     }
 
     /**
