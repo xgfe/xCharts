@@ -270,10 +270,6 @@
                     .enter()
                     .append('g')
                     .attr('class', function(d, i) {
-                        // TODO 等刘洋将idx的添加统一提前后,这段代码将删除
-                        if(!d.originalData.idx) {
-                            d.originalData.idx = i;
-                        }
                         return 'xc-radar-area xc-radar-area' + d.originalData.idx;
                     });
                 areaList.append('polygon')
@@ -284,7 +280,6 @@
                     })
                     .style({
                         stroke: function(d) {
-                            // TODO 等刘洋将color的添加统一提前后,这段代码将删除
                             if(!d.originalData.color) {
                                 d.originalData.color = _self.getColor(d.originalData.idx);
                             }
