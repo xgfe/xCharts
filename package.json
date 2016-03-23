@@ -1,7 +1,7 @@
 {
-  "name": "xCharts",
-  "version": "0.1.0",
-  "description": "基于D3的图表库",
+  "name": "xg-xcharts",
+  "version": "2.0.0",
+  "description": "charts base on d3.js",
   "keywords": [
     "d3",
     "charts"

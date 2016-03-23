@@ -1,12 +1,13 @@
 # xCharts  
-这是简介。  
+这是简介
 
 - 特点1；  
 - 特点2；  
 - 特点3。  
 
 ## 安装  
-待添加。
+
+1. npm安装方法 `npm install xg-xcharts`
 
 ## 快速上手  
 1. 把xCharts添加到项目中：   

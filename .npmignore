@@ -1,0 +1,10 @@
+doc
+kaifa
+node_modules
+siren
+src
+test
+.gitignore
+.npmignore
+build.sh
+karma.conf.js
