@@ -54,6 +54,7 @@
             this.firstDrawingRect = this.clippath.append("rect").attr('x',0).attr('y',0).attr("width",0).attr('height',this.originalHeight);
 
             //添加clippath
+            // todo 画完记着删掉
             this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
 
             this.main = this.svg.append('g').attr('class', 'xc-main');
@@ -142,7 +143,11 @@
             this.firstDrawingRect.style("transition",transitionStr);
             this.firstDrawingRect.style("width",this.originalWidth);
 
-
+            // 动画结束后删掉clip-path
+            var _this =this;
+            setTimeout(function(){
+                _this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
+            },this.config.animation.animationTime+100);
         },
         refresh: function () {
             //console.time("refresh time");
