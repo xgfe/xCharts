@@ -108,7 +108,6 @@
             __renderArea: function (animationEase, animationTime) {
                 //面积
                 // DONE 不用d3.svg.area，重写一个以满足需求
-                // FIXME 当y轴=category时，无法满足
                 var id = this.id, _this = this;
                 var transitionStr = "opacity "+(animationTime/2)+"ms linear";
 
@@ -152,6 +151,12 @@
                         if(serie.show === false){
                             return function(){
                                 return ctx.areaPath;
+                            }
+                        }
+
+                        if(serie.areaStyle.show === false){
+                            return function(){
+                                return "";
                             }
                         }
 

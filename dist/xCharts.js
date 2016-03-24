@@ -1042,7 +1042,6 @@
             __renderArea: function (animationEase, animationTime) {
                 //面积
                 // DONE 不用d3.svg.area，重写一个以满足需求
-                // FIXME 当y轴=category时，无法满足
                 var id = this.id, _this = this;
                 var transitionStr = "opacity "+(animationTime/2)+"ms linear";
 
@@ -1086,6 +1085,12 @@
                         if(serie.show === false){
                             return function(){
                                 return ctx.areaPath;
+                            }
+                        }
+
+                        if(serie.areaStyle.show === false){
+                            return function(){
+                                return "";
                             }
                         }
 
@@ -5255,16 +5260,26 @@
 
             container.html('');//清理容器里面的所有节点
 
+
             this.container = container;
             this.originalWidth = getWidth(container.node());
             this.originalHeight = getHeight(container.node());
             this.id = id++; //唯一标识，<use> 在多图表使用时，区别其他图用
             this.div = container.append('div').attr('class', 'xc-container');
             this.svg = this.div.append('svg').attr('class', 'xc-svg').attr('width', this.originalWidth).attr('height', this.originalHeight);
+            this.defs = this.svg.append('defs');
+            this.clippath = this.defs.append("clipPath").attr('id',"xc-firstdraw-"+this.id);
+            this.firstDrawingRect = this.clippath.append("rect").attr('x',0).attr('y',0).attr("width",0).attr('height',this.originalHeight);
+
+            //添加clippath
+            this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
+
             this.main = this.svg.append('g').attr('class', 'xc-main');
-            this.margin = {top: 7, left: 10, right: 10, bottom: 20};
+            this.margin = {top: 7, left: 10, right: 15, bottom: 20};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
+
+
 
             // 生成随机字符串
             var chartID = Math.random().toString(36).substr(2);
@@ -5281,8 +5296,6 @@
         },
         firstDrawing: function (config) {
 
-            // 开始设置this.div 透明度为0
-            this.div.style("opacity",0);
 
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
             var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'resize'];
@@ -5338,9 +5351,9 @@
             }
 
             // 绘画结束,淡入动画
-            var transitionStr = "opacity "+this.config.animation.animationTime+"ms linear";
-            this.div.style("transition",transitionStr);
-            this.div.style("opacity",1);
+            var transitionStr = "width "+500+"ms linear";
+            this.firstDrawingRect.style("transition",transitionStr);
+            this.firstDrawingRect.style("width",this.originalWidth);
 
 
         },
