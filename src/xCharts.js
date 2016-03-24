@@ -78,7 +78,6 @@
         },
         firstDrawing: function (config) {
 
-
             //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
             var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'resize'];
             var component, i = 0;
@@ -133,7 +132,13 @@
             }
 
             // 绘画结束,淡入动画
-            var transitionStr = "width "+500+"ms linear";
+            var transitionStr;
+            if(this.config.animation.enable){
+                 transitionStr = "width "+this.config.animation.animationTime+"ms linear";
+            }else{
+                transitionStr = "width "+0+"ms linear";
+            }
+
             this.firstDrawingRect.style("transition",transitionStr);
             this.firstDrawingRect.style("width",this.originalWidth);
 
