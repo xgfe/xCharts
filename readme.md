@@ -1,13 +1,14 @@
-# xCharts  
-这是简介
+# xCharts   
 
-- 特点1；  
-- 特点2；  
-- 特点3。  
+## 下载   
+可以通过以下两种方法(任选其一)：  
 
-## 安装  
+1. npm安装方法    
 
-1. npm安装方法 `npm install xg-xcharts`
+  ```  
+  npm install xg-xcharts
+  ```   
+2. 在github[项目](https://github.com/xgfe/xCharts/releases)中选择版本进行下载。
 
 ## 快速上手  
 1. 把xCharts添加到项目中：   
@@ -86,5 +87,5 @@ chart.loadConfig(option);
 
 ## 联系方式  
 
-- @scliuyang&emsp;&emsp;(mzefibp@163.com)  
-- @chenwubai&emsp;&emsp;(chenwubai.cx@gmail.com)
+- @scliuyang&emsp;(mzefibp@163.com)  
+- @chenwubai&emsp;(chenwubai.cx@gmail.com)
