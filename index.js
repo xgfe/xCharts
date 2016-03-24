@@ -34,7 +34,10 @@ $(document).ready(function() {
         },
         color: [
             'lightgray'
-        ]
+        ],
+        animation: {
+            enable: true
+        }
     };
     chart.loadConfig(option);
 
