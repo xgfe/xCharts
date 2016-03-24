@@ -145,7 +145,7 @@
             // 动画结束后删掉clip-path
             var _this =this;
             setTimeout(function(){
-                _this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
+                _this.svg.attr("clip-path","");
             },this.config.animation.animationTime+100);
         },
         refresh: function () {
