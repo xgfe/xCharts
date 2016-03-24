@@ -1,6 +1,6 @@
 {
   "name": "xg-xcharts",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "charts base on d3.js",
   "keywords": [
     "d3",
@@ -21,9 +21,6 @@
   },
   "author": "scliuyang",
   "license": "ISC",
-  "dependencies": {
-    "d3": "^3.5.16"
-  },
   "devDependencies": {
     "browserify": "^13.0.0",
     "cz-conventional-changelog": "^1.1.5",
