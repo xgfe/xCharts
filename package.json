@@ -1,6 +1,6 @@
 {
   "name": "xg-xcharts",
-  "version": "0.0.5",
+  "version": "0.1.4",
   "description": "charts base on d3.js",
   "keywords": [
     "d3",
