@@ -308,6 +308,10 @@
         },
         __tooltipReady: function() {
             var _self = this;
+            // 如果没有对tooltip进行配置或设置tooltip不显示,则不绑定事件监听
+            if(!this.config.tooltip || !this.config.tooltip.show) {
+                return;
+            }
             if(this.config.tooltip.trigger == 'axis') {
                 this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
                     var htmlStr = '';
