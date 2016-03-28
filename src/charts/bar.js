@@ -25,7 +25,7 @@
             if(!this.barSeries) {
                 // 提出type为bar的series的子元素对象
                 // 提出type为bar的series的子元素对象
-                this.barSeries = new Array();
+                this.barSeries = [];
                 for(var i=0;i<series.length;i++) {
                     if(series[i].type == 'bar') {
                         this.barSeries.push(series[i]);
@@ -97,11 +97,11 @@
             var seriesLength = this.barSeries.length;
             var rectWidth = (rangeBand - (seriesLength+1)*rectMargin)/seriesLength;
 
-            var rectGroupData = new Array(),
+            var rectGroupData = [],
                 tempX = outPadding;
             for(var i=0;i<rangeBandNum;i++) {
                 // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-                var rectsData = new Array();
+                var rectsData = [];
                 var rectX = rectMargin;
                 for(var k=0;k<seriesLength;k++) {
                     var tempRect = {
