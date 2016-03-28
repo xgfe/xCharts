@@ -96,7 +96,7 @@
             // 计算网轴多边形的点
             this.radarConfig.total = this.radarConfig.data[0].value.length;
             var onePiece = 2 * Math.PI/this.radarConfig.total;
-            var polygonWebs = new Array();
+            var polygonWebs = [];
             for(var k=this.radarConfig.levels;k>0;k--) {
                 var web = '',
                     points = [];
@@ -116,7 +116,7 @@
         },
         __getAreas: function() {
             // 计算雷达图形的点
-            var areas = new Array();
+            var areas = [];
             for(var i=0; i<this.radarConfig.data.length;i++) {
                 var d = this.radarConfig.data[i],
                     max = this.radarConfig.indicator[i].max,
@@ -146,7 +146,7 @@
         __getTextPoints: function() {
             // 计算文字标签的点
             // TODO 优化文字标签分布
-            var textPoints = new Array();
+            var textPoints = [];
             var textRadius = this.radarConfig.radius + 20;
             for(var i=0;i<this.radarConfig.total;i++) {
                 textPoints.push({
@@ -159,7 +159,7 @@
         __getCoverPolygons: function() {
             // 计算覆盖整个多边形网轴的多边形的坐标
             var webPoints = this.polygonWebs[0].webPoints;
-            var coverPolygons = new Array();
+            var coverPolygons = [];
             var length = webPoints.length;
             for(var i=0;i<length;i++) {
                 var lastPoint = i==0 ? webPoints[length-1] : webPoints[i-1],
@@ -416,7 +416,7 @@
                     radarFormatter = _self.radarConfig.formatter;
                 var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
                 var indicator = _self.radarConfig.indicator[index].text;
-                var valueList = new Array();
+                var valueList = [];
                 for(var i=0;i<_self.radarConfig.data.length;i++) {
                     if(_self.areas[i].isShow) {
                         valueList.push({
