@@ -40,13 +40,7 @@
             }
 
 
-            // 用变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
-            this.margin = messageCenter.margin;
-            this.width = messageCenter.width;
-            this.height = messageCenter.height;
-            this.main = messageCenter.main;
-            this.getColor = messageCenter.getColor;
-
+            // 用变量存储messageCenter里的一些信息，方便后面使用
             this.xAxisScale = messageCenter.xAxisScale;
             this.yAxisScale = messageCenter.yAxisScale;
 
