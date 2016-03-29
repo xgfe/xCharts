@@ -40,12 +40,6 @@
                 }
             }
 
-            // 用变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
-            this.width = messageCenter.width;
-            this.height = messageCenter.height;
-            this.main = messageCenter.main;
-            this.getColor = messageCenter.getColor;
-
             // 计算饼图原点、半径等属性值
             this.__correctConfig();
             // 转化原始数据为画弧形需要的数据

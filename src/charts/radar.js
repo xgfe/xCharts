@@ -40,13 +40,6 @@
                 }
             }
 
-            // 用临时变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
-            this.margin = messageCenter.margin;
-            this.width = messageCenter.width;
-            this.height = messageCenter.height;
-            this.main = messageCenter.main;
-            this.getColor = messageCenter.getColor;
-
             // 计算网轴点坐标
             this.polygonWebs = this.__getPolygonWebs();
             // 计算雷达图形的点坐标
