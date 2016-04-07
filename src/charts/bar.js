@@ -31,10 +31,9 @@
                         this.barSeries.push(series[i]);
                     }
                 }
-                // 给每种柱状添加idx，并获取颜色
-                this.barSeries.forEach(function(series, i) {
-                    series.idx = i;
-                    series.color = _self.getColor(i);
+                // 给每种柱状添加颜色值
+                this.barSeries.forEach(function(series) {
+                    series.color = _self.getColor(series.idx);
                     series.isShow = true;
                 });
             }
