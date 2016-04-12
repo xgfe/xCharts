@@ -40,13 +40,6 @@
                 }
             }
 
-            // 用临时变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
-            this.margin = messageCenter.margin;
-            this.width = messageCenter.width;
-            this.height = messageCenter.height;
-            this.main = messageCenter.main;
-            this.getColor = messageCenter.getColor;
-
             // 计算网轴点坐标
             this.polygonWebs = this.__getPolygonWebs();
             // 计算雷达图形的点坐标
@@ -71,11 +64,8 @@
             this.coverPolygonList = this.__renderCoverPolygons();
         },
         ready: function() {
-            // TODO 这里应该考虑在一些极简应用场景下(没有legend或tooltip的配置)是否还需要进行事件绑定
             this.__legendReady();
-            if(this.messageCenter.components.tooltip && this.messageCenter.components.tooltip._show) {
-                this.__tooltipReady();
-            }
+            this.__tooltipReady();
         },
         __getPolygonWebs: function() {
             // 计算图的中心坐标
@@ -99,7 +89,7 @@
             // 计算网轴多边形的点
             this.radarConfig.total = this.radarConfig.data[0].value.length;
             var onePiece = 2 * Math.PI/this.radarConfig.total;
-            var polygonWebs = new Array();
+            var polygonWebs = [];
             for(var k=this.radarConfig.levels;k>0;k--) {
                 var web = '',
                     points = [];
@@ -119,7 +109,7 @@
         },
         __getAreas: function() {
             // 计算雷达图形的点
-            var areas = new Array();
+            var areas = [];
             for(var i=0; i<this.radarConfig.data.length;i++) {
                 var d = this.radarConfig.data[i],
                     max = this.radarConfig.indicator[i].max,
@@ -130,7 +120,12 @@
                     var x = this.polygonWebs[0].webPoints[k].x * d.value[k]/(max - min),
                         y = this.polygonWebs[0].webPoints[k].y * d.value[k]/(max - min);
                     area += x + ',' + y + ' ';
-                    points.push({ x: x, y: y });
+                    points.push({
+                        x: x,
+                        y: y,
+                        // 增加一个属性存放原始属性,方便后面设置颜色
+                        originalData: d
+                    });
                 }
                 areas.push({
                     areaString: area,
@@ -144,7 +139,7 @@
         __getTextPoints: function() {
             // 计算文字标签的点
             // TODO 优化文字标签分布
-            var textPoints = new Array();
+            var textPoints = [];
             var textRadius = this.radarConfig.radius + 20;
             for(var i=0;i<this.radarConfig.total;i++) {
                 textPoints.push({
@@ -157,7 +152,7 @@
         __getCoverPolygons: function() {
             // 计算覆盖整个多边形网轴的多边形的坐标
             var webPoints = this.polygonWebs[0].webPoints;
-            var coverPolygons = new Array();
+            var coverPolygons = [];
             var length = webPoints.length;
             for(var i=0;i<length;i++) {
                 var lastPoint = i==0 ? webPoints[length-1] : webPoints[i-1],
@@ -189,213 +184,158 @@
             return coverPolygons;
         },
         __renderRadarWrapper: function() {
-            var radar;
-            if(!this.main.select('.xc-radar').node()) {
-                radar = this.main.append('g')
-                    .classed('xc-radar', true);
-            } else {
-                radar = this.main.select('.xc-radar');
-            }
+            var radar = this.main
+                .selectAll('.xc-radar')
+                .data([1]);
+            radar.enter()
+                .append('g')
+                .classed('xc-radar', true);
             radar.attr('transform', 'translate(' + this.radarConfig.center[0] + ',' + this.radarConfig.center[1] + ')');
             return radar;
         },
         __renderWebs: function() {
-            var webs, webList;
-            if(!this.radar.select('.xc-radar-webs').node()) {
-                // 初始化加载
-                webs = this.radar.append('g')
-                    .classed('xc-radar-webs', true);
-                webList = webs.selectAll('.xc-radar-web')
-                    .data(this.polygonWebs)
-                    .enter()
-                    .append('polygon')
-                    .classed('xc-radar-web', true)
-                    .attr('points', function(d) { return d.webString; });
-            } else {
-                // 重绘
-                webs = this.radar.select('.xc-radar-webs');
-                webList = webs.selectAll('.xc-radar-web')
-                    .data(this.polygonWebs)
-                    .attr('points', function(d) { return d.webString; });
-            }
+            var webs = this.radar
+                .selectAll('.xc-radar-webs')
+                .data([1]);
+            webs.enter()
+                .append('g')
+                .classed('xc-radar-webs', true);
+            var webList = webs.selectAll('.xc-radar-web')
+                .data(this.polygonWebs);
+            webList.enter()
+                .append('polygon')
+                .classed('xc-radar-web', true);
+            webList.attr('points', function(d) { return d.webString; });
             return webList;
         },
         __renderLines: function() {
-            var lines, lineList;
-            if(!this.radar.select('.xc-radar-lines').node()) {
-                // 初始化加载
-                lines = this.radar.append('g')
-                    .classed('xc-radar-lines', true);
-                lineList = lines.selectAll('.xc-radar-line')
-                    .data(this.polygonWebs[0].webPoints)
-                    .enter()
-                    .append('line')
-                    .classed('xc-radar-line', true)
-                    .attr({
-                        x1: 0,
-                        y1: 0,
-                        x2: function(d) {
-                            return d.x;
-                        },
-                        y2: function(d) {
-                            return d.y;
-                        }
-                    });
-            } else {
-                lines = this.radar.select('.xc-radar-lines');
-                lineList = lines.selectAll('.xc-radar-line')
-                    .data(this.polygonWebs[0].webPoints)
-                    .attr({
-                        x1: 0,
-                        y1: 0,
-                        x2: function(d) {
-                            return d.x;
-                        },
-                        y2: function(d) {
-                            return d.y;
-                        }
-                    });
-            }
+            var lines = this.radar
+                .selectAll('.xc-radar-lines')
+                .data([1]);
+            lines.enter()
+                .append('g')
+                .classed('xc-radar-lines', true);
+            var lineList = lines.selectAll('.xc-radar-line')
+                .data(this.polygonWebs[0].webPoints);
+            lineList.enter()
+                .append('line')
+                .classed('xc-radar-line', true);
+            lineList.attr({
+                x1: 0,
+                y1: 0,
+                x2: function(d) {
+                    return d.x;
+                },
+                y2: function(d) {
+                    return d.y;
+                }
+            });
             return lineList;
         },
         __renderAreas: function(animationEase, animationTime) {
             var _self = this;
-            var areas, areaList;
-            if(!this.radar.select('.xc-radar-areas').node()) {
-                // 初始化加载
-                areas = this.radar.append('g')
-                    .classed('xc-radar-areas', true);
-                areaList = areas.selectAll('.xc-radar-area')
-                    .data(this.areas)
-                    .enter()
-                    .append('g')
-                    .attr('class', function(d, i) {
-                        return 'xc-radar-area xc-radar-area' + d.originalData.idx;
-                    });
-                areaList.append('polygon')
-                    .attr('points', function(d) {
-                        return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
-                            return '0,0';
-                        }).join(' ');
-                    })
-                    .style({
-                        stroke: function(d) {
-                            if(!d.originalData.color) {
-                                d.originalData.color = _self.getColor(d.originalData.idx);
-                            }
-                            return d.originalData.color;
-                        },
-                        fill: !this.radarConfig.fill ? '' : function(d) {
-                            return d.originalData.color;
+            var areas = this.radar
+                .selectAll('.xc-radar-areas')
+                .data([1]);
+            areas.enter()
+                .append('g')
+                .classed('xc-radar-areas', true);
+            var areaList = areas.selectAll('.xc-radar-area')
+                .data(this.areas);
+            areaList.enter()
+                .append('g')
+                .attr('class', function(d, i) {
+                    return 'xc-radar-area xc-radar-area' + d.originalData.idx;
+                });
+            var polygonList = areaList.selectAll('polygon')
+                .data(function(d) {
+                    return [d];
+                });
+            polygonList.enter()
+                .append('polygon')
+                .attr('points', function(d) {
+                    return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
+                        return '0,0';
+                    }).join(' ');
+                })
+                .style({
+                    stroke: function(d) {
+                        if(!d.originalData.color) {
+                            d.originalData.color = _self.getColor(d.originalData.idx);
                         }
-                    })
-                    .transition()
-                    .duration(animationTime)
-                    .ease(animationEase)
-                    .attr('points', function(d) {
-                        return d.areaString;
-                    });
-                // 添加雷达图形的点
-                for(var i=0;i<this.areas.length;i++) {
-                    var area = areas.select('.xc-radar-area' + this.areas[i].originalData.idx);
-                    area.selectAll('.xc-radar-area-point')
-                        .data(this.areas[i].areaPoints)
-                        .enter()
-                        .append('circle')
-                        .classed('xc-radar-area-point', true)
-                        .attr({
-                            cx: 0,
-                            cy: 0
-                        })
-                        .style('stroke', _self.areas[i].originalData.color)
-                        .transition()
-                        .duration(animationTime)
-                        .ease(animationEase)
-                        .attr({
-                            cx: function(d) { return d.x; },
-                            cy: function(d) { return d.y; }
-                        });
-                }
-            } else {
-                // 重绘
-                areas = this.radar.select('.xc-radar-areas');
-                areaList = areas.selectAll('.xc-radar-area')
-                    .data(this.areas);
-                for(var i=0;i<this.areas.length;i++) {
-                    var area = areas.select('.xc-radar-area' + this.areas[i].originalData.idx);
-                    area.select('polygon')
-                        .transition()
-                        .duration(animationTime)
-                        .ease(animationEase)
-                        .attr('points', this.areas[i].areaString);
-                    area.selectAll('.xc-radar-area-point')
-                        .data(this.areas[i].areaPoints)
-                        .transition()
-                        .duration(animationTime)
-                        .ease(animationEase)
-                        .attr({
-                            cx: function(d) { return d.x; },
-                            cy: function(d) { return d.y; }
-                        });
-                }
-            }
+                        return d.originalData.color;
+                    },
+                    fill: !this.radarConfig.fill ? '' : function(d) {
+                        return d.originalData.color;
+                    }
+                });
+            polygonList.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attr('points', function(d) {
+                    return d.areaString;
+                });
+            var pointsList = areaList.selectAll('.xc-radar-area-point')
+                .data(function(d) {
+                    return d.areaPoints;
+                });
+            pointsList.enter()
+                .append('circle')
+                .classed('xc-radar-area-point', true)
+                .attr({
+                    cx: 0,
+                    cy: 0
+                })
+                .style('stroke', function(d){
+                    return d.originalData.color;
+                });
+            pointsList.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attr({
+                    cx: function(d) { return d.x; },
+                    cy: function(d) { return d.y; }
+                });
             return areaList;
         },
         __renderText: function() {
             var _self = this;
-            var texts, textList;
-            if(!this.radar.select('.xc-radar-texts').node()) {
-                // 初始化加载
-                texts = this.radar.append('g')
-                    .classed('xc-radar-texts', true);
-                textList = texts.selectAll('.xc-radar-text')
-                    .data(this.textPoints)
-                    .enter()
-                    .append('text')
-                    .classed('xc-radar-text', true)
-                    .attr({
-                        x: function(d) { return d.x; },
-                        y: function(d) { return d.y; }
-                    })
-                    .text(function(d, i) {
-                        return _self.radarConfig.indicator[i].text;
-                    })
-                    .attr('text-anchor', 'middle');
-            } else {
-                // 重绘
-                texts = this.radar.select('.xc-radar-texts');
-                textList = texts.selectAll('.xc-radar-text')
-                    .data(this.textPoints)
-                    .attr({
-                        x: function(d) { return d.x; },
-                        y: function(d) { return d.y; }
-                    });
-            }
+            var texts = this.radar
+                .selectAll('.xc-radar-texts')
+                .data([1]);
+            texts.enter()
+                .append('g')
+                .classed('xc-radar-texts', true);
+            var textList = texts.selectAll('.xc-radar-text')
+                .data(this.textPoints);
+            textList.enter()
+                .append('text')
+                .classed('xc-radar-text', true)
+                .text(function(d, i) {
+                    return _self.radarConfig.indicator[i].text;
+                })
+                .attr('text-anchor', 'middle');
+            textList.attr({
+                x: function(d) { return d.x; },
+                y: function(d) { return d.y; }
+            });
             return textList;
         },
         __renderCoverPolygons: function() {
-            var coverPolygons, coverPolygonList;
-            if(!this.radar.select('.xc-radar-coverPolygons').node()) {
-                // 初始化加载
-                coverPolygons = this.radar.append('g')
-                    .classed('xc-radar-coverPolygons', true);
-                coverPolygonList = coverPolygons.selectAll('xc-radar-coverPolygon')
-                    .data(this.coverPolygons)
-                    .enter()
-                    .append('polygon')
-                    .classed('xc-radar-coverPolygon', true)
-                    .attr('points', function(d) {
-                        return d.pointsStr;
-                    });
-            } else {
-                // 重绘
-                coverPolygons = this.radar.select('.xc-radar-coverPolygons');
-                coverPolygonList = coverPolygons.selectAll('xc-radar-coverPolygon')
-                    .data(this.coverPolygons)
-                    .attr('points', function(d) {
-                        return d.pointsStr;
-                    });
-            }
+            var coverPolygons = this.radar
+                .selectAll('.xc-radar-coverPolygons')
+                .data([1]);
+            coverPolygons.enter()
+                .append('g')
+                .classed('xc-radar-coverPolygons', true);
+            var coverPolygonList = coverPolygons.selectAll('.xc-radar-coverPolygon')
+                .data(this.coverPolygons);
+            coverPolygonList.enter()
+                .append('polygon')
+                .classed('xc-radar-coverPolygon', true);
+            coverPolygonList.attr('points', function(d) {
+                return d.pointsStr;
+            });
             return coverPolygonList;
         },
         __legendReady: function() {
@@ -455,6 +395,10 @@
         },
         __tooltipReady: function() {
             var _self = this;
+            // 如果没有对tooltip进行配置或设置tooltip不显示,则不绑定事件监听
+            if(!this.config.tooltip || !this.config.tooltip.show) {
+                return;
+            }
             var tooltip = _self.messageCenter.components.tooltip;
             this.coverPolygonList.on('mousemove.radar', function() {
                 var index = d3.select(this).datum().index;
@@ -465,7 +409,7 @@
                     radarFormatter = _self.radarConfig.formatter;
                 var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
                 var indicator = _self.radarConfig.indicator[index].text;
-                var valueList = new Array();
+                var valueList = [];
                 for(var i=0;i<_self.radarConfig.data.length;i++) {
                     if(_self.areas[i].isShow) {
                         valueList.push({

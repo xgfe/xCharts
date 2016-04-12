@@ -25,28 +25,21 @@
             if(!this.barSeries) {
                 // 提出type为bar的series的子元素对象
                 // 提出type为bar的series的子元素对象
-                this.barSeries = new Array();
+                this.barSeries = [];
                 for(var i=0;i<series.length;i++) {
                     if(series[i].type == 'bar') {
                         this.barSeries.push(series[i]);
                     }
                 }
-                // 给每种柱状添加idx，并获取颜色
-                this.barSeries.forEach(function(series, i) {
-                    series.idx = i;
-                    series.color = _self.getColor(i);
+                // 给每种柱状添加颜色值
+                this.barSeries.forEach(function(series) {
+                    series.color = _self.getColor(series.idx);
                     series.isShow = true;
                 });
             }
 
 
-            // 用变量存储messageCenter里的一些信息(如宽高等)，方便后面使用
-            this.margin = messageCenter.margin;
-            this.width = messageCenter.width;
-            this.height = messageCenter.height;
-            this.main = messageCenter.main;
-            this.getColor = messageCenter.getColor;
-
+            // 用变量存储messageCenter里的一些信息，方便后面使用
             this.xAxisScale = messageCenter.xAxisScale;
             this.yAxisScale = messageCenter.yAxisScale;
 
@@ -97,11 +90,11 @@
             var seriesLength = this.barSeries.length;
             var rectWidth = (rangeBand - (seriesLength+1)*rectMargin)/seriesLength;
 
-            var rectGroupData = new Array(),
+            var rectGroupData = [],
                 tempX = outPadding;
             for(var i=0;i<rangeBandNum;i++) {
                 // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-                var rectsData = new Array();
+                var rectsData = [];
                 var rectX = rectMargin;
                 for(var k=0;k<seriesLength;k++) {
                     var tempRect = {
@@ -159,100 +152,61 @@
             }
         },
         __renderBarWrapper: function() {
-            var bar;
-            if(!this.main.select('.xc-bar').node()) {
-                // 初始化加载
-                bar = this.main.append('g')
-                    .classed('xc-bar', true);
-            } else {
-                bar = this.main.select('.xc-bar');
-            }
+            var bar = this.main
+                .selectAll('.xc-bar')
+                .data([1]);
+            bar.enter()
+                .append('g')
+                .classed('xc-bar', true);
             return bar;
         },
         __renderRectWrapper: function() {
-            var rectWrapperList;
-            if(!this.bar.select('.xc-bar-rectWrapper').node()) {
-                rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
-                    .data(this.rectsData)
-                    .enter()
-                    .append('g')
-                    .classed('xc-bar-rectWrapper', true)
-                    .attr('transform', function(d) {
-                        return 'translate(' + d.x + ',' + d.y + ')';
-                    });
-            } else {
-                rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
-                    .data(this.rectsData)
-                    .attr('transform', function(d) {
-                        return 'translate(' + d.x + ',' + d.y + ')';
-                    });
-            }
+            var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
+                .data(this.rectsData);
+            rectWrapperList.enter()
+                .append('g')
+                .classed('xc-bar-rectWrapper', true);
+            rectWrapperList.attr('transform', function(d) {
+                return 'translate(' + d.x + ',' + d.y + ')';
+            });
             return rectWrapperList;
         },
         __renderRect: function(animationEase, animationTime) {
-            var rectList;
-            if(!this.rectWrapperList.select('.xc-bar-rect').node()) {
-                rectList = this.rectWrapperList
-                    .selectAll('.xc-bar-rect')
-                    .data(function(d) {
-                        return d.rectsData;
-                    })
-                    .enter()
-                    .append('rect')
-                    .classed('xc-bar-rect', true)
-                    .attr('x', function(d) {
-                        return d.x;
-                    })
-                    .attr('y', this.yRange)
-                    .attr('width', function(d) {
-                        return d.width;
-                    })
-                    .attr('height', 0)
-                    .attr('fill', function(d) {
-                        return d.color;
-                    })
-                    .transition()
-                    .duration(animationTime)
-                    .ease(animationEase)
-                    .attr('y', function(d) {
-                        return d.y;
-                    })
-                    .attr('height', function(d) {
-                        return d.height;
-                    });
-                return rectList;
-            } else {
-                this.rectWrapperList
-                    .selectAll('.xc-bar-rect')
-                    .data(function(d) {
-                        return d.rectsData;
-                    });
-                return this.__changeRect(animationEase, animationTime);
-            }
-        },
-        __changeRect: function(animationEase, animationTime) {
-            for(var i=0;i<this.rectList.length;i++) {
-                var rectArr = this.rectList[i];
-                for(var k=0;k<rectArr.length;k++) {
-                    d3.select(rectArr[k])
-                        .transition()
-                        .duration(animationTime)
-                        .ease(animationEase)
-                        .attr('x', function(d) {
-                            return d.x;
-                        })
-                        .attr('y', function(d) {
-                            return d.y;
-                        })
-                        .attr('width', function(d) {
-                            return d.width;
-                        })
-                        .attr('height', function(d) {
-                            return d.height;
-                        });
-                }
-            }
-            return this.rectList;
+            var rectList = this.rectWrapperList
+                .selectAll('.xc-bar-rect')
+                .data(function(d) {
+                    return d.rectsData;
+                });
+            rectList.enter()
+                .append('rect')
+                .classed('xc-bar-rect', true)
+                .attr('x', function(d) {
+                    return d.x;
+                })
+                .attr('y', this.yRange)
+                .attr('width', function(d) {
+                    return d.width;
+                })
+                .attr('height', 0)
+                .attr('fill', function(d) {
+                    return d.color;
+                });
+            rectList.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attr('x', function(d) {
+                    return d.x;
+                })
+                .attr('y', function(d) {
+                    return d.y;
+                })
+                .attr('width', function(d) {
+                    return d.width;
+                })
+                .attr('height', function(d) {
+                    return d.height;
+                });
+            return rectList;
         },
         __legendReady: function() {
             var _self = this;
@@ -303,11 +257,15 @@
                 }
                 // 根据新的isShow配置进行计算
                 _self.__changeRectsData();
-                _self.__changeRect(animationConfig.animationEase, animationConfig.animationTime);
+                _self.__renderRect(animationConfig.animationEase, animationConfig.animationTime);
             });
         },
         __tooltipReady: function() {
             var _self = this;
+            // 如果没有对tooltip进行配置或设置tooltip不显示,则不绑定事件监听
+            if(!this.config.tooltip || !this.config.tooltip.show) {
+                return;
+            }
             if(this.config.tooltip.trigger == 'axis') {
                 this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
                     var htmlStr = '';
