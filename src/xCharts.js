@@ -154,6 +154,12 @@
             //1 容器大小发生了改变，修正
             this.originalWidth = getWidth(this.container.node());
             this.originalHeight = getHeight(this.container.node());
+
+            // 找不到容器
+            if(isNaN(this.originalWidth) || isNaN(this.originalHeight)){
+                throw new Error("container not found");
+            }
+
             this.margin = xCharts.utils.copy(this.originMargin);
 
             this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
