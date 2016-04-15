@@ -41,9 +41,11 @@
 
                 // 这里判断，如果domain是NAN证明是legend取消了所有显示，保持上一个不变
                 var doamin = scale.domain();
-                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType==='value') scale = this.scales[i];
+                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType === 'value') scale = this.scales[i];
 
-                if (!this.legendRefresh) calcAxisMargin(this, this.isXAxis, config, scale);
+                if (!this.legendRefresh && !this.isXAxis) {
+                    calcAxisMargin(this, this.isXAxis, config, scale);
+                }
 
 
                 this.axisConfig[i] = config;
@@ -60,6 +62,12 @@
 
             setScaleRange(scales, this.range);
 
+            // 判断x轴上面的文字是否重合
+            // 如果重合则返回需要显示的ticks
+            if (this.isXAxis) {
+                this.showDomainList = xAxisShowTicks(scales, this.axisConfig);
+            }
+
             this.messageCenter[this.type + 'Scale'] = scales;
             this.scales = scales;
 
@@ -73,18 +81,28 @@
                 if (!config.show) break; //不显示坐标
 
                 var scale = scales[i];
-
                 // d3内置函数,生成axis
                 var axis = d3.svg.axis()
                     .scale(scale)
+                    .outerTickSize(0)
+                    .ticks(config.ticks)
                     .orient(config.position)
                     .tickFormat(config.tickFormat);
+
+                // 画网格
+                if (!this.isXAxis) {
+                    axis.innerTickSize(-this.width);
+                } else {
+                    axis.innerTickSize(-this.height);
+                    axis.tickPadding(10);
+                    axis.tickValues(this.showDomainList[i]);
+                }
 
                 //添加<g>
                 var axisGroup = this.main.selectAll(".xc-axis." + type + '-' + i).data([config]);
 
                 axisGroup.enter().append('g')
-                    .attr('class', 'xc-axis ' + type + '-' + i)
+                    .attr('class', 'xc-axis ' + type + ' ' + type + '-' + i)
                     .attr('fill', 'none')
                     .attr('stroke', '#000');
 
@@ -93,7 +111,6 @@
                     .ease(animationEase)
                     .duration(animationTime)
                     .call(axis);
-
 
             }
         },
@@ -108,7 +125,6 @@
             if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger !== 'axis' || this.type == 'yAxis') return;
 
             //默认已经是单x轴,且type！=value
-
             var axis = this.axisConfig[0];
             this.on('tooltipSectionChange.axis', function (sectionNumber, callback) {
                 var data = axis.data[sectionNumber];
@@ -133,6 +149,7 @@
                     }
 
                 });
+
                 // 给个标识，这样就不用去计算margin的值
                 _this.legendRefresh = true;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
@@ -166,21 +183,21 @@
     function calcAxisMargin(ctx, isXAxis, config, scale) {
 
         // 只处理Y轴，X轴高度基本不会变化
-        if (!isXAxis) {
-            var ticksTextList = scale.ticks().map(function (tickText) {
-                return config.tickFormat(tickText);
-            });
-            // 这里默认14的字体大小，也不知道有没有影响，囧
-            var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
-            var maxWidth = d3.max(widthList);
 
-            maxWidth = maxWidth == undefined ? 0 : maxWidth;
+        var ticksTextList = scale.ticks().map(function (tickText) {
+            return config.tickFormat(tickText);
+        });
 
-            if (config.position === 'right') {
-                ctx.margin.right += maxWidth;
-            } else {
-                ctx.margin.left += maxWidth;
-            }
+        // 这里默认14的字体大小，也不知道有没有影响，囧
+        var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
+        var maxWidth = d3.max(widthList);
+
+        maxWidth = maxWidth == undefined ? 0 : maxWidth;
+
+        if (config.position === 'right') {
+            ctx.margin.right += maxWidth;
+        } else {
+            ctx.margin.left += maxWidth;
         }
 
 
@@ -279,21 +296,17 @@
             return value[1]
         });
 
-        // 虽然设置轴，但是并没有使用，查看是否设置了最大最小值
-        //if(domain[0] === undefined){
-        //    domain[0] = singleConfig.min;
-        //    domain[1] = singleConfig.max;
-        //}
 
         // 如果最大最小值是相等的,手动将domain的一个值设为0
-        if (domain[0] === domain[1]) {
+        if (domain[0] === domain[1] && domain[0] != null && domain[1] != null) {
             domain[0] > 0 ? domain[0] = 0 : domain[1] = 0;
         }
 
         // domain 上下添加0.1的偏移，参考至c3
-        var valueLength = domain[1] - domain[0];
-        domain[0] -= valueLength * 0.1;
-        domain[1] += valueLength * 0.1;
+        // var valueLength = domain[1] - domain[0];
+        // domain[0] -= valueLength * 0.1;
+        // domain[1] += valueLength * 0.1;
+
 
         //用户手动控制最大最小值
         if (domain[0] > singleConfig.minValue) {
@@ -306,9 +319,32 @@
 
         var scale = d3.scale.linear()
             .domain(domain);
-
-
         scale.scaleType = "value";
+
+        // 动态计算ticks,2以下就会报错咯
+        // 将默认10个情况下的长度拿出然后/2并且向上取整
+        // 经测试这样得出的结果会符合分布要求,并且也不会像默认一样显得过于密集
+        if (singleConfig.ticks < 2 || this.legendRefresh) {
+            var ticksLength = scale.ticks().length;
+            var ticks = Math.ceil(ticksLength / 2);
+            if(ticks>=2){
+                singleConfig.ticks=ticks;
+            }
+        }
+
+        var ticks = scale.ticks(singleConfig.ticks);
+        var tickRange = ticks[1] - ticks[0];
+
+
+        if (domain[0] % tickRange !== 0) {
+            domain[0] = parseInt(domain[0] / tickRange) * tickRange;
+        }
+
+        if (domain[1] % tickRange !== 0) {
+            domain[1] = (parseInt(domain[1] / tickRange) + 1) * tickRange;
+        }
+
+        scale.domain(domain);
 
         return scale;
     }
@@ -440,6 +476,50 @@
     }
 
     /**
+     *
+     */
+    function xAxisShowTicks(scales, configs) {
+        var domainList = [];
+        for (var i = 0; i < scales.length; i++) {
+            var scale = scales[i];
+            var domain = utils.copy(scale.domain());
+            var range = scale.range();
+            var config = configs[i]
+            var ticksTextList = domain.map(function (tickText) {
+                return config.tickFormat(tickText);
+            });
+            var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
+
+            // tick与tick之间的距离
+            var rangeWidth = parseInt((range[range.length - 1] - range[0]) / (domain.length - 1));
+
+            var preIdx = 0;
+            var nowIdx = 1;
+            for (var j = 1; j < widthList.length; j++) {
+                var preWidth = widthList[preIdx];
+                var nowWidth = widthList[nowIdx];
+
+                //两个tick挤在一起了
+                if ((preWidth + nowWidth) / 2 > rangeWidth * (j - preIdx)) {
+                    domain[j] = null;
+                } else {
+                    nowIdx = j + 1;
+                    preIdx = j;
+                }
+            }
+
+            // 因为不显示的tick全部置为null,所以保留不为null的即可
+            domain = domain.filter(function (tick) {
+                return tick !== null;
+            });
+
+            domainList.push(domain);
+        }
+
+        return domainList;
+    }
+
+    /**
      * 根据作为位置返回需要偏移的坐标量
      * @param config
      * @returns {string} translate(0,0)
@@ -463,6 +543,7 @@
 
         return false;
     }
+
 
     function defaultConfig(type) {
         //注释掉是因为该项没有默认值,非必须或者必须由用户指定
@@ -508,6 +589,15 @@
              */
             tickFormat: utils.loop,
             /**
+             * @var ticks
+             * @extends xCharts.axis
+             * @type Number
+             * @description
+             *   对坐标轴类型为value时,设置坐标点的数量
+             *  @default 动态计算,大概在4-6之间
+             */
+            ticks: -1,
+            /**
              * @var formatter
              * @extends xCharts.axis
              * @type Function
@@ -540,6 +630,7 @@
              *  当type=value时有效
              *  控制坐标轴上最大值显示
              *  当传入值中的最大值超过maxValue时，以传入值为准
+             *  注意: 如果设置不合理,内部会自动重新计算
              */
             //maxValue: 100,
             /**
@@ -550,6 +641,7 @@
              *  当type=value时有效
              *  控制坐标轴上最小值显示
              *  当传入值中的最小值小于minValue时，以传入值为准
+             *  注意: 如果设置不合理,内部会自动重新计算
              */
             //minValue: 0, //type=value有效，手动设置最大最小值,
             /**
