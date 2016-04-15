@@ -1,5 +1,6 @@
 .xc-container{
     position:relative;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
 .xc-axis text,
 .xc-legend-item text {
@@ -11,6 +12,19 @@
 .xc-axis path {
     stroke: #a2a2a2;
 }
+
+.xc-axis.yAxis > .domain {
+    display: none;
+}
+
+.xc-axis > .tick > line {
+    opacity: 0.2;
+}
+
+.xc-axis.xAxis > .tick:first-child > line {
+    opacity: 1;
+}
+
 .xc-legend-group{
     cursor: pointer;
 }

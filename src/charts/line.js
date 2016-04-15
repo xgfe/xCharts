@@ -150,7 +150,7 @@
 
                         if(serie.show === false){
                             return function(){
-                                return ctx.areaPath == undefined?"":ctx.areaPath;
+                                return ctx.areaPath == null ? "":ctx.areaPath;
                             }
                         }
 
