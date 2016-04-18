@@ -43,7 +43,7 @@
                 var doamin = scale.domain();
                 if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType === 'value') scale = this.scales[i];
 
-                if (!this.legendRefresh && !this.isXAxis) {
+                if (!this.legendRefresh) {
                     calcAxisMargin(this, this.isXAxis, config, scale);
                 }
 
@@ -66,6 +66,9 @@
             // 如果重合则返回需要显示的ticks
             if (this.isXAxis) {
                 this.showDomainList = xAxisShowTicks(scales, this.axisConfig);
+
+                // 抛出这个数组,让折线图之类的图表可以使用
+                messageCenter.showDomainList = getDataIndex(this.showDomainList, this.axisConfig);
             }
 
             this.messageCenter[this.type + 'Scale'] = scales;
@@ -73,6 +76,17 @@
 
         },
         render: function (animationEase, animationTime) {
+            if(this.isXAxis){
+                return this.__drawAxis(animationEase,animationTime);
+            }
+
+            // Y轴等待X轴画完,因为网格线不等待X轴计算margin完毕的话,可能会出现超出边界的情况
+            this.on("xAxisReady.yAxis",function(){
+                this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right; //计算剩余容器宽
+                this.__drawAxis(animationEase,animationTime);
+            }.bind(this));
+        },
+        __drawAxis: function(animationEase, animationTime){
             var type = this.type;
             var scales = this.scales;
 
@@ -90,21 +104,31 @@
                     .tickFormat(config.tickFormat);
 
                 // 画网格
-                if (!this.isXAxis) {
+                // i===0 表示只画一个,不然多Y轴情况会很难看
+                if (!this.isXAxis && i === 0) {
                     axis.innerTickSize(-this.width);
-                } else {
+                } else if (i === 0) {
                     axis.innerTickSize(-this.height);
                     axis.tickPadding(10);
                     axis.tickValues(this.showDomainList[i]);
+                } else {
+                    // 第二个根Y轴
+                    axis.innerTickSize(0);
                 }
 
                 //添加<g>
                 var axisGroup = this.main.selectAll(".xc-axis." + type + '-' + i).data([config]);
 
+
                 axisGroup.enter().append('g')
                     .attr('class', 'xc-axis ' + type + ' ' + type + '-' + i)
                     .attr('fill', 'none')
                     .attr('stroke', '#000');
+
+                // 柱状图的网格要特殊处理
+                if (scale.scaleType === "barCategory") {
+                    axisGroup.classed("xc-bar-axis", true);
+                }
 
                 axisGroup.attr('transform', translate.call(this, config))
                     .transition()
@@ -112,6 +136,10 @@
                     .duration(animationTime)
                     .call(axis);
 
+            }
+
+            if(this.isXAxis){
+                this.fire("xAxisReady");
             }
         },
         ready: function () {
@@ -175,6 +203,7 @@
 
     /**
      * 计算y轴时，需要偏移的margin值
+     * 计算X轴时,margin.right偏移值,根据显示文字长度决定
      * @param ctx
      * @param isXAxis
      * @param config
@@ -182,25 +211,47 @@
      */
     function calcAxisMargin(ctx, isXAxis, config, scale) {
 
-        // 只处理Y轴，X轴高度基本不会变化
 
-        var ticksTextList = scale.ticks().map(function (tickText) {
-            return config.tickFormat(tickText);
-        });
+        if (isXAxis) {
 
-        // 这里默认14的字体大小，也不知道有没有影响，囧
-        var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
-        var maxWidth = d3.max(widthList);
+            var ticksTextList = scale.domain().map(function (tickText) {
+                return config.tickFormat(tickText);
+            });
+            var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
 
-        maxWidth = maxWidth == undefined ? 0 : maxWidth;
+            var lastTickWidth = widthList[widthList.length - 1];
+            var marginRight = ctx.margin.right;
+            if (lastTickWidth / 2 > marginRight) {
 
-        if (config.position === 'right') {
-            ctx.margin.right += maxWidth;
+                // 加法是为了防止意外覆盖到legend
+                ctx.margin.right += Math.round(lastTickWidth / 2) - marginRight;
+            }
+
+            var firstTickWidth = widthList[0];
+            var marginLeft = ctx.margin.left;
+            if (firstTickWidth / 2 > marginLeft) {
+                ctx.margin.left += Math.round(firstTickWidth / 2) - marginLeft;
+            }
+
         } else {
-            ctx.margin.left += maxWidth;
+
+            var ticksTextList = scale.ticks().map(function (tickText) {
+                return config.tickFormat(tickText);
+            });
+
+            // 这里默认14的字体大小，也不知道有没有影响，囧
+            var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
+
+            var maxWidth = d3.max(widthList);
+
+            maxWidth = maxWidth == undefined ? 0 : maxWidth;
+
+            if (config.position === 'right') {
+                ctx.margin.right += maxWidth;
+            } else {
+                ctx.margin.left += maxWidth;
+            }
         }
-
-
     }
 
     /**
@@ -327,8 +378,8 @@
         if (singleConfig.ticks < 2 || this.legendRefresh) {
             var ticksLength = scale.ticks().length;
             var ticks = Math.ceil(ticksLength / 2);
-            if(ticks>=2){
-                singleConfig.ticks=ticks;
+            if (ticks >= 2) {
+                singleConfig.ticks = ticks;
             }
         }
 
@@ -476,12 +527,22 @@
     }
 
     /**
+     * 计算哪些tick可能重叠,将其抛弃.留下需要显示的tick
      *
+     * @param scales 计算出来的scale
+     * @param configs
+     * @return {Array}
      */
     function xAxisShowTicks(scales, configs) {
         var domainList = [];
         for (var i = 0; i < scales.length; i++) {
             var scale = scales[i];
+
+            // 只支持category类型
+            if (scale.scaleType !== 'category' && scale.scaleType !== 'barCategory') {
+                continue;
+            }
+
             var domain = utils.copy(scale.domain());
             var range = scale.range();
             var config = configs[i]
@@ -544,6 +605,33 @@
         return false;
     }
 
+    /**
+     * 计算需要显示的ticks在config.data中的列表
+     * @param showDomainList
+     * @param configs
+     * @returns {Array} [{1:true}] key是config.data中的位置
+     */
+    function getDataIndex(showDomainList, configs) {
+        var ret = [];
+        for (var i = 0; i < showDomainList.length; i++) {
+            var list = showDomainList[i];
+            var data = configs[i].data;
+            var dataIndex = {};
+            list.forEach(function (value) {
+                for (var j = 0; j < data.length; j++) {
+                    if (value === data[j]) {
+                        break;
+                    }
+                }
+                if (j == data.length) {
+                    console.error("data和value不匹配");
+                }
+                dataIndex[j] = true;
+            });
+            ret[i] = dataIndex;
+        }
+        return ret;
+    }
 
     function defaultConfig(type) {
         //注释掉是因为该项没有默认值,非必须或者必须由用户指定
@@ -560,7 +648,7 @@
              * @extends xCharts.axis
              * @description 坐标轴的类型
              * @type String
-             * @values 'category'|'value'|'time'
+             * @values 'category'|'value'
              */
             //type:'value',
             /**
