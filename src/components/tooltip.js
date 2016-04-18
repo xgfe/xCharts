@@ -161,7 +161,7 @@
              * 并不需要重新render
              */
             if (!this._show) return true;
-
+            this.hiddenTooltip();
             this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
             this.ready();
         },
@@ -172,7 +172,6 @@
             _this.tooltip.style( {visibility: 'visible'} );
             // 显示线条
             if(this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 1);
-
 
         },
         hiddenTooltip: function () {
