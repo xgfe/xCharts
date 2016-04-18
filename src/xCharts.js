@@ -11,6 +11,7 @@
      */
     var d3 = window.d3;
     var id = 1;
+    var mobileMode = isMobile();
 
     function xCharts(container) {
 
@@ -41,7 +42,7 @@
 
             container.html('');//清理容器里面的所有节点
 
-
+            this.mobileMode = mobileMode;
             this.container = container;
             this.originalWidth = getWidth(container.node());
             this.originalHeight = getHeight(container.node());
@@ -398,6 +399,25 @@
         chart.fire("chartRemoveBind");
         //删除引用
         delete chartsList[chartID];
+    }
+
+    /**
+     * 判断是不是手机
+     * @returns {boolean} true 是,false 不是
+     */
+    function isMobile() {
+        var userAgentInfo = navigator.userAgent;
+        var Agents = ["Android", "iPhone",
+            "SymbianOS", "Windows Phone",
+            "iPad", "iPod"];
+        var flag = true;
+        for (var v = 0; v < Agents.length; v++) {
+            if (userAgentInfo.indexOf(Agents[v]) > 0) {
+                flag = false;
+                break;
+            }
+        }
+        return !flag;
     }
 
     /**
