@@ -57,7 +57,7 @@
             this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
 
             this.main = this.svg.append('g').attr('class', 'xc-main');
-            this.margin = {top: 15, left: 10, right: 15, bottom: 20};
+            this.margin = {top: 15, left: 10, right: 15, bottom: 30};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
 

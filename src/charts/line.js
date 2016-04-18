@@ -23,20 +23,20 @@
                 this.yAxisScale = messageCenter.yAxisScale;
 
                 // 处理折线图数据
-                this.series = parseSeries(this,series, config);
+                this.series = parseSeries(this, series, config);
 
                 // 判断是否是时间轴
-                this.timeModel = config.xAxis[0].type=='time';
+                this.timeModel = config.xAxis[0].type == 'time';
             },
             render: function (animationEase, animationTime) {
                 this.__renderArea(animationEase, animationTime);
                 this.__renderLine(animationEase, animationTime);
-                if(!this.timeModel) this.__renderCircle(animationEase, animationTime);
+                if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
             },
             __renderLine: function (animationEase, animationTime) {
                 var id = this.id, _this = this;
 
-                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
+                var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
 
                 var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
                 lineGroup.enter().append('g').attr('class', 'xc-line-group')
@@ -63,13 +63,13 @@
                     .attr('id', function (d) {
                         return 'xc-line-path-id' + id + "-" + d.idx;
                     })
-                    .style("transition",transitionStr)
-                    .style("opacity",function(d){
-                       if(d.show === false){
-                           return 0;
-                       } else {
-                           return 1;
-                       }
+                    .style("transition", transitionStr)
+                    .style("opacity", function (d) {
+                        if (d.show === false) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
                     });
 
                 linePath.transition()
@@ -78,15 +78,15 @@
                     .attrTween("d", function (serie) {
 
                         var ctx = this;
-                        if (serie.show === false) return function(){
+                        if (serie.show === false) return function () {
                             return ctx.linePath;
                         };
 
 
-                        var lineData = serie.data.map(function(dataItem){
+                        var lineData = serie.data.map(function (dataItem) {
                             return {
-                                x:serie.xScale(dataItem.x),
-                                y:serie.yScale(dataItem.y)
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(dataItem.y)
                             }
                         });
 
@@ -94,11 +94,11 @@
                         var interpolate = d3.interpolate(this.lineData, lineData);
                         this.lineData = lineData;
 
-                        return function(t){
+                        return function (t) {
                             var interpolateData = interpolate(t);
                             lineScale.interpolate(serie.interpolate);
                             var path = lineScale(interpolateData);
-                            if(t==1){
+                            if (t == 1) {
                                 ctx.linePath = path;
                             }
                             return path
@@ -109,7 +109,7 @@
                 //面积
                 // DONE 不用d3.svg.area，重写一个以满足需求
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
+                var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
 
                 var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
                 areaGroup.enter().append('g').attr('class', 'xc-area-group');
@@ -131,9 +131,9 @@
                     .attr('id', function (d) {
                         return 'xc-line-area-path-id' + id + "-" + d.idx;
                     })
-                    .style("transition",transitionStr)
-                    .style("opacity",function(d){
-                        if(d.show === false){
+                    .style("transition", transitionStr)
+                    .style("opacity", function (d) {
+                        if (d.show === false) {
                             return 0;
                         } else {
                             return d.areaStyle.opacity;
@@ -145,36 +145,36 @@
                 areaPath.transition()
                     .duration(animationTime)
                     .ease(animationEase)
-                    .attrTween("d",function(serie){
+                    .attrTween("d", function (serie) {
                         var ctx = this;
 
-                        if(serie.show === false){
-                            return function(){
-                                return ctx.areaPath == null ? "":ctx.areaPath;
+                        if (serie.show === false) {
+                            return function () {
+                                return ctx.areaPath == null ? "" : ctx.areaPath;
                             }
                         }
 
-                        if(serie.areaStyle.show === false){
-                            return function(){
+                        if (serie.areaStyle.show === false) {
+                            return function () {
                                 return "";
                             }
                         }
 
-                        var areaData = serie.data.map(function(dataItem){
+                        var areaData = serie.data.map(function (dataItem) {
                             return {
-                                x: serie.xScale( dataItem.x ),
-                                y: serie.yScale( dataItem.y ),
-                                y0: serie.yScale( dataItem.y0 )
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(dataItem.y),
+                                y0: serie.yScale(dataItem.y0)
                             }
                         });
-                        ctx.areaData = ctx.areaData == undefined? areaData : ctx.areaData;
+                        ctx.areaData = ctx.areaData == undefined ? areaData : ctx.areaData;
                         var interpolate = d3.interpolate(this.areaData, areaData);
                         ctx.areaData = areaData;
 
-                        return function(t){
+                        return function (t) {
                             var data = interpolate(t);
-                            var areaPath = area(data,serie);
-                            if(t==1){
+                            var areaPath = area(data, serie);
+                            if (t == 1) {
                                 ctx.areaPath = areaPath;
                             }
                             return areaPath;
@@ -185,7 +185,8 @@
                 //画点
                 //最后画点，防止面积遮盖
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
+                var showDataList = _this.messageCenter.showDomainList[0];
+                var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
                 var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
                 circleGroup.enter().append('g').attr('class', function (serie) {
                     return 'xc-circle-group';
@@ -193,13 +194,14 @@
                 circleGroup.exit().remove();
 
                 circleGroup.attr('id', function (d) {
-                    return 'xc-circle-group-id' + id + '-' + d.idx;
-                })
+                        return 'xc-circle-group-id' + id + '-' + d.idx;
+                    })
                     .attr('fill', function (serie) {
                         if (serie.lineStyle.color != 'auto')
                             return serie.lineStyle.color;
                         return _this.getColor(serie.idx);
                     });
+
 
                 var circle = circleGroup.selectAll('circle').data(function (d) {
                     return d.data;
@@ -208,16 +210,24 @@
                     return 'xc-point xc-point-' + i;
                 });
                 circle.exit().remove();
-                circle.style("transition",transitionStr)
-                    .style("opacity",function(d){
-                        if(typeof d !== 'object'){
+                circle.style("transition", transitionStr)
+                    .style("opacity", function (d) {
+                        if (typeof d !== 'object') {
                             return 0;
                         } else {
                             return 1;
                         }
                     })
+                    .style("display",function(d,idx){
+                        if(showDataList[idx] !== true){
+                            return "none";
+                        }
+
+                        return "block";
+
+                    })
                     .attr('r', function (d) {
-                        if(typeof d === 'object') {
+                        if (typeof d === 'object') {
                             this.circleRadius = d._serie.lineStyle.radius;
                         }
                         return this.circleRadius;
@@ -227,9 +237,9 @@
                 circle.transition()
                     .duration(animationTime)
                     .ease(animationEase)
-                    .attrTween("cx",function(d){
+                    .attrTween("cx", function (d) {
                         var ctx = this;
-                        if(typeof d !== 'object') {
+                        if (typeof d !== 'object') {
                             return function () {
                                 return ctx.circleCX
                             }
@@ -237,27 +247,27 @@
 
 
                         var circleCX = d._serie.xScale(d.x);
-                        ctx.circleCX = ctx.circleCX == undefined ? circleCX:ctx.circleCX;
+                        ctx.circleCX = ctx.circleCX == undefined ? circleCX : ctx.circleCX;
                         var interpolate = d3.interpolate(ctx.circleCX, circleCX);
                         ctx.circleCX = circleCX;
-                        return function(t){
+                        return function (t) {
                             return interpolate(t);
                         }
                     })
-                    .attrTween("cy",function(d){
+                    .attrTween("cy", function (d) {
                         var ctx = this;
 
-                        if(typeof d !== 'object') {
+                        if (typeof d !== 'object') {
                             return function () {
                                 return ctx.circleCY;
                             }
                         }
 
                         var circleCY = d._serie.yScale(d.y);
-                        ctx.circleCY = ctx.circleCY == undefined ? circleCY:ctx.circleCY;
+                        ctx.circleCY = ctx.circleCY == undefined ? circleCY : ctx.circleCY;
                         var interpolate = d3.interpolate(ctx.circleCY, circleCY);
                         ctx.circleCY = circleCY;
-                        return function(t){
+                        return function (t) {
                             return interpolate(t);
                         }
                     })
@@ -304,7 +314,7 @@
                     circleUse.attr('xlink:href', "");
                     d3.select(lineId).attr('stroke', serie.color).attr('stroke-width', serie.lineStyle.width);
                     d3.select(circleId).attr('fill', serie.color);
-                })
+                });
 
 
                 /**
@@ -322,7 +332,7 @@
                     var series = _this.config.series;
                     var animationConfig = _this.config.animation;
                     _this.init(_this.messageCenter, _this.config, _this.type, series);
-                    _this.render(animationConfig.animationEase,animationConfig.animationTime);
+                    _this.render(animationConfig.animationEase, animationConfig.animationTime);
                 });
             },
             __tooltipReady: function () {
@@ -336,14 +346,14 @@
 
                         var html = "", series = _this.series;
 
-                        if(_this.timeModel){
+                        if (_this.timeModel) {
                             //时间轴时，鼠标地方会出现圆点
                             _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
-                            _this.series.forEach(function(serie){
+                            _this.series.forEach(function (serie) {
 
                                 var data = serie.data[sectionNumber];
                                 _this.main.append('circle').datum(data)
-                                    .attr('class',"xc-tooltip-circle")
+                                    .attr('class', "xc-tooltip-circle")
                                     .attr('r', function (d) {
                                         return d._serie.lineStyle.radius;
                                     })
@@ -353,7 +363,7 @@
                                     .attr('cy', function (d) {
                                         return d.yScale(d.y);
                                     })
-                                    .attr('fill',function(d){
+                                    .attr('fill', function (d) {
                                         return d._serie.color;
                                     })
                             })
@@ -362,15 +372,15 @@
 
                         series.forEach(function (serie) {
                             if (serie.show === false) return;
-                            var data = serie.data[sectionNumber]===undefined?"":serie.data[sectionNumber].value;
+                            var data = serie.data[sectionNumber] === undefined ? "" : serie.data[sectionNumber].value;
 
-                            var serieFormat = serie.formatter || format ||defaultFormatter;
+                            var serieFormat = serie.formatter || format || defaultFormatter;
                             html += serieFormat(serie.name, data);
                         })
                         callback(html);
                     });
 
-                    this.on('tooltipHidden',function(){
+                    this.on('tooltipHidden', function () {
                         //当tooltip滑出区域时，需要清理圆点
                         _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
                     })
@@ -408,7 +418,7 @@
 
         });
 
-        function parseSeries(ctx,series, config) {
+        function parseSeries(ctx, series, config) {
             //先剔除不属于line的serie
             var stacks = {}, idx = 0, lineSeries = [];
             series.map(function (serie) {
@@ -532,7 +542,7 @@
          * 替换d3.svg.area函数
          * @param data
          */
-        function area(data,serie) {
+        function area(data, serie) {
             var lineScale = d3.svg.line()
                 .x(function (d) {
                     return d.x;
@@ -555,14 +565,14 @@
             var path0 = line0Scale(data.reverse());
             data.reverse()//再次翻转，恢复原状
             //serie.areaPath = joinPath(serie);
-           return joinPath(path,path0,data);
+            return joinPath(path, path0, data);
         }
 
         /**
          * 将path和path0拼接成一个areaPath
          * @param serie
          */
-        function joinPath(path,path0,data) {
+        function joinPath(path, path0, data) {
             var firstData = data[0], lastData = data[data.length - 1];
             var leftTop = [firstData.x, firstData.y],
                 rightBottom = [lastData.x, lastData.y0];
@@ -577,7 +587,7 @@
          * @returns {string} 一段html文本
          */
         function defaultFormatter(name, value) {
-            return '<p>'+name + ':&nbsp;' + value+'</p>';
+            return '<p>' + name + ':&nbsp;' + value + '</p>';
         }
 
         function defaultConfig() {
@@ -604,13 +614,6 @@
                  * @extends xCharts.series.line
                  */
                 type: 'line',
-                /**
-                 * @var xAxisIndex
-                 * @type Number
-                 * @description 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
-                 * @default 0
-                 * @extends xCharts.series.line
-                 */
                 xAxisIndex: 0,
                 /**
                  * @var yAxisIndex

@@ -915,20 +915,20 @@
                 this.yAxisScale = messageCenter.yAxisScale;
 
                 // 处理折线图数据
-                this.series = parseSeries(this,series, config);
+                this.series = parseSeries(this, series, config);
 
                 // 判断是否是时间轴
-                this.timeModel = config.xAxis[0].type=='time';
+                this.timeModel = config.xAxis[0].type == 'time';
             },
             render: function (animationEase, animationTime) {
                 this.__renderArea(animationEase, animationTime);
                 this.__renderLine(animationEase, animationTime);
-                if(!this.timeModel) this.__renderCircle(animationEase, animationTime);
+                if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
             },
             __renderLine: function (animationEase, animationTime) {
                 var id = this.id, _this = this;
 
-                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
+                var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
 
                 var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
                 lineGroup.enter().append('g').attr('class', 'xc-line-group')
@@ -955,13 +955,13 @@
                     .attr('id', function (d) {
                         return 'xc-line-path-id' + id + "-" + d.idx;
                     })
-                    .style("transition",transitionStr)
-                    .style("opacity",function(d){
-                       if(d.show === false){
-                           return 0;
-                       } else {
-                           return 1;
-                       }
+                    .style("transition", transitionStr)
+                    .style("opacity", function (d) {
+                        if (d.show === false) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
                     });
 
                 linePath.transition()
@@ -970,15 +970,15 @@
                     .attrTween("d", function (serie) {
 
                         var ctx = this;
-                        if (serie.show === false) return function(){
+                        if (serie.show === false) return function () {
                             return ctx.linePath;
                         };
 
 
-                        var lineData = serie.data.map(function(dataItem){
+                        var lineData = serie.data.map(function (dataItem) {
                             return {
-                                x:serie.xScale(dataItem.x),
-                                y:serie.yScale(dataItem.y)
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(dataItem.y)
                             }
                         });
 
@@ -986,11 +986,11 @@
                         var interpolate = d3.interpolate(this.lineData, lineData);
                         this.lineData = lineData;
 
-                        return function(t){
+                        return function (t) {
                             var interpolateData = interpolate(t);
                             lineScale.interpolate(serie.interpolate);
                             var path = lineScale(interpolateData);
-                            if(t==1){
+                            if (t == 1) {
                                 ctx.linePath = path;
                             }
                             return path
@@ -1001,7 +1001,7 @@
                 //面积
                 // DONE 不用d3.svg.area，重写一个以满足需求
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
+                var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
 
                 var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
                 areaGroup.enter().append('g').attr('class', 'xc-area-group');
@@ -1023,9 +1023,9 @@
                     .attr('id', function (d) {
                         return 'xc-line-area-path-id' + id + "-" + d.idx;
                     })
-                    .style("transition",transitionStr)
-                    .style("opacity",function(d){
-                        if(d.show === false){
+                    .style("transition", transitionStr)
+                    .style("opacity", function (d) {
+                        if (d.show === false) {
                             return 0;
                         } else {
                             return d.areaStyle.opacity;
@@ -1037,36 +1037,36 @@
                 areaPath.transition()
                     .duration(animationTime)
                     .ease(animationEase)
-                    .attrTween("d",function(serie){
+                    .attrTween("d", function (serie) {
                         var ctx = this;
 
-                        if(serie.show === false){
-                            return function(){
-                                return ctx.areaPath == null ? "":ctx.areaPath;
+                        if (serie.show === false) {
+                            return function () {
+                                return ctx.areaPath == null ? "" : ctx.areaPath;
                             }
                         }
 
-                        if(serie.areaStyle.show === false){
-                            return function(){
+                        if (serie.areaStyle.show === false) {
+                            return function () {
                                 return "";
                             }
                         }
 
-                        var areaData = serie.data.map(function(dataItem){
+                        var areaData = serie.data.map(function (dataItem) {
                             return {
-                                x: serie.xScale( dataItem.x ),
-                                y: serie.yScale( dataItem.y ),
-                                y0: serie.yScale( dataItem.y0 )
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(dataItem.y),
+                                y0: serie.yScale(dataItem.y0)
                             }
                         });
-                        ctx.areaData = ctx.areaData == undefined? areaData : ctx.areaData;
+                        ctx.areaData = ctx.areaData == undefined ? areaData : ctx.areaData;
                         var interpolate = d3.interpolate(this.areaData, areaData);
                         ctx.areaData = areaData;
 
-                        return function(t){
+                        return function (t) {
                             var data = interpolate(t);
-                            var areaPath = area(data,serie);
-                            if(t==1){
+                            var areaPath = area(data, serie);
+                            if (t == 1) {
                                 ctx.areaPath = areaPath;
                             }
                             return areaPath;
@@ -1077,7 +1077,8 @@
                 //画点
                 //最后画点，防止面积遮盖
                 var id = this.id, _this = this;
-                var transitionStr = "opacity "+(animationTime/2)+"ms linear";
+                var showDataList = _this.messageCenter.showDomainList[0];
+                var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
                 var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
                 circleGroup.enter().append('g').attr('class', function (serie) {
                     return 'xc-circle-group';
@@ -1085,13 +1086,14 @@
                 circleGroup.exit().remove();
 
                 circleGroup.attr('id', function (d) {
-                    return 'xc-circle-group-id' + id + '-' + d.idx;
-                })
+                        return 'xc-circle-group-id' + id + '-' + d.idx;
+                    })
                     .attr('fill', function (serie) {
                         if (serie.lineStyle.color != 'auto')
                             return serie.lineStyle.color;
                         return _this.getColor(serie.idx);
                     });
+
 
                 var circle = circleGroup.selectAll('circle').data(function (d) {
                     return d.data;
@@ -1100,16 +1102,24 @@
                     return 'xc-point xc-point-' + i;
                 });
                 circle.exit().remove();
-                circle.style("transition",transitionStr)
-                    .style("opacity",function(d){
-                        if(typeof d !== 'object'){
+                circle.style("transition", transitionStr)
+                    .style("opacity", function (d) {
+                        if (typeof d !== 'object') {
                             return 0;
                         } else {
                             return 1;
                         }
                     })
+                    .style("display",function(d,idx){
+                        if(showDataList[idx] !== true){
+                            return "none";
+                        }
+
+                        return "block";
+
+                    })
                     .attr('r', function (d) {
-                        if(typeof d === 'object') {
+                        if (typeof d === 'object') {
                             this.circleRadius = d._serie.lineStyle.radius;
                         }
                         return this.circleRadius;
@@ -1119,9 +1129,9 @@
                 circle.transition()
                     .duration(animationTime)
                     .ease(animationEase)
-                    .attrTween("cx",function(d){
+                    .attrTween("cx", function (d) {
                         var ctx = this;
-                        if(typeof d !== 'object') {
+                        if (typeof d !== 'object') {
                             return function () {
                                 return ctx.circleCX
                             }
@@ -1129,27 +1139,27 @@
 
 
                         var circleCX = d._serie.xScale(d.x);
-                        ctx.circleCX = ctx.circleCX == undefined ? circleCX:ctx.circleCX;
+                        ctx.circleCX = ctx.circleCX == undefined ? circleCX : ctx.circleCX;
                         var interpolate = d3.interpolate(ctx.circleCX, circleCX);
                         ctx.circleCX = circleCX;
-                        return function(t){
+                        return function (t) {
                             return interpolate(t);
                         }
                     })
-                    .attrTween("cy",function(d){
+                    .attrTween("cy", function (d) {
                         var ctx = this;
 
-                        if(typeof d !== 'object') {
+                        if (typeof d !== 'object') {
                             return function () {
                                 return ctx.circleCY;
                             }
                         }
 
                         var circleCY = d._serie.yScale(d.y);
-                        ctx.circleCY = ctx.circleCY == undefined ? circleCY:ctx.circleCY;
+                        ctx.circleCY = ctx.circleCY == undefined ? circleCY : ctx.circleCY;
                         var interpolate = d3.interpolate(ctx.circleCY, circleCY);
                         ctx.circleCY = circleCY;
-                        return function(t){
+                        return function (t) {
                             return interpolate(t);
                         }
                     })
@@ -1196,7 +1206,7 @@
                     circleUse.attr('xlink:href', "");
                     d3.select(lineId).attr('stroke', serie.color).attr('stroke-width', serie.lineStyle.width);
                     d3.select(circleId).attr('fill', serie.color);
-                })
+                });
 
 
                 /**
@@ -1214,7 +1224,7 @@
                     var series = _this.config.series;
                     var animationConfig = _this.config.animation;
                     _this.init(_this.messageCenter, _this.config, _this.type, series);
-                    _this.render(animationConfig.animationEase,animationConfig.animationTime);
+                    _this.render(animationConfig.animationEase, animationConfig.animationTime);
                 });
             },
             __tooltipReady: function () {
@@ -1228,14 +1238,14 @@
 
                         var html = "", series = _this.series;
 
-                        if(_this.timeModel){
+                        if (_this.timeModel) {
                             //时间轴时，鼠标地方会出现圆点
                             _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
-                            _this.series.forEach(function(serie){
+                            _this.series.forEach(function (serie) {
 
                                 var data = serie.data[sectionNumber];
                                 _this.main.append('circle').datum(data)
-                                    .attr('class',"xc-tooltip-circle")
+                                    .attr('class', "xc-tooltip-circle")
                                     .attr('r', function (d) {
                                         return d._serie.lineStyle.radius;
                                     })
@@ -1245,7 +1255,7 @@
                                     .attr('cy', function (d) {
                                         return d.yScale(d.y);
                                     })
-                                    .attr('fill',function(d){
+                                    .attr('fill', function (d) {
                                         return d._serie.color;
                                     })
                             })
@@ -1254,15 +1264,15 @@
 
                         series.forEach(function (serie) {
                             if (serie.show === false) return;
-                            var data = serie.data[sectionNumber]===undefined?"":serie.data[sectionNumber].value;
+                            var data = serie.data[sectionNumber] === undefined ? "" : serie.data[sectionNumber].value;
 
-                            var serieFormat = serie.formatter || format ||defaultFormatter;
+                            var serieFormat = serie.formatter || format || defaultFormatter;
                             html += serieFormat(serie.name, data);
                         })
                         callback(html);
                     });
 
-                    this.on('tooltipHidden',function(){
+                    this.on('tooltipHidden', function () {
                         //当tooltip滑出区域时，需要清理圆点
                         _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
                     })
@@ -1300,7 +1310,7 @@
 
         });
 
-        function parseSeries(ctx,series, config) {
+        function parseSeries(ctx, series, config) {
             //先剔除不属于line的serie
             var stacks = {}, idx = 0, lineSeries = [];
             series.map(function (serie) {
@@ -1424,7 +1434,7 @@
          * 替换d3.svg.area函数
          * @param data
          */
-        function area(data,serie) {
+        function area(data, serie) {
             var lineScale = d3.svg.line()
                 .x(function (d) {
                     return d.x;
@@ -1447,14 +1457,14 @@
             var path0 = line0Scale(data.reverse());
             data.reverse()//再次翻转，恢复原状
             //serie.areaPath = joinPath(serie);
-           return joinPath(path,path0,data);
+            return joinPath(path, path0, data);
         }
 
         /**
          * 将path和path0拼接成一个areaPath
          * @param serie
          */
-        function joinPath(path,path0,data) {
+        function joinPath(path, path0, data) {
             var firstData = data[0], lastData = data[data.length - 1];
             var leftTop = [firstData.x, firstData.y],
                 rightBottom = [lastData.x, lastData.y0];
@@ -1469,7 +1479,7 @@
          * @returns {string} 一段html文本
          */
         function defaultFormatter(name, value) {
-            return '<p>'+name + ':&nbsp;' + value+'</p>';
+            return '<p>' + name + ':&nbsp;' + value + '</p>';
         }
 
         function defaultConfig() {
@@ -1496,13 +1506,6 @@
                  * @extends xCharts.series.line
                  */
                 type: 'line',
-                /**
-                 * @var xAxisIndex
-                 * @type Number
-                 * @description 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
-                 * @default 0
-                 * @extends xCharts.series.line
-                 */
                 xAxisIndex: 0,
                 /**
                  * @var yAxisIndex
@@ -2916,7 +2919,7 @@
                 var doamin = scale.domain();
                 if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType === 'value') scale = this.scales[i];
 
-                if (!this.legendRefresh && !this.isXAxis) {
+                if (!this.legendRefresh) {
                     calcAxisMargin(this, this.isXAxis, config, scale);
                 }
 
@@ -2939,6 +2942,9 @@
             // 如果重合则返回需要显示的ticks
             if (this.isXAxis) {
                 this.showDomainList = xAxisShowTicks(scales, this.axisConfig);
+
+                // 抛出这个数组,让折线图之类的图表可以使用
+                messageCenter.showDomainList = getDataIndex(this.showDomainList, this.axisConfig);
             }
 
             this.messageCenter[this.type + 'Scale'] = scales;
@@ -2946,6 +2952,17 @@
 
         },
         render: function (animationEase, animationTime) {
+            if(this.isXAxis){
+                return this.__drawAxis(animationEase,animationTime);
+            }
+
+            // Y轴等待X轴画完,因为网格线不等待X轴计算margin完毕的话,可能会出现超出边界的情况
+            this.on("xAxisReady.yAxis",function(){
+                this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right; //计算剩余容器宽
+                this.__drawAxis(animationEase,animationTime);
+            }.bind(this));
+        },
+        __drawAxis: function(animationEase, animationTime){
             var type = this.type;
             var scales = this.scales;
 
@@ -2963,21 +2980,31 @@
                     .tickFormat(config.tickFormat);
 
                 // 画网格
-                if (!this.isXAxis) {
+                // i===0 表示只画一个,不然多Y轴情况会很难看
+                if (!this.isXAxis && i === 0) {
                     axis.innerTickSize(-this.width);
-                } else {
+                } else if (i === 0) {
                     axis.innerTickSize(-this.height);
                     axis.tickPadding(10);
                     axis.tickValues(this.showDomainList[i]);
+                } else {
+                    // 第二个根Y轴
+                    axis.innerTickSize(0);
                 }
 
                 //添加<g>
                 var axisGroup = this.main.selectAll(".xc-axis." + type + '-' + i).data([config]);
 
+
                 axisGroup.enter().append('g')
                     .attr('class', 'xc-axis ' + type + ' ' + type + '-' + i)
                     .attr('fill', 'none')
                     .attr('stroke', '#000');
+
+                // 柱状图的网格要特殊处理
+                if (scale.scaleType === "barCategory") {
+                    axisGroup.classed("xc-bar-axis", true);
+                }
 
                 axisGroup.attr('transform', translate.call(this, config))
                     .transition()
@@ -2985,6 +3012,10 @@
                     .duration(animationTime)
                     .call(axis);
 
+            }
+
+            if(this.isXAxis){
+                this.fire("xAxisReady");
             }
         },
         ready: function () {
@@ -3048,6 +3079,7 @@
 
     /**
      * 计算y轴时，需要偏移的margin值
+     * 计算X轴时,margin.right偏移值,根据显示文字长度决定
      * @param ctx
      * @param isXAxis
      * @param config
@@ -3055,25 +3087,47 @@
      */
     function calcAxisMargin(ctx, isXAxis, config, scale) {
 
-        // 只处理Y轴，X轴高度基本不会变化
 
-        var ticksTextList = scale.ticks().map(function (tickText) {
-            return config.tickFormat(tickText);
-        });
+        if (isXAxis) {
 
-        // 这里默认14的字体大小，也不知道有没有影响，囧
-        var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
-        var maxWidth = d3.max(widthList);
+            var ticksTextList = scale.domain().map(function (tickText) {
+                return config.tickFormat(tickText);
+            });
+            var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
 
-        maxWidth = maxWidth == undefined ? 0 : maxWidth;
+            var lastTickWidth = widthList[widthList.length - 1];
+            var marginRight = ctx.margin.right;
+            if (lastTickWidth / 2 > marginRight) {
 
-        if (config.position === 'right') {
-            ctx.margin.right += maxWidth;
+                // 加法是为了防止意外覆盖到legend
+                ctx.margin.right += Math.round(lastTickWidth / 2) - marginRight;
+            }
+
+            var firstTickWidth = widthList[0];
+            var marginLeft = ctx.margin.left;
+            if (firstTickWidth / 2 > marginLeft) {
+                ctx.margin.left += Math.round(firstTickWidth / 2) - marginLeft;
+            }
+
         } else {
-            ctx.margin.left += maxWidth;
+
+            var ticksTextList = scale.ticks().map(function (tickText) {
+                return config.tickFormat(tickText);
+            });
+
+            // 这里默认14的字体大小，也不知道有没有影响，囧
+            var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
+
+            var maxWidth = d3.max(widthList);
+
+            maxWidth = maxWidth == undefined ? 0 : maxWidth;
+
+            if (config.position === 'right') {
+                ctx.margin.right += maxWidth;
+            } else {
+                ctx.margin.left += maxWidth;
+            }
         }
-
-
     }
 
     /**
@@ -3200,8 +3254,8 @@
         if (singleConfig.ticks < 2 || this.legendRefresh) {
             var ticksLength = scale.ticks().length;
             var ticks = Math.ceil(ticksLength / 2);
-            if(ticks>=2){
-                singleConfig.ticks=ticks;
+            if (ticks >= 2) {
+                singleConfig.ticks = ticks;
             }
         }
 
@@ -3349,12 +3403,22 @@
     }
 
     /**
+     * 计算哪些tick可能重叠,将其抛弃.留下需要显示的tick
      *
+     * @param scales 计算出来的scale
+     * @param configs
+     * @return {Array}
      */
     function xAxisShowTicks(scales, configs) {
         var domainList = [];
         for (var i = 0; i < scales.length; i++) {
             var scale = scales[i];
+
+            // 只支持category类型
+            if (scale.scaleType !== 'category' && scale.scaleType !== 'barCategory') {
+                continue;
+            }
+
             var domain = utils.copy(scale.domain());
             var range = scale.range();
             var config = configs[i]
@@ -3417,6 +3481,33 @@
         return false;
     }
 
+    /**
+     * 计算需要显示的ticks在config.data中的列表
+     * @param showDomainList
+     * @param configs
+     * @returns {Array} [{1:true}] key是config.data中的位置
+     */
+    function getDataIndex(showDomainList, configs) {
+        var ret = [];
+        for (var i = 0; i < showDomainList.length; i++) {
+            var list = showDomainList[i];
+            var data = configs[i].data;
+            var dataIndex = {};
+            list.forEach(function (value) {
+                for (var j = 0; j < data.length; j++) {
+                    if (value === data[j]) {
+                        break;
+                    }
+                }
+                if (j == data.length) {
+                    console.error("data和value不匹配");
+                }
+                dataIndex[j] = true;
+            });
+            ret[i] = dataIndex;
+        }
+        return ret;
+    }
 
     function defaultConfig(type) {
         //注释掉是因为该项没有默认值,非必须或者必须由用户指定
@@ -3433,7 +3524,7 @@
              * @extends xCharts.axis
              * @description 坐标轴的类型
              * @type String
-             * @values 'category'|'value'|'time'
+             * @values 'category'|'value'
              */
             //type:'value',
             /**
@@ -5257,7 +5348,7 @@
             this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
 
             this.main = this.svg.append('g').attr('class', 'xc-main');
-            this.margin = {top: 15, left: 10, right: 15, bottom: 20};
+            this.margin = {top: 15, left: 10, right: 15, bottom: 30};
             this.originMargin = xCharts.utils.copy(this.margin);//克隆一个副本，提供给refresh重置用
             this.EventList = {};
 
