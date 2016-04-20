@@ -183,7 +183,7 @@
             _this.tooltip.style({visibility: 'hidden'});
 
             // 隐藏线条
-            if(this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 0);
+            if(this.tooltipConfig.trigger === 'axis' &&  _this.axisLine) _this.axisLine.attr('opacity', 0);
             _this.main.selectAll('.xc-tooltip-line').attr('opacity', 0);
         },
         setPosition: function (position, offsetX, offsetY) {

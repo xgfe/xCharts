@@ -54,7 +54,6 @@
             this.firstDrawingRect = this.clippath.append("rect").attr('x',0).attr('y',0).attr("width",0).attr('height',this.originalHeight);
 
             //添加clippath
-            // todo 画完记着删掉
             this.svg.attr("clip-path","url(#xc-firstdraw-"+this.id+")");
 
             this.main = this.svg.append('g').attr('class', 'xc-main');
@@ -158,7 +157,7 @@
 
             // 找不到容器
             if(isNaN(this.originalWidth) || isNaN(this.originalHeight)){
-                throw new Error("container not found");
+                throw "container not found";
             }
 
             this.margin = xCharts.utils.copy(this.originMargin);
