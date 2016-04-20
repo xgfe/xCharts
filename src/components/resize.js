@@ -27,7 +27,11 @@
                 } catch (error) {
                     // 在angular router切换时,会导致不能正常退出,
                     // 报错证明已经不存在页面当中,清除此chart
-                    delete chartList[k];
+                    if(typeof error === 'string'){
+                        delete chartList[k];
+                    }else{
+                        console.error(error.stack);
+                    }
                 }
             }
         }
