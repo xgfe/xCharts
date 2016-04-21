@@ -82,6 +82,10 @@ var option = {
 chart.loadConfig(option);
   ```
 
+## 源码编译
+
+`npm run build`
+
 ## 实例及文档  
 更多实例及API文档请移步[项目介绍](http://xgfe.github.io/xCharts/)。  
 
