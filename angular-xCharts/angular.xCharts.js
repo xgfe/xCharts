@@ -1,7 +1,7 @@
 /**
  * angular-xCharts
  */
-angular.module("angular.xCharts", ["xCharts.pie"]);
+angular.module("angular.xCharts", ["xCharts.pie", 'xCharts.line']);
 /**
  * xcharts-pie
  * Discription: 饼图
@@ -9,31 +9,73 @@ angular.module("angular.xCharts", ["xCharts.pie"]);
  * Date: 2016-04-21
  */
 angular.module('xCharts.pie', [])
-.directive('xchartsPie', function() {
-    return {
-        restrict: 'E',
-        replace: true,
-        scope: {
-            config: '=',
-            width: '@',
-            height: '@'
-        },
-        template: '<div></div>',
-        link: function(scope, ele, attrs) {
-            var config = scope.config,
-                width = scope.width,
-                height = scope.height;
-            if(config.series[0].type !== 'pie') {
-                config.series[0].type = 'pie';
+    .directive('xchartsPie', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                config: '=',
+                width: '@',
+                height: '@'
+            },
+            template: '<div></div>',
+            link: function (scope, ele) {
+                var config = scope.config,
+                    width = scope.width,
+                    height = scope.height;
+                if (config.series[0].type !== 'pie') {
+                    config.series[0].type = 'pie';
+                }
+                if (width) {
+                    ele.css('width', width);
+                }
+                if (height) {
+                    ele.css('height', height);
+                }
+                var chart = xCharts(ele[0]);
+                chart.loadConfig(config);
             }
-            if(width) {
-                ele[0].style.width = width + 'px';
+        };
+    });
+
+/**
+ * xcharts-line
+ * Discription: 折线图,面积图
+ * Author: mzefibp@163.com
+ * Date: 2016-04-21
+ */
+angular.module('xCharts.line', [])
+    .directive('xchartsLine', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                config: '=',
+                width: '@',
+                height: '@'
+            },
+            template: '<div></div>',
+            link: function (scope, ele) {
+                var config = scope.config,
+                    width = scope.width,
+                    height = scope.height;
+
+                config.series = config.series.map(function (serie) {
+                    if (!serie.type) {
+                        serie.type = 'line';
+                    }
+                    return serie;
+                });
+                if (width) {
+                    ele.css('width', width);
+                }
+
+                if (height) {
+                    ele.css('height', height);
+                }
+
+                var chart = xCharts(ele[0]);
+                chart.loadConfig(config);
             }
-            if(height) {
-                ele[0].style.height = height + 'px';
-            }
-            var chart = xCharts(ele[0]);
-            chart.loadConfig(config);
-        }
-    };
-});
+        };
+    });
