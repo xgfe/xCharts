@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "./build.sh"
+    "build": "NODE_ENV=production gulp build"
   },
   "repository": {
     "type": "git",
@@ -25,6 +25,12 @@
     "browserify": "^13.0.0",
     "cz-conventional-changelog": "^1.1.5",
     "dox": "^0.8.0",
+    "gulp": "^3.9.1",
+    "gulp-concat": "^2.6.0",
+    "gulp-header": "^1.7.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^2.0.0-alpha",
+    "gulp-uglify": "^1.5.3",
     "jasmine": "^2.3.2",
     "jasmine-core": "^2.3.4",
     "karma": "^0.13.15",
