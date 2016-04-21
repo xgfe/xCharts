@@ -282,4 +282,4 @@
         return scatter;
     }
 
-}(window))
+}(window));

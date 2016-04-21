@@ -553,4 +553,4 @@
         }
         return config;
     }
-}(window))
+}(window));

@@ -42,4 +42,4 @@
 
     xCharts.charts.extend({Chart:Chart});
 
-}(window))
+}(window));

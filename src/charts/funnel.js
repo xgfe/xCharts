@@ -500,4 +500,4 @@
         return funnel;
     }
 
-}(window))
+}(window));

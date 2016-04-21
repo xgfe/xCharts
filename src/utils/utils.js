@@ -1,5 +1,6 @@
 /**
  * Created by liuyang on 15/10/23.
+ * 工具类
  */
 (function () {
     var utils = xCharts.utils;
@@ -244,4 +245,4 @@
         return throttle(fn, delay, immediate, true);
     };
 
-}())
+}());

@@ -326,4 +326,4 @@
         }
         return config;
     }
-}(window))
+}(window));

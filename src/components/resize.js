@@ -116,4 +116,4 @@
         animationTime:300
     }
 
-}(window))
+}(window));

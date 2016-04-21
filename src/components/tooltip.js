@@ -332,4 +332,4 @@
         }
         return tooltip;
     }
-}(window))
+}(window));

@@ -67,4 +67,4 @@
 
     xCharts.components.extend({Component: Component});
 
-}())
+}());
