@@ -454,4 +454,4 @@
     }
 
     window.xCharts = xCharts;
-}(window))
+}(window));
