@@ -7,43 +7,49 @@
 var gulp = require('gulp');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
-var sourcemaps = require('gulp-sourcemaps');
 var rename = require('gulp-rename');
 var config = require('./package.json');
 var header = require('gulp-header');
+var umd = require("gulp-umd");
 
 var uglifyOptions = {}
 
-var banner=['/**',
+var banner = ['/**',
     ' * <%= pkg.name %> - <%= pkg.description %>',
     ' * @version v<%= pkg.version %>',
     '*/',
-''].join('\n');
+    ''].join('\n');
 
 var production = process.env.NODE_ENV === 'production';
 
 gulp.task('build-js', function () {
-    var pipe = gulp.src([
-        './src/xCharts.js',
-        './src/utils/utils.js',
-        './src/components/Component.js',
-        './src/components/*.js',
-        './src/charts/Chart.js',
-        './src/charts/*.js'
-    ]).pipe(concat('xCharts.js'))
+    return gulp.src([
+            './src/xCharts.js',
+            './src/utils/utils.js',
+            './src/components/Component.js',
+            './src/components/*.js',
+            './src/charts/Chart.js',
+            './src/charts/*.js'
+        ])
+        .pipe(concat('./xCharts.js'))
+        .pipe(umd({
+            exports: function () {
+                return 'xCharts';
+            },
+            namespace: function () {
+                return 'xCharts';
+            },
+            dependencies: function() {
+                return ['d3'];
+            },
 
-    if (!production) {
-        pipe.pipe(sourcemaps.init())
-    }
-
-    pipe.pipe(uglify(uglifyOptions))
-    if (!production) {
-        pipe.pipe(sourcemaps.write('./maps'))
-    }
-    pipe.pipe(rename({
+        }))
+        .pipe(gulp.dest('./dist/'))
+        .pipe(uglify(uglifyOptions))
+        .pipe(rename({
             suffix: '.min'
         }))
-        .pipe(header(banner,{pkg:config}))
+        .pipe(header(banner, {pkg: config}))
         .pipe(gulp.dest('./dist/'));
 });
 
@@ -52,4 +58,4 @@ gulp.task('build-css', function () {
         .pipe(gulp.dest('./dist/'));
 });
 
-gulp.task('build',['build-js','build-css']);
+gulp.task('build', ['build-js', 'build-css']);
