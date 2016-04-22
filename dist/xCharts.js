@@ -1,12 +1,12 @@
 ;(function(root, factory) {
   if (typeof define === 'function' && define.amd) {
-    define(['d3'], factory);
+    define([], factory);
   } else if (typeof exports === 'object') {
-    module.exports = factory(require('d3'));
+    module.exports = factory();
   } else {
-    root.xCharts = factory(root.d3);
+    root.xCharts = factory();
   }
-}(this, function(d3) {
+}(this, function() {
 /**
  * Created by liuyang on 15/10/23.
  * TODO 当出现不支持的参数时，忽略还是报错关闭绘制
@@ -1168,14 +1168,16 @@
         }
 
         var ticks = scale.ticks(singleConfig.ticks);
+
+        // 当所有值为0时,会出现tickRange=NaN;
         var tickRange = ticks[1] - ticks[0];
 
 
-        if (domain[0] % tickRange !== 0) {
+        if (domain[0] % tickRange !== 0 && !isNaN(tickRange)) {
             domain[0] = parseInt(domain[0] / tickRange) * tickRange;
         }
 
-        if (domain[1] % tickRange !== 0) {
+        if (domain[1] % tickRange !== 0 && !isNaN(tickRange)) {
             domain[1] = (parseInt(domain[1] / tickRange) + 1) * tickRange;
         }
 

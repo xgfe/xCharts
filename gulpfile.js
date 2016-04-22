@@ -40,9 +40,6 @@ gulp.task('build-js', function () {
             namespace: function () {
                 return 'xCharts';
             },
-            dependencies: function () {
-                return ['d3'];
-            },
 
         }))
         .pipe(gulp.dest('./dist/'))
