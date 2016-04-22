@@ -2,11 +2,9 @@
  *  scatter 散点图
  *  继承自 Chart
  */
-(function (window) {
-    var xCharts = window.xCharts;
+(function (xCharts,d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
-    var d3 = window.d3;
     xCharts.charts.extend({scatter: scatter});
     utils.inherits(scatter, Chart);
 
@@ -282,4 +280,4 @@
         return scatter;
     }
 
-}(window));
+}(xCharts,d3));

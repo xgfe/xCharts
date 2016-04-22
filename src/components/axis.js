@@ -2,11 +2,12 @@
  * xCharts.axis
  * 坐标系绘制函数
  * TODO brush时间刷
+ * TODO formatter函数被调用了三次
+ * TODO 用户可以控制哪些ticks显示
+ * TODO 用户控制网格显示
  */
-(function (window) {
-    var xCharts = window.xCharts;
+(function (xCharts,d3) {
     var utils = xCharts.utils;
-    var d3 = window.d3;
     var components = xCharts.components;
     utils.inherits(axis, components['Component']);
     components.extend({axis: axis});
@@ -748,4 +749,4 @@
     }
 
 
-}(window));
+}(xCharts,d3));

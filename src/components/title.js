@@ -2,12 +2,10 @@
  * xCharts.title
  * extends Component
  */
-(function (window) {
+(function (xCharts,d3) {
 
     // 获取必须的全局声明
-    var xCharts = window.xCharts;
     var utils = xCharts.utils;
-    var d3 = window.d3;
 
     // 获取xCharts的components存储点
     var components = xCharts.components;
@@ -289,4 +287,4 @@
         }
         return title;
     }
-}(window));
+}(xCharts,d3));

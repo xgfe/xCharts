@@ -11,6 +11,7 @@ var rename = require('gulp-rename');
 var config = require('./package.json');
 var header = require('gulp-header');
 var umd = require("gulp-umd");
+var path = require('path');
 livereload = require('gulp-livereload');
 
 var uglifyOptions = {}
@@ -30,7 +31,8 @@ gulp.task('build-js', function () {
             './src/components/Component.js',
             './src/components/*.js',
             './src/charts/Chart.js',
-            './src/charts/*.js'
+            // './src/charts/*.js',
+            './src/charts/line.js',
         ])
         .pipe(concat('./xCharts.js'))
         .pipe(umd({
@@ -40,7 +42,7 @@ gulp.task('build-js', function () {
             namespace: function () {
                 return 'xCharts';
             },
-
+            template:path.resolve(__dirname,'returnExportsGlobal.js')
         }))
         .pipe(gulp.dest('./dist/'))
         .pipe(uglify(uglifyOptions))

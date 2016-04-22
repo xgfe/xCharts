@@ -2,7 +2,7 @@
  * Created by liuyang on 15/10/27.
  * chars的基类
  */
-(function(window){
+(function(xCharts,d3){
 
     /**
      * @var series
@@ -11,7 +11,6 @@
      * @description 包含图表数据
      */
 
-    var xCharts=window.xCharts;
     var utils=xCharts.utils;
     var Component=xCharts.components.Component;
     function Chart(messageCenter,config,type){
@@ -42,4 +41,4 @@
 
     xCharts.charts.extend({Chart:Chart});
 
-}(window));
+}(xCharts,d3));

@@ -2,7 +2,7 @@
  * Created by liuyang on 15/10/23.
  * 工具类
  */
-(function () {
+(function (xCharts) {
     var utils = xCharts.utils;
 
     var toString = Object.prototype.toString;
@@ -245,4 +245,4 @@
         return throttle(fn, delay, immediate, true);
     };
 
-}());
+}(xCharts));
