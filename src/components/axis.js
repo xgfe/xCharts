@@ -384,14 +384,16 @@
         }
 
         var ticks = scale.ticks(singleConfig.ticks);
+
+        // 当所有值为0时,会出现tickRange=NaN;
         var tickRange = ticks[1] - ticks[0];
 
 
-        if (domain[0] % tickRange !== 0) {
+        if (domain[0] % tickRange !== 0 && !isNaN(tickRange)) {
             domain[0] = parseInt(domain[0] / tickRange) * tickRange;
         }
 
-        if (domain[1] % tickRange !== 0) {
+        if (domain[1] % tickRange !== 0 && !isNaN(tickRange)) {
             domain[1] = (parseInt(domain[1] / tickRange) + 1) * tickRange;
         }
 
