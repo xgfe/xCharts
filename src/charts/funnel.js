@@ -1,11 +1,9 @@
 /**
  * 漏斗图
  */
-(function (window) {
-    var xCharts = window.xCharts;
+(function (xCharts,d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
-    var d3 = window.d3;
     xCharts.charts.extend({funnel: funnel});
     utils.inherits(funnel, Chart);
 
@@ -500,4 +498,4 @@
         return funnel;
     }
 
-}(window));
+}(xCharts,d3));

@@ -5,12 +5,10 @@
  */
 
 
-(function(window){
+(function(xCharts,d3){
 
 
-    var xCharts = window.xCharts;
     var utils = xCharts.utils;
-    var d3 = window.d3;
     var components = xCharts.components;
     utils.inherits(resize, components['Component']);
     components.extend({resize: resize});
@@ -116,4 +114,4 @@
         animationTime:300
     }
 
-}(window));
+}(xCharts,d3));

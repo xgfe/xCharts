@@ -1,7 +1,7 @@
 /**
  * Created by liuyang on 15/10/27.
  */
-(function () {
+(function (xCharts) {
 
     function Component(messageCenter, config, type) {
         this.messageCenter = messageCenter;
@@ -67,4 +67,4 @@
 
     xCharts.components.extend({Component: Component});
 
-}());
+}(xCharts));

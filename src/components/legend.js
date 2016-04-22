@@ -2,10 +2,8 @@
  * xCharts.legend
  * extends Component
  */
-(function (window) {
-    var xCharts = window.xCharts;
+(function (xCharts,d3) {
     var utils = xCharts.utils;
-    var d3 = window.d3;
     var components = xCharts.components;
     var Component = components['Component'];
 
@@ -667,4 +665,4 @@
     }
 
 
-}(window));
+}(xCharts,d3));
