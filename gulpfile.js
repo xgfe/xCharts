@@ -3,7 +3,7 @@
  * Date 16/4/21
  * Describe
  */
-'use strict"'
+'use strict'
 var gulp = require('gulp');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
