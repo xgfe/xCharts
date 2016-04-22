@@ -11,6 +11,7 @@ var rename = require('gulp-rename');
 var config = require('./package.json');
 var header = require('gulp-header');
 var umd = require("gulp-umd");
+livereload = require('gulp-livereload');
 
 var uglifyOptions = {}
 
@@ -39,7 +40,7 @@ gulp.task('build-js', function () {
             namespace: function () {
                 return 'xCharts';
             },
-            dependencies: function() {
+            dependencies: function () {
                 return ['d3'];
             },
 
@@ -57,5 +58,18 @@ gulp.task('build-css', function () {
     return gulp.src('./src/css/xCharts.css')
         .pipe(gulp.dest('./dist/'));
 });
+
+gulp.task('watch-reload', function () {
+    var server = livereload({start: true});
+    gulp.watch(['src/**/*.*', 'kaifa/*.*'], function (file) {
+        return gulp.src(file.path)
+            .pipe(livereload())
+    });
+});
+
+gulp.task('watch',function(){
+    gulp.watch(['src/**/*.js'],['build-js']);
+    gulp.watch(['src/**/*.css'],['build-css']);
+})
 
 gulp.task('build', ['build-js', 'build-css']);
