@@ -2,6 +2,7 @@
  * @file 饼图
  * @author chenwubai.cx@gmail.com
  */
+// TODO 把代码里的魔数尽量提出来作为配置项
 (function(window) {
     var xCharts = window.xCharts;
     var utils = xCharts.utils;
@@ -33,6 +34,7 @@
             } else {
                 for(var i=0;i<series.length;i++) {
                     if(series[i].type == 'pie') {
+                        // 这一步是为了重绘时重新计算圆心和半径
                         this.pieConfig.center = utils.copy(series[i].center, true);
                         this.pieConfig.radius = utils.copy(series[i].radius, true);
                         break;
@@ -47,12 +49,19 @@
             // 生成弧形路径计算函数
             this.arcFunc = this.__getArcFunc();
             this.bigArcFunc = this.__getBigArcFunc();
+            this.textArcFunc = this.__getTextArcFunc();
         },
         render: function(animationEase, animationTime) {
             // 添加饼图g容器
             this.pieWrapper = this.__renderPieWrapper();
             // 添加弧形
             this.arcList = this.__renderArcs(animationEase, animationTime);
+            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+                // 添加文字标签
+                this.textList = this.__renderText(animationEase, animationTime);
+                // 添加连接弧形和文字标签的线条
+                this.textLineList = this.__renderTextLine(animationEase, animationTime);
+            }
         },
         ready: function() {
             this.__legendReady();
@@ -116,6 +125,12 @@
                 .outerRadius(this.pieConfig.radius.outerRadius + 10);
             return bigArcFunc;
         },
+        __getTextArcFunc: function() {
+            var textArcFunc = d3.svg.arc()
+                .innerRadius(this.pieConfig.radius.outerRadius * 1.1)
+                .outerRadius(this.pieConfig.radius.outerRadius * 1.1);
+            return textArcFunc;
+        },
         __renderPieWrapper: function() {
             var pieWrapper = this.main
                 .selectAll('.xc-pie')
@@ -163,6 +178,78 @@
                 });
             return arcList;
         },
+        __renderText: function(animationEase, animationTime) {
+            var _this = this;
+            var texts = this.pieWrapper
+                .selectAll('.xc-pie-texts')
+                .data([1]);
+            texts.enter()
+                .append('g')
+                .classed('xc-pie-texts', true);
+            var textList = texts.selectAll('.xc-pie-text')
+                .data(this.pieData);
+            textList.enter()
+                .append('text')
+                .classed('xc-pie-text', true)
+                // TODO 后面考虑是否把这个提成配置项
+                .attr('dy', '0.35em')
+                .attr('fill', function(d) {
+                    return d.data.color;
+                })
+                .text(function(d) {
+                    var formatter = _this.pieConfig.labels.formatter || defaultLabelFormatter;
+                    return formatter(d.data.name, d.data.value);
+                });
+            textList.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attr('transform', function(d) {
+                    // 找出外弧形的中心点
+                    var pos = _this.textArcFunc.centroid(d);
+                    // 适当改变文字标签的x坐标
+                    pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
+                    return 'translate(' + pos + ')';
+                })
+                .style('display', function(d) {
+                    return d.data.isShow ? null : 'none';
+                })
+                .style('text-anchor', function(d) {
+                    return midAngel(d)<Math.PI ? 'start' : 'end';
+                });
+        },
+        __renderTextLine: function(animationEase, animationTime) {
+            var _this = this;
+            var arcFunc = d3.svg.arc()
+                .innerRadius(this.pieConfig.radius.outerRadius * 1.05)
+                .outerRadius(this.pieConfig.radius.outerRadius * 1.05);
+            var textLines = this.pieWrapper
+                .selectAll('.xc-pie-textLines')
+                .data([1]);
+            textLines.enter()
+                .append('g')
+                .classed('xc-pie-textLines', true);
+            var textLineList = textLines.selectAll('.xc-pie-textLine')
+                .data(this.pieData);
+            textLineList.enter()
+                .append('polyline')
+                .classed('xc-pie-textLine', true)
+                .attr('points', function(d) {
+                    return [arcFunc.centroid(d), arcFunc.centroid(d), arcFunc.centroid(d)];
+                });
+            textLineList.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attr('points', function(d) {
+                    // 找出外弧形的中心点
+                    var pos = _this.textArcFunc.centroid(d);
+                    // 适当改变文字标签的x坐标
+                    pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
+                    return [arcFunc.centroid(d), _this.textArcFunc.centroid(d), pos];
+                })
+                .style('display', function(d) {
+                    return d.data.isShow ? null : 'none';
+                });
+        },
         __legendReady: function() {
             var _self = this;
             this.on('legendMouseenter.pie', function(name) {
@@ -193,6 +280,7 @@
                     _self.pieData.forEach(function(d) {
                         d.startAngle = 0;
                         d.endAngle = 0;
+                        d.data.isShow = false;
                     });
                 } else {
                     // 先把所有弧形的可见配置设为不可见
@@ -213,6 +301,10 @@
                     _self.pieData = _self.__getPieData();
                 }
                 _self.__renderArcs(animationConfig.animationEase, animationConfig.animationTime);
+                if(_self.pieConfig.labels && _self.pieConfig.labels.enable) {
+                    _self.__renderText(animationConfig.animationEase, animationConfig.animationTime);
+                    _self.__renderTextLine(animationConfig.animationEase, animationConfig.animationTime);
+                }
             });
         },
         __tooltipReady: function() {
@@ -229,7 +321,7 @@
                     y = event.layerY || event.offsetY;
                 var tooltipFormatter = tooltip.tooltipConfig.formatter,
                     pieFormatter = _self.pieConfig.formatter;
-                var formatter = pieFormatter || tooltipFormatter || defaultFormatter;
+                var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
                 tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
                 tooltip.setPosition([x,y], 10, 10);
                 tooltip.showTooltip();
@@ -246,10 +338,15 @@
             });
         }
     });
-    function defaultFormatter(name, value) {
+    function defaultTooltipFormatter(name, value) {
         return "<div>" + name + '：' + value + "</div>";
     }
-
+    function defaultLabelFormatter(name) {
+        return name;
+    }
+    function midAngel(d) {
+        return d.startAngle + (d.endAngle - d.startAngle)/2;
+    }
     function defaultConfig() {
         /**
          * @var pie
@@ -298,6 +395,30 @@
                  * @extends xCharts.series.pie.radius
                  */
                 innerRadius: 0
+            },
+            /**
+             * @var labels
+             * @type Object
+             * @description 定义饼图弧形的文字标签
+             * @extends xCharts.series.pie
+             */
+            labels: {
+                /**
+                 * @var enable
+                 * @type Boolean
+                 * @description 定义是否绘制弧形的文字标签
+                 * @default false
+                 * @extends xCharts.series.pie.labels
+                 */
+                enable: false,
+                /**
+                 * @var formatter
+                 * @type Function
+                 * @description 定义弧形的文字标签的显示格式
+                 * @default 返回弧形的名称
+                 * @extends xCharts.series.pie.labels
+                 */
+                formatter: defaultLabelFormatter
             },
             /**
              * @var data
