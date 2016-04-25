@@ -3,8 +3,7 @@
  * @author chenwubai.cx@gmail.com
  */
 // TODO 把代码里的魔数尽量提出来作为配置项
-(function(window) {
-    var xCharts = window.xCharts;
+(function(xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
 
@@ -447,4 +446,4 @@
         }
         return config;
     }
-}(window));
+}(xCharts, d3));

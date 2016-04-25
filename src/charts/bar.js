@@ -2,8 +2,7 @@
  * @file 柱状图
  * @author chenwubai.cx@gmail.com
  */
-(function(window) {
-    var xCharts = window.xCharts;
+(function(xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
 
@@ -337,4 +336,4 @@
         }
         return config;
     }
-}(window));
+}(xCharts, d3));
