@@ -3,6 +3,7 @@
  * 折线图
  *
  * TODO 动画效果
+ * TODO 折线图鼠标hover影藏点出现
  */
 (function (xCharts,d3) {
     var utils = xCharts.utils;
