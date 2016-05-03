@@ -1,7 +1,7 @@
 /**
  * angular-xCharts
  */
-angular.module("angular.xCharts", ["xCharts.pie", 'xCharts.line']);
+angular.module("angular.xCharts", ["xCharts.pie", 'xCharts.bar', 'xCharts.line']);
 /**
  * xcharts-pie
  * Discription: 饼图
@@ -25,6 +25,42 @@ angular.module('xCharts.pie', [])
                     height = scope.height;
                 if (config.series[0].type !== 'pie') {
                     config.series[0].type = 'pie';
+                }
+                if (width) {
+                    ele.css('width', width);
+                }
+                if (height) {
+                    ele.css('height', height);
+                }
+                var chart = xCharts(ele[0]);
+                chart.loadConfig(config);
+            }
+        };
+    });
+
+/**
+ * xcharts-pie
+ * Discription: 饼图
+ * Author: chenwubai.cx@gmail.com
+ * Date: 2016-04-21
+ */
+angular.module('xCharts.bar', [])
+    .directive('xchartsBar', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                config: '=',
+                width: '@',
+                height: '@'
+            },
+            template: '<div></div>',
+            link: function (scope, ele) {
+                var config = scope.config,
+                    width = scope.width,
+                    height = scope.height;
+                if (config.series[0].type !== 'bar') {
+                    config.series[0].type = 'bar';
                 }
                 if (width) {
                     ele.css('width', width);
