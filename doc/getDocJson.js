@@ -6,7 +6,7 @@ var dox = require('dox');
 var fs = require('fs');
 var Path = require('path');
 
-var path=Path.join(__dirname,'../js')//起始目录
+var path=Path.join(__dirname,'../src')//起始目录
 var outputName=Path.join(__dirname,'api.json');
 var apiData=[];
 fs.writeFile(outputName,'');
