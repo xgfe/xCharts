@@ -12,7 +12,7 @@ var config = require('./package.json');
 var header = require('gulp-header');
 var umd = require("gulp-umd");
 var path = require('path');
-livereload = require('gulp-livereload');
+var livereload = require('gulp-livereload');
 
 var uglifyOptions = {}
 
