@@ -342,8 +342,8 @@
                     var pieFormatter = _self.pieConfig.formatter;
                     var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
                     tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
-                    tooltip.setPosition([x,y], 10, 10);
                     tooltip.showTooltip();
+                    tooltip.setPosition([x,y], 10, 10);
                 }
             });
         } else {
@@ -358,8 +358,8 @@
                     pieFormatter = _self.pieConfig.formatter;
                 var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
                 tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
-                tooltip.setPosition([x,y], 10, 10);
                 tooltip.showTooltip();
+                tooltip.setPosition([x,y], 10, 10);
 
                 d3.select(this).attr('d', function(d) {
                     return _self.bigArcFunc(d);
