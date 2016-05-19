@@ -4,9 +4,9 @@
  * TODO brush时间刷
  * TODO formatter函数被调用了三次
  * TODO 用户可以控制哪些ticks显示
- * TODO 用户控制网格显示
+ * DONE 用户控制网格显示
  */
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var components = xCharts.components;
     utils.inherits(axis, components['Component']);
@@ -77,17 +77,17 @@
 
         },
         render: function (animationEase, animationTime) {
-            if(this.isXAxis){
-                return this.__drawAxis(animationEase,animationTime);
+            if (this.isXAxis) {
+                return this.__drawAxis(animationEase, animationTime);
             }
 
             // Y轴等待X轴画完,因为网格线不等待X轴计算margin完毕的话,可能会出现超出边界的情况
-            this.on("xAxisReady.yAxis",function(){
+            this.on("xAxisReady.yAxis", function () {
                 this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right; //计算剩余容器宽
-                this.__drawAxis(animationEase,animationTime);
+                this.__drawAxis(animationEase, animationTime);
             }.bind(this));
         },
-        __drawAxis: function(animationEase, animationTime){
+        __drawAxis: function (animationEase, animationTime) {
             var type = this.type;
             var scales = this.scales;
 
@@ -106,10 +106,13 @@
 
                 // 画网格
                 // i===0 表示只画一个,不然多Y轴情况会很难看
+                var innerTickWidth = 0;
                 if (!this.isXAxis && i === 0) {
-                    axis.innerTickSize(-this.width);
+                    innerTickWidth = config.grid.show ? -this.width : 0;
+                    axis.innerTickSize(innerTickWidth);
                 } else if (i === 0) {
-                    axis.innerTickSize(-this.height);
+                    innerTickWidth = config.grid.show ? -this.height : 0;
+                    axis.innerTickSize(innerTickWidth);
                     axis.tickPadding(10);
                     axis.tickValues(this.showDomainList[i]);
                 } else {
@@ -137,9 +140,24 @@
                     .duration(animationTime)
                     .call(axis);
 
+                // =======处理网格样式======
+                axisGroup.selectAll(".tick>line")
+                    .attr('opacity', function (line, index) {
+                        if (index !== 0 && config.grid.controlSingleLineShow(line)) {
+                            return config.grid.opacity;
+                        }
+                        return 0;
+                        
+
+                    })
+                    .attr('stroke', function (line, index) {
+                        if (index !== 0) {
+                            return config.grid.color;
+                        }
+                    });
             }
 
-            if(this.isXAxis){
+            if (this.isXAxis) {
                 this.fire("xAxisReady");
             }
         },
@@ -743,10 +761,59 @@
              * @description
              * 当不需要显示坐标轴时，可以关掉这个选项
              */
-            show: true
+            show: true,
+            /**
+             * @var grid
+             * @extends xCharts.axis
+             * @type Object
+             * @description
+             * 坐标网格
+             */
+            grid: {
+                /**
+                 * @var show
+                 * @extends xCharts.axis.grid
+                 * @type Boolean
+                 * @default true
+                 * @description
+                 * 当不需要显示网格时,可以关掉此项
+                 */
+                show: true,
+                /**
+                 * @var opacity
+                 * @extends xCharts.axis.grid
+                 * @type Number
+                 * @default 0.2
+                 * @description
+                 * 网格线的透明度
+                 */
+                opacity: 0.2,
+                /**
+                 * @var color
+                 * @extends xCharts.axis.grid
+                 * @type String
+                 * @default #a2a2a2
+                 * @description
+                 * 网格线的颜色
+                 */
+                color: '#a2a2a2',
+                /**
+                 * @var controlSingleLineShow
+                 * @extends xCharts.axis.grid
+                 * @type Function
+                 * @default 全部显示
+                 * @description
+                 *  精确控制每一根网格线的显示与否
+                 *  传入data里的每一个值,返回true或者false控制显示或者不显示
+                 *
+                 */
+                controlSingleLineShow: function () {
+                    return true;
+                }
+            }
         }
         return axis;
     }
 
 
-}(xCharts,d3));
+}(xCharts, d3));

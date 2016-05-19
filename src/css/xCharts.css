@@ -10,7 +10,6 @@
     stroke: none;
 }
 
-.xc-axis line,
 .xc-axis path {
     stroke: #a2a2a2;
 }
@@ -19,9 +18,7 @@
     display: none;
 }
 
-.xc-axis > .tick > line {
-    opacity: 0.2;
-}
+
 
 .xc-axis > .tick:first-child > line {
     opacity: 0;
