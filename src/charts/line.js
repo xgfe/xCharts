@@ -5,7 +5,7 @@
  * TODO 动画效果
  * TODO 折线图鼠标hover影藏点出现
  */
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
 
@@ -220,9 +220,11 @@
                 })
                 .style("display", function (d, idx) {
                     if (showDataList[idx] !== true) {
+                        this.circleDisplay = false;
                         return "none";
                     }
 
+                    this.circleDisplay = true;
                     return "block";
 
                 })
@@ -272,7 +274,8 @@
                     }
                 })
 
-            _this.circleGroup = circle;
+            _this.circle = circle;
+            _this.circleGroup = circleGroup;
         },
         ready: function () {
             this.__legendReady();
@@ -299,7 +302,7 @@
                 circleUse.attr('xlink:href', circleId);
                 d3.select(lineId).attr('stroke-width', serie.lineStyle.width + 1);
                 //d3.select(circleId).attr('fill', 'yellow');
-            })
+            });
 
             this.on('legendMouseleave.line', function (name) {
 
@@ -366,8 +369,23 @@
                                 .attr('fill', function (d) {
                                     return d._serie.color;
                                 })
-                        })
+                        });
 
+                    } else {
+                        // 首先将不显示的圆点全部隐藏
+                        _this.circle.style('display',function(){
+                            if(!this.circleDisplay){
+                                return 'none';
+                            }
+                        });
+
+                        // 判断如果是 display:none; 显示为display:block;
+                        var circle = _this.circleGroup.selectAll('circle:nth-child('+(sectionNumber + 1)+')');
+                        circle.style('display',function(){
+                            if(!this.circleDisplay){
+                                return 'block';
+                            }
+                        })
                     }
 
                     series.forEach(function (serie) {
@@ -376,7 +394,8 @@
 
                         var serieFormat = serie.formatter || format || defaultFormatter;
                         html += serieFormat(serie.name, data);
-                    })
+                    });
+
                     callback(html);
                 });
 
@@ -389,7 +408,7 @@
                 var tooltip = _this.messageCenter.components['tooltip'];
                 var tooltipFormatter = tooltip.tooltipConfig.formatter;
                 var axisConfig = _this.messageCenter.components['xAxis'].axisConfig;
-                _this.circleGroup.on('mouseenter', function (data) {
+                _this.circle.on('mouseenter', function (data) {
                     var target = d3.event.srcElement || d3.event.target;
                     target = d3.select(target);
                     var data = target.data()[0];
@@ -408,7 +427,7 @@
                     tooltip.setPosition([x, y]);
 
                 })
-                _this.circleGroup.on('mouseleave', function () {
+                _this.circle.on('mouseleave', function () {
                     tooltip.hidden();
                 })
 
@@ -734,4 +753,4 @@
         return config;
     }
 
-}(xCharts,d3));
+}(xCharts, d3));
