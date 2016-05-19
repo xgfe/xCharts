@@ -31,8 +31,8 @@ gulp.task('build-js', function () {
             './src/components/Component.js',
             './src/components/*.js',
             './src/charts/Chart.js',
-            // './src/charts/*.js',
-            './src/charts/line.js',
+            './src/charts/*.js',
+            // './src/charts/line.js',
         ])
         .pipe(concat('./xCharts.js'))
         .pipe(umd({
