@@ -88,40 +88,50 @@
             itemList.append('text')
                 .attr('x', chartSize * 1.1)
                 .attr('y', function () {
-                    return fontSize * 0.9;//减去一个偏移量,使其居中
+                    return 0.325*chartSize + 0.25*fontSize;
                 })
-                .attr('font-size', fontSize)
                 .append('tspan')
-                .attr('dy', function () {
-                    //为了文字和图居中
-                    if (fontSize > chartSize) return 0;
-                    else return (chartSize - fontSize) * 0.5;
-                })
                 .text(function (serie) {
                     return serie.name;
-                });
+                })
+                .attr('font-size', fontSize);
 
 
             //添加图案
-            var legendPathD={};
-            itemList.append('path')
-                .attr('d', function (serie) {
+            // var legendPathD={};
+            // itemList.append('path')
+            //     .attr('d', function (serie) {
+            //
+            //         //这里新添一个图表需要在这里添加自己独特的图案路径
+            //         if (!pathD[serie.type]) {
+            //             throw new Error("pathD." + serie.type + " not found")
+            //         }
+            //
+            //         // 节约性能，因为图例的大小都是统一的，计算一次就够了
+            //         if(!legendPathD[serie.type])  legendPathD[serie.type]=pathD[serie.type](chartSize, itemHeight);
+            //
+            //         return legendPathD[serie.type];
+            //     })
+            //     .attr('stroke', function (serie) {
+            //         return serie.color;
+            //     })
+            //     .attr('fill', function (serie) {
+            //         return serie.color;
+            //     });
 
-                    //这里新添一个图表需要在这里添加自己独特的图案路径
-                    if (!pathD[serie.type]) {
-                        throw new Error("pathD." + serie.type + " not found")
-                    }
-
-                    // 节约性能，因为图例的大小都是统一的，计算一次就够了
-                    if(!legendPathD[serie.type])  legendPathD[serie.type]=pathD[serie.type](chartSize, itemHeight);
-
-                    return legendPathD[serie.type];
-                })
+            itemList.append('rect')
+                .attr('width',chartSize*0.9)
+                .attr('height',chartSize*0.5)
+                .attr('rx',chartSize*0.1)
+                .attr('ry',chartSize*0.1)
                 .attr('stroke', function (serie) {
                     return serie.color;
                 })
                 .attr('fill', function (serie) {
                     return serie.color;
+                })
+                .style('transform',function(){
+
                 });
 
             _this.itemList = itemList;
@@ -252,7 +262,7 @@
         });
 
         //计算name的长度
-        var widthList = utils.calcTextWidth(nameList,config.item.chartSize,offsetLength).widthList;
+        var widthList = utils.calcTextWidth(nameList,config.item.fontSize,offsetLength).widthList;
 
         // 计算每个legendSerie的x,y位置
         var totalWidth = 0, totoalHeight = 0, maxWidth=0, maxHeight=0, colWidth = 0;
@@ -266,10 +276,15 @@
                 totalWidth += itemWidth + itemGap;
 
                 // 如果当前行的宽度已经大于当前可绘画区域的最大宽度，进行换行
-                if (totalWidth > width) {
+                if ((totalWidth - itemGap) > width) {
                     maxWidth = width;
                     totalWidth = 0;
                     totoalHeight += itemHeight * 1.1;//加上高度的0.1的偏移量做分割
+
+                    // 需要把当前的serie重新设置位置
+                    serie.position = [totalWidth, totoalHeight];
+
+                    totalWidth = itemWidth + itemGap;
                 }
             } else {
                 //垂直布局
