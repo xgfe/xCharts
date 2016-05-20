@@ -13,14 +13,18 @@ var header = require('gulp-header');
 var umd = require("gulp-umd");
 var path = require('path');
 var livereload = require('gulp-livereload');
+var moment = require('moment');
 
 var uglifyOptions = {}
 
 var banner = ['/**',
     ' * <%= pkg.name %> - <%= pkg.description %>',
     ' * @version v<%= pkg.version %>',
+    ' * @date <%= pkg.date %>',
     '*/',
     ''].join('\n');
+
+config.date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 var production = process.env.NODE_ENV === 'production';
 
