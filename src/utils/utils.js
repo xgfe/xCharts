@@ -28,13 +28,13 @@
         return type;
     };
     utils['copy'] = copy;
-    utils['merage']=merage;
-    utils['inherits']=inherits;
-    utils['loop']=loop;
-    utils['getColor']=getColor;
-    utils['calcTextWidth']=calcTextWidth;
-    utils['throttle']=throttle;
-    utils['debounce']=debounce;
+    utils['merage'] = merage;
+    utils['inherits'] = inherits;
+    utils['loop'] = loop;
+    utils['getColor'] = getColor;
+    utils['calcTextWidth'] = calcTextWidth;
+    utils['throttle'] = throttle;
+    utils['debounce'] = debounce;
 
     /**
      * 复制函数
@@ -43,23 +43,23 @@
      * @returns {*}
      */
     function copy(form, deep) {
-        if(!form) return form;
+        if (!form) return form;
         var type = utils.getType(form);
-        if(type=="Object" || type=='Array'){
-            var clone=type=='Object'?{}:[];
+        if (type == "Object" || type == 'Array') {
+            var clone = type == 'Object' ? {} : [];
             var value;
-            for(var k in form){
+            for (var k in form) {
                 if (form.hasOwnProperty(k)) {
-                    value=form[k];
-                    if(deep && ( utils.isObject(value)||utils.isArray(value) )){
-                        clone[k]=arguments.callee(value,true);
-                    }else{
-                        clone[k]=form[k];
+                    value = form[k];
+                    if (deep && ( utils.isObject(value) || utils.isArray(value) )) {
+                        clone[k] = arguments.callee(value, true);
+                    } else {
+                        clone[k] = form[k];
                     }
                 }
             }
             return clone;
-        }else{
+        } else {
             return form;
         }
     }
@@ -69,18 +69,18 @@
      * @param to 被合并对象
      * @param form 来源
      */
-    function merage(to,form){
+    function merage(to, form) {
         var value;
         for (var k in form) {
             if (form.hasOwnProperty(k)) {
                 value = form[k];
                 if (utils.isObject(value)) {
-                    to[k] =to[k]|| {};
+                    to[k] = to[k] || {};
                 } else if (utils.isArray(value)) {
-                    to[k] =to[k]|| [];
-                }else{
+                    to[k] = to[k] || [];
+                } else {
                     //非数组和对象不处理
-                    to[k]=form[k];
+                    to[k] = form[k];
                     continue;
                 }
                 arguments.callee(to[k], form[k], true);
@@ -94,7 +94,7 @@
         var clazzPrototype = clazz.prototype;
 
         function F() {
-            this.superClass=baseClazz.prototype;
+            this.superClass = baseClazz.prototype;
         }
 
         F.prototype = baseClazz.prototype;
@@ -102,8 +102,9 @@
 
         clazz.constructor = clazz;
     }
+
     //内部迭代用，返回第一个参数
-    function loop(arg){
+    function loop(arg) {
         return arg;
     }
 
@@ -122,7 +123,7 @@
      */
     function getColor(palette) {
 
-        if (!palette && !Array.isArray(palette) ) {
+        if (!palette && !Array.isArray(palette)) {
             palette = [
                 '#2ec7c9', '#b6a2de', '#5ab1ef', '#ffb980', '#d87a80',
                 '#8d98b3', '#e5cf0d', '#97b552', '#95706d', '#dc69aa',
@@ -142,18 +143,19 @@
      * @param fontSize 文字大小
      * @param offsetWidth 需要追加的长度
      * @param {Array} list 需要计算的文字
+     * TODO 引起了刷新抖动
      */
-    function calcTextWidth(list,fontSize,offsetWidth,offsetHeight){
-        if(!Array.isArray(list)){
-            list=[list];
+    function calcTextWidth(list, fontSize, offsetWidth, offsetHeight) {
+        if (!Array.isArray(list)) {
+            list = [list];
         }
 
-        if(offsetWidth === undefined){
-            offsetWidth=0;
+        if (offsetWidth === undefined) {
+            offsetWidth = 0;
         }
 
-        if(offsetHeight === undefined){
-            offsetHeight=0;
+        if (offsetHeight === undefined) {
+            offsetHeight = 0;
         }
 
 
@@ -170,8 +172,8 @@
         textSpan.style.visibility = "hidden";
         document.body.appendChild(textSpan);
 
-        var widthList=[],heightList=[];
-        list.forEach(function(text){
+        var widthList = [], heightList = [];
+        list.forEach(function (text) {
 
             // 给span设置文字
             textSpan.innerText === undefined ? textSpan.textContent = text : textSpan.innerText = text; //兼容firefox
@@ -186,8 +188,8 @@
         //移除这个span,因为用不到了
         document.body.removeChild(textSpan);
         return {
-            widthList:widthList,
-            heightList:heightList
+            widthList: widthList,
+            heightList: heightList
         };
     }
 
@@ -198,7 +200,7 @@
      * @param immediate  {bool} 给 immediate参数传递false 绑定的函数先执行，而不是delay后后执行。
      * @return {function}实际调用函数
      */
-    function throttle(fn,delay, immediate, debounce) {
+    function throttle(fn, delay, immediate, debounce) {
         var curr = +new Date(),//当前事件
             last_call = 0,
             last_exec = 0,
@@ -211,7 +213,7 @@
                 fn.apply(context, args);
             };
         return function () {
-            curr= +new Date();
+            curr = +new Date();
             context = this,
                 args = arguments,
                 diff = curr - (debounce ? last_call : last_exec) - delay;
