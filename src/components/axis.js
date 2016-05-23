@@ -3,7 +3,7 @@
  * 坐标系绘制函数
  * TODO brush时间刷
  * TODO formatter函数被调用了三次
- * TODO 用户可以控制哪些ticks显示
+ * done 用户可以控制哪些ticks显示
  * DONE 用户控制网格显示
  */
 (function (xCharts, d3) {
@@ -66,6 +66,8 @@
             // 判断x轴上面的文字是否重合
             // 如果重合则返回需要显示的ticks
             if (this.isXAxis) {
+
+                // todo 每个tick按照最长的情况来算
                 this.showDomainList = xAxisShowTicks(scales, this.axisConfig);
 
                 // 抛出这个数组,让折线图之类的图表可以使用
@@ -147,7 +149,7 @@
                             return config.grid.opacity;
                         }
                         return 0;
-                        
+
 
                     })
                     .attr('stroke', function (line, index) {
@@ -549,7 +551,7 @@
 
     /**
      * 计算哪些tick可能重叠,将其抛弃.留下需要显示的tick
-     *
+     * TODO 保证第一个和最后一个点显示
      * @param scales 计算出来的scale
      * @param configs
      * @return {Array}
@@ -572,14 +574,17 @@
             });
             var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
 
+            // 每个tick的大小取最大的一个来进行判断
+            var maxWidtList = d3.max(widthList);
+
             // tick与tick之间的距离
             var rangeWidth = parseInt((range[range.length - 1] - range[0]) / (domain.length - 1));
 
             var preIdx = 0;
             var nowIdx = 1;
             for (var j = 1; j < widthList.length; j++) {
-                var preWidth = widthList[preIdx];
-                var nowWidth = widthList[nowIdx];
+                var preWidth = maxWidtList;
+                var nowWidth = maxWidtList;
 
                 //两个tick挤在一起了
                 if ((preWidth + nowWidth) / 2 > rangeWidth * (j - preIdx)) {
