@@ -606,7 +606,10 @@
      * @returns {string} 一段html文本
      */
     function defaultFormatter(name, value) {
-        return '<p>' + name + ':&nbsp;' + value + '</p>';
+        if(value !== ''){
+            return '<p>' + name + ':&nbsp;' + value + '</p>';
+        }
+        return '';
     }
 
     function defaultConfig() {

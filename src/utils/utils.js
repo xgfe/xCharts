@@ -16,7 +16,7 @@
         utils['is' + name] = function (obj) {
             return toString.call(obj) === '[object ' + name + ']';
         };
-    })
+    });
     /**
      * 类型返回函数
      * @param obj 判断对象
