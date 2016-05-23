@@ -78,10 +78,7 @@
 .xc-radar-coverPolygon {
     fill-opacity: 0;
 }
-.xc-radar-tooltip-line {
-    stroke: #008ACD;
-    stroke-width: 2;
-}
+
 .xc-tooltip h3 {
     margin-top: 5px;
     margin-bottom: 5px;
