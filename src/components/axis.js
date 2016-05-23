@@ -67,7 +67,7 @@
             // 如果重合则返回需要显示的ticks
             if (this.isXAxis) {
 
-                // todo 每个tick按照最长的情况来算
+                // done 每个tick按照最长的情况来算
                 this.showDomainList = xAxisShowTicks(scales, this.axisConfig);
 
                 // 抛出这个数组,让折线图之类的图表可以使用
@@ -217,7 +217,7 @@
         scales.forEach(function (scale) {
             if (scale.scaleType === "value" || scale.scaleType === "time") scale.range(range);
             else if (scale.scaleType === "barCategory") scale.rangeRoundBands(range, 0, 0.1);
-            else if (scale.scaleType === "category")  scale.rangeRoundPoints(range);
+            else if (scale.scaleType === "category")  scale.rangePoints(range);
 
         });
     }
@@ -779,11 +779,12 @@
                  * @var show
                  * @extends xCharts.axis.grid
                  * @type Boolean
-                 * @default true
+                 * @default true,x轴默认false
                  * @description
                  * 当不需要显示网格时,可以关掉此项
+                 * 推荐只显示Y轴网格
                  */
-                show: true,
+                show: type === 'xAxis' ? false : true,
                 /**
                  * @var opacity
                  * @extends xCharts.axis.grid
