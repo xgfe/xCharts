@@ -56,7 +56,8 @@ xCharts.prototype.extend({
         this.firstDrawingRect = this.clippath.append("rect").attr('x', 0).attr('y', 0).attr("width", 0).attr('height', this.originalHeight);
 
         //添加clippath
-        this.svg.attr("clip-path", "url(#xc-firstdraw-" + this.id + ")");
+        // 去掉动画
+        // this.svg.attr("clip-path", "url(#xc-firstdraw-" + this.id + ")");
 
         this.main = this.svg.append('g').attr('class', 'xc-main');
         this.margin = {top: 15, left: 10, right: 15, bottom: 30};
@@ -133,7 +134,8 @@ xCharts.prototype.extend({
         }
 
         // 绘画结束,淡入动画
-        var transitionStr;
+        // 去掉动画
+        /*var transitionStr;
         if (this.config.animation.enable) {
             transitionStr = "width " + this.config.animation.animationTime + "ms linear";
         } else {
@@ -147,7 +149,7 @@ xCharts.prototype.extend({
         var _this = this;
         setTimeout(function () {
             _this.svg.attr("clip-path", "");
-        }, this.config.animation.animationTime + 100);
+        }, this.config.animation.animationTime + 100);*/
     },
     refresh: function () {
         //console.time("refresh time");
