@@ -11,21 +11,26 @@
         this.margin = messageCenter.margin;
         this.svg = messageCenter.svg;
         this.div = messageCenter.div;
-
+        this.mobileMode = messageCenter.mobileMode;
         //绘画三大周期
+        this.start();
 
-        //计算绘画所需的数据
-        this.init(messageCenter, config, type, this.config.series);
-
-        //绘制图形，第一个参数是动画类型，第二个是动画时间，这里初始化绘制统一交给动画组件进行，所以时间为0
-        this.render('linear', 0);
-
-        //绑定相应的事件
-        this.ready();
     }
 
     Component.prototype = {
         constructor: Component,
+        start: function () {
+
+            // 绘画三大周期函数,可以被重载
+            // 计算绘画所需的数据
+            this.init(this.messageCenter, this.config, this.type, this.config.series);
+
+            // 绘制图形，第一个参数是动画类型，第二个是动画时间，这里初始化绘制统一交给动画组件进行，所以时间为0
+            this.render('linear', 0);
+
+            // 绑定相应的事件
+            this.ready();
+        },
         init: function (messageCenter, config, type) {
             //初始化
         },
@@ -38,7 +43,7 @@
         refresh: function (animationEase, animationTime) {
 
             // 关闭显示的组件不进行刷新
-            if(!this._show) return true;
+            if (!this._show) return true;
 
             //当容器改变时，刷新当前组件
             this.margin = this.messageCenter.margin;//每次刷新时，重置margin
@@ -50,7 +55,7 @@
         updateSeries: function (series) {
 
             // 关闭显示的组件不更新数据
-            if(!this._show) return true;
+            if (!this._show) return true;
 
             //加载新数据
             this.init(this.messageCenter, this.config, this.type, series);//重新初始化

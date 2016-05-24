@@ -373,19 +373,21 @@
 
                     } else {
                         // 首先将不显示的圆点全部隐藏
-                        _this.circle.style('display',function(){
-                            if(!this.circleDisplay){
-                                return 'none';
-                            }
-                        });
+                        _this.circle.style('display', function () {
+                                if (!this.circleDisplay) {
+                                    return 'none';
+                                }
+                            })
+                            .classed('xc-tooltip-circle', false);
 
                         // 判断如果是 display:none; 显示为display:block;
-                        var circle = _this.circleGroup.selectAll('circle:nth-child('+(sectionNumber + 1)+')');
-                        circle.style('display',function(){
-                            if(!this.circleDisplay){
-                                return 'block';
-                            }
-                        })
+                        var circle = _this.circleGroup.selectAll('circle:nth-child(' + (sectionNumber + 1) + ')');
+                        circle.style('display', function () {
+                                if (!this.circleDisplay) {
+                                    return 'block';
+                                }
+                            })
+                            .classed('xc-tooltip-circle', true);
                     }
 
                     series.forEach(function (serie) {
@@ -401,7 +403,16 @@
 
                 this.on('tooltipHidden', function () {
                     //当tooltip滑出区域时，需要清理圆点
-                    _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
+                    if (_this.timeModel) {
+                        _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
+                    } else {
+                        _this.circle.style('display', function () {
+                                if (!this.circleDisplay) {
+                                    return 'none';
+                                }
+                            })
+                            .classed('xc-tooltip-circle', false);
+                    }
                 })
             } else {
                 //trigger='item'
@@ -606,7 +617,7 @@
      * @returns {string} 一段html文本
      */
     function defaultFormatter(name, value) {
-        if(value !== ''){
+        if (value !== '') {
             return '<p>' + name + ':&nbsp;' + value + '</p>';
         }
         return '';

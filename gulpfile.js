@@ -33,9 +33,9 @@ gulp.task('build-js', function () {
             './src/xCharts.js',
             './src/utils/utils.js',
             './src/components/Component.js',
-            './src/components/*.js',
+            './src/components/**/*.js',
             './src/charts/Chart.js',
-            './src/charts/*.js',
+            './src/charts/**/*.js',
             // './src/charts/line.js',
         ])
         .pipe(concat('./xCharts.js'))
