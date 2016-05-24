@@ -29,6 +29,7 @@
             this.timeModel = config.xAxis[0].type == 'time';
         },
         render: function (animationEase, animationTime) {
+
             this.__renderArea(animationEase, animationTime);
             this.__renderLine(animationEase, animationTime);
             if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
@@ -90,7 +91,17 @@
                         }
                     });
 
-                    this.lineData = this.lineData == undefined ? lineData : this.lineData;
+                    if (this.lineData === undefined) {
+                        var minValue = serie.yScale.range()[1];
+                        this.lineData = serie.data.map(function (dataItem) {
+                            return {
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(minValue)
+                            }
+                        })
+                    }
+
+                    // this.lineData = this.lineData === undefined ? lineData : this.lineData;
                     var interpolate = d3.interpolate(this.lineData, lineData);
                     this.lineData = lineData;
 
@@ -100,10 +111,13 @@
                         var path = lineScale(interpolateData);
                         if (t == 1) {
                             ctx.linePath = path;
+                            _this.fire('lineAnimationEnd');
                         }
                         return path
                     }
                 });
+
+            this.lineGroup = lineGroup;
         },
         __renderArea: function (animationEase, animationTime) {
             //面积
@@ -180,6 +194,7 @@
                         return areaPath;
                     }
                 });
+
         },
         __renderCircle: function (animationEase, animationTime) {
             //画点
@@ -200,7 +215,7 @@
                     if (serie.lineStyle.color != 'auto')
                         return serie.lineStyle.color;
                     return _this.getColor(serie.idx);
-                });
+                })
 
 
             var circle = circleGroup.selectAll('circle').data(function (d) {
@@ -233,7 +248,23 @@
                         this.circleRadius = d._serie.lineStyle.radius;
                     }
                     return this.circleRadius;
-                });
+                })
+            // .attr('cx', function (data) {
+            //     var ctx = this;
+            //     if (typeof data !== 'object') {
+            //         return ctx.circleCX;
+            //     }
+            //     ctx.circleCX = data._serie.xScale(data.x);
+            //     return ctx.circleCX;
+            // })
+            // .attr('cy', function (data) {
+            //     var ctx = this;
+            //     if (typeof data !== 'object') {
+            //         return ctx.circleCY;
+            //     }
+            //     ctx.circleCY = data._serie.yScale(data.y);
+            //     return ctx.circleCY;
+            // })
 
             //动画
             circle.transition()
@@ -266,13 +297,19 @@
                     }
 
                     var circleCY = d._serie.yScale(d.y);
+
+                    if(ctx.circleCY === undefined){
+                        var minValue = d._serie.yScale.range()[1];
+                        ctx.circleCY = d._serie.yScale(minValue);
+                    }
+
                     ctx.circleCY = ctx.circleCY == undefined ? circleCY : ctx.circleCY;
                     var interpolate = d3.interpolate(ctx.circleCY, circleCY);
                     ctx.circleCY = circleCY;
                     return function (t) {
                         return interpolate(t);
                     }
-                })
+                });
 
             _this.circle = circle;
             _this.circleGroup = circleGroup;

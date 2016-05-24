@@ -24,9 +24,10 @@
             // 绘画三大周期函数,可以被重载
             // 计算绘画所需的数据
             this.init(this.messageCenter, this.config, this.type, this.config.series);
-
+            var animationTime = this.messageCenter.config.animation.animationTime;
+            var animationEase = this.messageCenter.config.animation.animationEase;
             // 绘制图形，第一个参数是动画类型，第二个是动画时间，这里初始化绘制统一交给动画组件进行，所以时间为0
-            this.render('linear', 0);
+            this.render(animationEase, animationTime);
 
             // 绑定相应的事件
             this.ready();
