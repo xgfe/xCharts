@@ -51,9 +51,9 @@ xCharts.prototype.extend({
         this.id = id++; //唯一标识，<use> 在多图表使用时，区别其他图用
         this.div = container.append('div').attr('class', 'xc-container');
         this.svg = this.div.append('svg').attr('class', 'xc-svg').attr('width', this.originalWidth).attr('height', this.originalHeight);
-        this.defs = this.svg.append('defs');
-        this.clippath = this.defs.append("clipPath").attr('id', "xc-firstdraw-" + this.id);
-        this.firstDrawingRect = this.clippath.append("rect").attr('x', 0).attr('y', 0).attr("width", 0).attr('height', this.originalHeight);
+        // this.defs = this.svg.append('defs');
+        // this.clippath = this.defs.append("clipPath").attr('id', "xc-firstdraw-" + this.id);
+        // this.firstDrawingRect = this.clippath.append("rect").attr('x', 0).attr('y', 0).attr("width", 0).attr('height', this.originalHeight);
 
         //添加clippath
         // 去掉动画
