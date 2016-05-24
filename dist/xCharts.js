@@ -5167,7 +5167,6 @@ var animationConfig = {
 (function(xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
-git 
     // 创建radar构造函数
     function radar(messageCenter, config) {
         // 调用这一步的原因是为了继承属性
