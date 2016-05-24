@@ -2,7 +2,7 @@
  * components.tooltip
  */
 
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var components = xCharts.components;
     var Component = components['Component'];
@@ -70,75 +70,6 @@
             //触发方式为item时，交给各个chart自己处理去,这里只负责axis触发方式
             if (_this.tooltipConfig.trigger !== 'axis') return;
 
-            // 保存前一个tooltip所在的区域，用于判断当前tooltip是否需要刷新位置
-            var oldSectionNumber = -1;
-            var firstMove = true;
-            var tooltipX=-1;
-            _this.div.on('mousemove.tooltip', function () {
-
-                // 一级开关关闭，强制不显示，即使鼠标在正常的范围内
-                if (_this.display === false) return;
-
-                // 只需第一次移动时计算边界即可
-                if (firstMove) {
-                    firstMove = false;
-                    calcChartBorder(_this);
-                    _this.axisLine = appendTooltipLine.call(_this);
-                }
-
-
-                // 获取当前鼠标坐标
-                var position = d3.mouse(this),
-                    mouseX = position[0],
-                    mouseY = position[1],
-                    axisLine = _this.axisLine;
-
-
-                if ( judgeOutOfBounds.call(_this,mouseX,mouseY) ) {
-                    //超出边界，隐藏tooltip
-                    _this.hiddenTooltip();
-                    return;
-                } else if (!_this.tooltipShow) {
-                    _this.showTooltip();
-                }
-
-
-                var xScale = _this.messageCenter.xAxisScale[0],
-                    xAxisData = _this.config.xAxis[0].data,
-
-                    // TODO 有结束绘制事件后，只需计算一次
-                    width = _this.originalWidth - _this.margin.left - _this.margin.right,
-                    height = _this.originalHeight - _this.margin.top - _this.margin.bottom,
-                    sectionLength = xAxisData.length - 1,
-                    sectionWidth = width / sectionLength; //计算每个区域的宽度,注意这里是均分
-                var sectionNumber = Math.round((mouseX - _this.margin.left) / sectionWidth);//得到在哪个区域，从0开始
-
-
-                if (sectionNumber !== oldSectionNumber) {
-                    //触发tooltipSectionChange事件，获取文本
-                    var tooltipHtml="";
-
-                    _this.fire("tooltipSectionChange", sectionNumber, function (html) {
-                        tooltipHtml += html;
-                        _this.setTooltipHtml(tooltipHtml);
-                    }, _this.tooltipConfig.formatter);
-
-                    //如果是柱状图的话，需要使用bar上提供的接口来获取x坐标
-                    if (_this.messageCenter.charts['bar']) {
-                        tooltipX = _this.messageCenter.charts['bar'].getTooltipPosition(sectionNumber);
-                    } else {
-                        tooltipX = xScale(xAxisData[sectionNumber]);
-                    }
-
-                    axisLine.attr('x1', tooltipX).attr('x2', tooltipX).attr('y1', 0).attr('y2', height);
-                    tooltipX += _this.margin.left;//修正tooltip的位置
-
-                    oldSectionNumber = sectionNumber;
-                }
-
-                _this.setPosition([tooltipX, mouseY]);
-
-            });
 
             //这里是为了当没有任何需要显示的值时，能保证tooltip不出现
             _this.on('tooltipNone', function () {
@@ -147,10 +78,16 @@
             _this.on('tooltipShow', function () {
                 _this.display = true;
             });
+            
+            if(_this.mobileMode){
+                _this.mobileReady();
+            }else{
+                _this.div.on('mousemove.tooltip', tooltipMousemove(_this));
+                _this.div.on('mouseleave.tooltip', function () {
+                    _this.hiddenTooltip();//鼠标过快划出，单纯监听mousemove很容易造成隐藏失败，这里加重保险
+                });
+            }
 
-            _this.div.on('mouseleave.tooltip', function () {
-                _this.hiddenTooltip();//鼠标过快划出，单纯监听mousemove很容易造成隐藏失败，这里加重保险
-            });
 
         },
         refresh: function () {
@@ -163,13 +100,14 @@
             this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
             this.ready();
         },
-        updateSeries: function () {},
+        updateSeries: function () {
+        },
         showTooltip: function () {
             var _this = this;
             _this.tooltipShow = true;
-            _this.tooltip.style( {visibility: 'visible'} );
+            _this.tooltip.style({visibility: 'visible'});
             // 显示线条
-            if(this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 1);
+            if (this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 1);
 
         },
         hiddenTooltip: function () {
@@ -181,7 +119,7 @@
             _this.tooltip.style({visibility: 'hidden'});
 
             // 隐藏线条
-            if(this.tooltipConfig.trigger === 'axis' &&  _this.axisLine) _this.axisLine.attr('opacity', 0);
+            if (this.tooltipConfig.trigger === 'axis' && _this.axisLine) _this.axisLine.attr('opacity', 0);
             _this.main.selectAll('.xc-tooltip-line').attr('opacity', 0);
         },
         setPosition: function (position, offsetX, offsetY) {
@@ -225,13 +163,16 @@
         }
     });
 
+    // 暴露给mobile的方法
+    tooltip.tooltipMousemove = tooltipMousemove;
+
     /**
      * 判断鼠标是否出界
      * @param mouseX 鼠标X
      * @param mouseY 鼠标Y
      * @return {boolean} 是否出界
      */
-    function judgeOutOfBounds(mouseX,mouseY) {
+    function judgeOutOfBounds(mouseX, mouseY) {
         var axisX = this.axisX,
             axisY = this.axisY;
 
@@ -272,6 +213,79 @@
         _this.axisY[0] = _this.margin.top;
         _this.axisY[1] = _this.originalHeight - _this.margin.bottom;
 
+    }
+
+    /**
+     * 监听鼠标移动
+     */
+    function tooltipMousemove(_this) {
+        // 保存前一个tooltip所在的区域，用于判断当前tooltip是否需要刷新位置
+        var oldSectionNumber = -1;
+        var firstMove = true;
+        var tooltipX = -1;
+        return function () {
+            // 一级开关关闭，强制不显示，即使鼠标在正常的范围内
+            if (_this.display === false) return;
+
+            // 只需第一次移动时计算边界即可
+            if (firstMove) {
+                firstMove = false;
+                calcChartBorder(_this);
+                _this.axisLine = appendTooltipLine.call(_this);
+            }
+
+
+            // 获取当前鼠标坐标
+            var position = d3.mouse(this),
+                mouseX = position[0],
+                mouseY = position[1],
+                axisLine = _this.axisLine;
+
+
+            if (judgeOutOfBounds.call(_this, mouseX, mouseY)) {
+                //超出边界，隐藏tooltip
+                _this.hiddenTooltip();
+                return;
+            } else if (!_this.tooltipShow) {
+                _this.showTooltip();
+            }
+
+
+            var xScale = _this.messageCenter.xAxisScale[0],
+                xAxisData = _this.config.xAxis[0].data,
+
+            // TODO 有结束绘制事件后，只需计算一次
+                width = _this.originalWidth - _this.margin.left - _this.margin.right,
+                height = _this.originalHeight - _this.margin.top - _this.margin.bottom,
+                sectionLength = xAxisData.length - 1,
+                sectionWidth = width / sectionLength; //计算每个区域的宽度,注意这里是均分
+            var sectionNumber = Math.round((mouseX - _this.margin.left) / sectionWidth);//得到在哪个区域，从0开始
+
+
+            if (sectionNumber !== oldSectionNumber) {
+                //触发tooltipSectionChange事件，获取文本
+                var tooltipHtml = "";
+
+                _this.fire("tooltipSectionChange", sectionNumber, function (html) {
+                    tooltipHtml += html;
+                    _this.setTooltipHtml(tooltipHtml);
+                }, _this.tooltipConfig.formatter);
+
+                //如果是柱状图的话，需要使用bar上提供的接口来获取x坐标
+                if (_this.messageCenter.charts['bar']) {
+                    tooltipX = _this.messageCenter.charts['bar'].getTooltipPosition(sectionNumber);
+                } else {
+                    tooltipX = xScale(xAxisData[sectionNumber]);
+                }
+
+                axisLine.attr('x1', tooltipX).attr('x2', tooltipX).attr('y1', 0).attr('y2', height);
+                tooltipX += _this.margin.left;//修正tooltip的位置
+
+                oldSectionNumber = sectionNumber;
+            }
+
+            _this.setPosition([tooltipX, mouseY]);
+        }
     }
 
     function defaultConfig() {
@@ -330,4 +344,4 @@
         }
         return tooltip;
     }
-}(xCharts,d3));
+}(xCharts, d3));
