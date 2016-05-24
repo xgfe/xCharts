@@ -2,7 +2,7 @@
  * xCharts.legend
  * extends Component
  */
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var components = xCharts.components;
     var Component = components['Component'];
@@ -88,7 +88,7 @@
             itemList.append('text')
                 .attr('x', chartSize * 1.1)
                 .attr('y', function () {
-                    return 0.325*chartSize + 0.25*fontSize;
+                    return 0.325 * chartSize + 0.25 * fontSize;
                 })
                 .append('tspan')
                 .text(function (serie) {
@@ -120,17 +120,17 @@
             //     });
 
             itemList.append('rect')
-                .attr('width',chartSize*0.9)
-                .attr('height',chartSize*0.5)
-                .attr('rx',chartSize*0.1)
-                .attr('ry',chartSize*0.1)
+                .attr('width', chartSize * 0.9)
+                .attr('height', chartSize * 0.5)
+                .attr('rx', chartSize * 0.1)
+                .attr('ry', chartSize * 0.1)
                 .attr('stroke', function (serie) {
                     return serie.color;
                 })
                 .attr('fill', function (serie) {
                     return serie.color;
                 })
-                .style('transform',function(){
+                .style('transform', function () {
 
                 });
 
@@ -150,66 +150,76 @@
                     return serie.name;
                 }) : [];
 
-            /**
-             * 点击legend事件
-             * 有多选和单选模式，
-             * 多选模式下，初始状态是全部选中，点击某一个legend，状态翻转
-             * 单选模式下，初始状态是全部选中，第一次点击某一个legend这个legend保持高亮，其他取消选中。这种模式下除了初始状态，其他都是有且仅有一个legend处于选中状态
-             * 刷新图例状态，触发legendClick事件
-             */
-            _this.itemList.on('click.legend', function (data) {
-                this.isChecked = !this.isChecked;
-                if (multiple) {
-                    //多选的情况下
-                    d3.select(this).attr('opacity', this.isChecked ? 1 : opacity)
-                } else {
-                    // 单选，高亮自己，灰掉别人
-                    _this.itemList.attr('opacity', opacity);
-                    d3.select(this).attr('opacity', 1);
-                }
 
-                reload.call(_this,data.name,multiple,nameList);
-            });
+            if (_this.mobileMode) {
+                _this.mobileReady(nameList, opacity);
+            } else {
 
-            /**
-             * 鼠标移入，高亮对应的图表
-             * 触发legendMouseenter
-             */
-            _this.itemList.on('mouseenter.legend', function (data) {
-                var color;
-                if (hoverColor == 'auto')
-                    color = data.color;
-                else
-                    color = hoverColor;
-                var item = d3.select(this);
-                item.attr('fill', color);
-                _this.fire('legendMouseenter', data.name);
-            });
+                /**
+                 * 点击legend事件
+                 * 有多选和单选模式，
+                 * 多选模式下，初始状态是全部选中，点击某一个legend，状态翻转
+                 * 单选模式下，初始状态是全部选中，第一次点击某一个legend这个legend保持高亮，其他取消选中。这种模式下除了初始状态，其他都是有且仅有一个legend处于选中状态
+                 * 刷新图例状态，触发legendClick事件
+                 */
+                _this.itemList.on('click.legend', legendMouseClick(this, nameList, opacity));
 
-            /**
-             * 鼠标移除，移除高亮状态
-             * 触发 legendMouseleave
-             */
-            _this.itemList.on('mouseleave.legend', function (data) {
-                var item = d3.select(this);
-                item.attr('fill', defaultColor);
+                /**
+                 * 鼠标移入，高亮对应的图表
+                 * 触发legendMouseenter
+                 */
+                _this.itemList.on('mouseenter.legend', function (data) {
+                    var color;
+                    if (hoverColor == 'auto')
+                        color = data.color;
+                    else
+                        color = hoverColor;
+                    var item = d3.select(this);
+                    item.attr('fill', color);
+                    _this.fire('legendMouseenter', data.name);
+                });
 
-                _this.fire('legendMouseleave', data.name);
-            });
+                /**
+                 * 鼠标移除，移除高亮状态
+                 * 触发 legendMouseleave
+                 */
+                _this.itemList.on('mouseleave.legend', function (data) {
+                    var item = d3.select(this);
+                    item.attr('fill', defaultColor);
 
-
-
+                    _this.fire('legendMouseleave', data.name);
+                });
+            }
 
 
         }
     });
+
+    legend.legendMouseClick = legendMouseClick;
+
+    function legendMouseClick(ctx, nameList, opacity) {
+
+        return function (data) {
+            this.isChecked = !this.isChecked;
+            if (multiple) {
+                //多选的情况下
+                d3.select(this).attr('opacity', this.isChecked ? 1 : opacity)
+            } else {
+                // 单选，高亮自己，灰掉别人
+                this.itemList.attr('opacity', opacity);
+                d3.select(this).attr('opacity', 1);
+            }
+
+            reload.call(ctx, data.name, multiple, nameList);
+        }
+    }
 
     /**
      * 分两种模式处理刷新
      * 传递给接受者一个 name的数组
      * @param name
      */
-    function reload(name,multiple,nameList) {
+    function reload(name, multiple, nameList) {
         if (multiple) {
             //如果存在则删除，不存在则从_series中拿出添加
             var isAdd = true;
@@ -257,16 +267,16 @@
 
 
         var offsetLength = config.item.chartSize * 1.1;
-        var nameList = series.map(function(serie){
-           return serie.name;
+        var nameList = series.map(function (serie) {
+            return serie.name;
         });
 
         //计算name的长度
-        var widthList = utils.calcTextWidth(nameList,config.item.fontSize,offsetLength).widthList;
+        var widthList = utils.calcTextWidth(nameList, config.item.fontSize, offsetLength).widthList;
 
         // 计算每个legendSerie的x,y位置
-        var totalWidth = 0, totoalHeight = 0, maxWidth=0, maxHeight=0, colWidth = 0;
-        series.forEach(function (serie,index) {
+        var totalWidth = 0, totoalHeight = 0, maxWidth = 0, maxHeight = 0, colWidth = 0;
+        series.forEach(function (serie, index) {
 
             var itemWidth = widthList[index];
             serie.position = [totalWidth, totoalHeight];
@@ -344,7 +354,6 @@
         }
         return [posX, posY]
     }
-
 
 
     /**
@@ -680,4 +689,4 @@
     }
 
 
-}(xCharts,d3));
+}(xCharts, d3));
