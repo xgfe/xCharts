@@ -40,10 +40,10 @@
             scatterItem.exit().remove();
 
             scatterItem.style("transition",transitionStr)
-                .attr('cx', function (d) {
+                .attr('cx',function(d){
                     return d._serie.xScale(d.data[0]);
                 })
-                .attr('cy', function (d) {
+                .attr('cy',function(d){
                     return d._serie.yScale(d.data[1]);
                 })
                 .attr('r', function (d) {
@@ -65,6 +65,29 @@
                     return classStr;
                 });
 
+            // scatterItem.transition()
+            //     .duration(animationConfig.animationTime)
+            //     .ease(animationConfig.animationEase)
+            //     .attrTween('cx', function (d) {
+            //         var cx = d._serie.xScale(d.data[0]);
+            //         this.cxPosition = this.cxPosition === undefined ? cx : this.cxPosition;
+            //         var interpolate = d3.interpolate(this.cxPosition, cx);
+            //         this.cxPosition = cx;
+            //         return function (t) {
+            //             return interpolate(t);
+            //         }
+            //     })
+            //     .attrTween('cy', function (d) {
+            //         // return d._serie.yScale(d.data[1]);
+            //         var cy = d._serie.yScale(d.data[1]);
+            //         this.cyPosition = this.cyPosition === undefined ? cy : this.cyPosition;
+            //         var interpolate = d3.interpolate(this.cyPosition, cy);
+            //         this.cyPosition = cy;
+            //         return function (t) {
+            //             return interpolate(t);
+            //         }
+            //     })
+
             _this.scatterItem = scatterItem;//暴露出去，为了tooltip事件
         },
         ready: function () {
@@ -73,6 +96,8 @@
         },
         __legendReady: function () {
             var _this = this, selectGroup = null;
+            var animationConfig = _this.config.animation;
+
             _this.on('legendMouseenter.scatter', function (name) {
                 var serie = getSeriesByName(_this.series, name);
                 selectGroup = _this.main.selectAll('.xc-scatter-group-' + serie.idx);
@@ -86,7 +111,7 @@
             this.on('legendClick.scatter', function (nameList) {
                 var series = _this.config.series;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render('linear', 0);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
             });
         },
         __tooltipReady: function () {
