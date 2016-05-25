@@ -1,7 +1,7 @@
 /**
  * 漏斗图
  */
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
     xCharts.charts.extend({funnel: funnel});
@@ -37,7 +37,7 @@
                 return serie.data;
             });
             funnelSection.enter().append('path')
-                .attr('class','xc-funnel-section');
+                .attr('class', 'xc-funnel-section');
 
             funnelSection.attr('fill', function (d) {
                     return _this.getColor(d.idx);
@@ -46,10 +46,18 @@
                 .ease(animationEase)
                 .duration(animationTime)
                 .attrTween('d', function (d) {
-                    this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
+
+                    if (this.pathArr === undefined) {
+                        var pathArr = utils.copy(d.pathArr, true);
+                        pathArr[2][1] = pathArr[2][1] * 0.95;
+                        pathArr[3][1] = pathArr[3][1] * 0.95;
+                        this.pathArr = pathArr;
+                    }
+
+                    // this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
                     var interpolate = d3.interpolate(this.pathArr, d.pathArr);
                     this.pathArr = d.pathArr;
-                    return function(t){
+                    return function (t) {
                         return buildFunnelPath(interpolate(t));
                     }
                 });
@@ -60,15 +68,15 @@
                     return serie.data;
                 });
 
-            var transitionStr = "opacity "+animationConfig.animationTime+"ms linear";
+            var transitionStr = "opacity " + animationConfig.animationTime + "ms linear";
 
             funnelLabel.enter().append('g')
                 .attr('class', 'xc-funnel-label')
-                .style("transition",transitionStr);
+                .style("transition", transitionStr);
 
             funnelLabel.exit().remove();
-            funnelLabel.attr('opacity',function(d){
-                    if(d.show==false)
+            funnelLabel.attr('opacity', function (d) {
+                    if (d.show == false)
                         return 0;
                     else
                         return 1;
@@ -77,10 +85,15 @@
                 .ease(animationEase)
                 .duration(animationTime)
                 .attrTween('transform', function (d) {
-                    this.labelPosition = this.labelPosition===undefined? d.labelPosition : this.labelPosition;
+
+                    if (this.labelPosition === undefined) {
+                        this.labelPosition = [d.labelPosition[0] *1.1 , d.labelPosition[1]];
+                    }
+
+                    // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
                     var interpolate = d3.interpolate(this.labelPosition, d.labelPosition);
                     this.labelPosition = d.labelPosition;
-                    return function(t){
+                    return function (t) {
                         return 'translate(' + interpolate(t) + ')';
                     }
 
@@ -88,7 +101,7 @@
 
             var labelLine = funnelLabel.selectAll('.xc-funnel-label-line')
                 .data(function (d) {
-                    if(d.show!=false)
+                    if (d.show != false)
                         return [d]
                     else
                         return [];
@@ -105,7 +118,7 @@
 
             var labelText = funnelLabel.selectAll('.xc-funnel-label-text')
                 .data(function (d) {
-                    if(d.show!=false)
+                    if (d.show != false)
                         return [d]
                     else
                         return [];
@@ -138,57 +151,58 @@
                 });
             });
             _this.on('legendMouseleave.funnel', function () {
-                _this.funnelSection.attr('opacity',1);
+                _this.funnelSection.attr('opacity', 1);
             });
             _this.on('legendClick.funnel', function (nameList) {
-                var series=legendClickSeries(_this.config.series,nameList);
+                var series = legendClickSeries(_this.config.series, nameList);
                 var animationConfig = _this.config.animation;
-                _this.init(_this.series,_this.config,_this.type,series);
-                _this.render(animationConfig.animationEase,animationConfig.animationTime);
+                _this.init(_this.series, _this.config, _this.type, series);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
             });
         },
-        __tooltipReady:function(){
-            if (!this.config.tooltip || this.config.tooltip.show===false || this.config.tooltip.trigger=='axis') return;//未开启tooltip
-            var _this=this;
+        __tooltipReady: function () {
+            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
+            var _this = this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            _this.funnelSection.on('mousemove.funnel',function(data){
-                var event=d3.event;
+            _this.funnelSection.on('mousemove.funnel', function (data) {
+                var event = d3.event;
                 var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                var formatter = data._serie.formatter||tooltipFormatter||defaultFormatter;
+                var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
 
-                var title="<p>"+data._serie.name+"</p>";
-                tooltip.setTooltipHtml(title+formatter(data.name,data.value, (data.percentage*100).toFixed(1) ));
+                var title = "<p>" + data._serie.name + "</p>";
+                tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
                 tooltip.setPosition([x, y]);
 
             })
-            _this.funnelSection.on('mouseenter.funnel',function(data){
-                d3.select(this).attr('opacity',data._serie.itemStyle.opacity);
+            _this.funnelSection.on('mouseenter.funnel', function (data) {
+                d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
                 tooltip.showTooltip();
             })
-            _this.funnelSection.on('mouseleave.funnel',function(){
-                d3.select(this).attr('opacity',1);
+            _this.funnelSection.on('mouseleave.funnel', function () {
+                d3.select(this).attr('opacity', 1);
                 tooltip.hiddenTooltip();
             })
         }
 
     });
 
-    function legendClickSeries(series,nameList){
-        series.forEach(function(serie){
+    function legendClickSeries(series, nameList) {
+        series.forEach(function (serie) {
 
-            if(serie.type!='funnel') return;
+            if (serie.type != 'funnel') return;
 
-            serie.data.forEach(function(d){
-                if(inNameList(d.name,nameList)) d.show=true;
-                else d.show=false;
+            serie.data.forEach(function (d) {
+                if (inNameList(d.name, nameList)) d.show = true;
+                else d.show = false;
             })
         })
         return series;
     }
-    function inNameList(name,nameList){
-        for(var i= 0,n;n=nameList[i++];){
-            if(name==n)
+
+    function inNameList(name, nameList) {
+        for (var i = 0, n; n = nameList[i++];) {
+            if (name == n)
                 return true;
         }
         return false;
@@ -253,13 +267,14 @@
         var index = sort == 'top' ? 1 : 0,//如果是塔尖向上，则第一个变量的y坐标不是0，而是一个sectionHeigth的高度,该变量是用来计算区块y坐标
             position = [];
         data.forEach(function (d, i) {
-            d.maxValue=maxValue;
-            d.percentage= parseFloat(d.value) / maxValue;
-            if (d.show == false){
-                position[i]=undefined;
+            d.maxValue = maxValue;
+            d.percentage = parseFloat(d.value) / maxValue;
+            if (d.show == false) {
+                position[i] = undefined;
                 return
-            };
-            var sectionWidth = d.percentage  * width;
+            }
+            ;
+            var sectionWidth = d.percentage * width;
             d.sectionWidth = sectionWidth;
             var xOffset = (width - sectionWidth) / 2;
             position[i] = [];
@@ -281,9 +296,9 @@
         for (var i = 0, len = position.length; i < len; i++) {
             var p = position[i];
             if (p != undefined) continue;
-            var j=1;
+            var j = 1;
             //防止偏移后还是undefined
-            while(position[i] === undefined){
+            while (position[i] === undefined) {
                 if (sort == 'top')
                     position[i] = position[i - j];
                 else
@@ -385,8 +400,8 @@
         serie.yOffset = yOffset;
     }
 
-    function defaultFormatter(name,value,percentage){
-        return '<p>'+name + ':&nbsp;' + value+' 占比:'+percentage+'%</p>';
+    function defaultFormatter(name, value, percentage) {
+        return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
     }
 
     function defaultConfig() {
@@ -483,7 +498,7 @@
              * @type Object
              * @description 每个漏斗图区块的样式
              */
-            itemStyle:{
+            itemStyle: {
                 /**
                  * @var opacity
                  * @extends xCharts.series.funnel.itemStyle
@@ -492,10 +507,10 @@
                  * @description 鼠标移入时，变化的透明度
                  * @default 0.5
                  */
-                opacity:0.5
+                opacity: 0.5
             }
         }
         return funnel;
     }
 
-}(xCharts,d3));
+}(xCharts, d3));
