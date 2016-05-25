@@ -146,6 +146,7 @@
             //tooltip当前位置超出div最大宽度,强制往左边走
             if (tooltipX + tooltipWidth > width) {
                 tooltipX = tooltipX - tooltipWidth - offsetX;
+                tooltipX = tooltipX < 0 ? 0: tooltipX;
             } else {
                 tooltipX += offsetX;
             }
