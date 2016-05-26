@@ -182,7 +182,7 @@
                         }
                     });
 
-                    if(ctx.areaData === undefined){
+                    if (ctx.areaData === undefined) {
                         ctx.areaData = serie.data.map(function (dataItem) {
                             return {
                                 x: serie.xScale(dataItem.x),
@@ -309,7 +309,7 @@
 
                     var circleCY = d._serie.yScale(d.y);
 
-                    if(ctx.circleCY === undefined){
+                    if (ctx.circleCY === undefined) {
                         var minValue = d._serie.yScale.range()[1];
                         ctx.circleCY = d._serie.yScale(minValue);
                     }
@@ -428,6 +428,11 @@
                             })
                             .classed('xc-tooltip-circle', false);
 
+                        // 将其他circle都变小
+                        _this.circle.attr('r',function(){
+                            return this.circleRadius;
+                        })
+
                         // 判断如果是 display:none; 显示为display:block;
                         var circle = _this.circleGroup.selectAll('circle:nth-child(' + (sectionNumber + 1) + ')');
                         circle.style('display', function () {
@@ -435,7 +440,10 @@
                                     return 'block';
                                 }
                             })
-                            .classed('xc-tooltip-circle', true);
+                            .classed('xc-tooltip-circle', true)
+                            .attr('r',function(){
+                               return this.circleRadius * 1.2;
+                            });
                     }
 
                     series.forEach(function (serie) {
@@ -462,39 +470,73 @@
                             .classed('xc-tooltip-circle', false);
                     }
                 })
+            } else if (_this.mobileMode) {
+                _this.mobileReady();
             } else {
                 //trigger='item'
                 var tooltip = _this.messageCenter.components['tooltip'];
-                var tooltipFormatter = tooltip.tooltipConfig.formatter;
-                var axisConfig = _this.messageCenter.components['xAxis'].axisConfig;
-                _this.circle.on('mouseenter', function (data) {
-                    var target = d3.event.srcElement || d3.event.target;
-                    target = d3.select(target);
-                    var data = target.data()[0];
-                    var value = data.value;
-                    var name = data._serie.name;
-                    var serieFormatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-                    var html = serieFormatter(name, value);
 
-                    var xData = data.x;
-                    xData = axisConfig[data._serie.xAxisIndex].tickFormat(xData);
-                    var title = "<p>" + xData + "</p>";
-                    tooltip.show();
-                    tooltip.setTooltipHtml(title + html);
-                    var event = d3.event;
-                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                    tooltip.setPosition([x, y]);
-
-                })
+                _this.circle.on('mouseenter', tooltipTriggerItem(_this));
                 _this.circle.on('mouseleave', function () {
-                    tooltip.hidden();
-                })
+                    _this.circle.attr('r', function () {
+                        return this.circleRadius;
+                    });
+                    tooltip.hiddenTooltip();
+                });
 
             }
 
         }
 
     });
+
+    line.tooltipTriggerItem = tooltipTriggerItem;
+
+
+    function tooltipTriggerItem(ctx) {
+
+        return function () {
+            var tooltip = ctx.messageCenter.components['tooltip'];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter;
+            var axisConfig = ctx.messageCenter.components['xAxis'].axisConfig;
+
+            var target = d3.event.srcElement || d3.event.target;
+            target = d3.select(target);
+            var data = target.data()[0];
+            var value = data.value;
+            var name = data._serie.name;
+            var serieFormatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+            var html = serieFormatter(name, value);
+
+            var xData = data.x;
+            xData = axisConfig[data._serie.xAxisIndex].tickFormat(xData);
+            var title = "<p>" + xData + "</p>";
+            tooltip.showTooltip();
+            tooltip.setTooltipHtml(title + html);
+            // var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+            var position = d3.mouse(this);
+
+            position = [
+                position[0] + 40,
+                position[1] + 40
+            ];
+
+            tooltip.setPosition(position);
+
+            // 处理圆变大
+
+            if (ctx.mobileMode) {
+                ctx.circle.attr('r', function () {
+                    return this.circleRadius;
+                });
+            }
+
+
+            d3.select(this).attr('r', function () {
+                return this.circleRadius * 1.2;
+            });
+        }
+    }
 
     function parseSeries(ctx, series, config) {
         //先剔除不属于line的serie

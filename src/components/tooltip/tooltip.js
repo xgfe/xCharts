@@ -78,7 +78,7 @@
             _this.on('tooltipShow', function () {
                 _this.display = true;
             });
-            
+
             if(_this.mobileMode){
                 _this.mobileReady();
             }else{
