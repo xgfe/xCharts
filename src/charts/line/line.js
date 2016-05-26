@@ -181,7 +181,18 @@
                             y0: serie.yScale(dataItem.y0)
                         }
                     });
-                    ctx.areaData = ctx.areaData == undefined ? areaData : ctx.areaData;
+
+                    if(ctx.areaData === undefined){
+                        ctx.areaData = serie.data.map(function (dataItem) {
+                            return {
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(dataItem.y0),
+                                y0: serie.yScale(dataItem.y0)
+                            }
+                        });
+                    }
+
+                    // ctx.areaData = ctx.areaData == undefined ? areaData : ctx.areaData;
                     var interpolate = d3.interpolate(this.areaData, areaData);
                     ctx.areaData = areaData;
 
