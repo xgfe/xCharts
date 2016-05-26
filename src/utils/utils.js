@@ -247,4 +247,8 @@
         return throttle(fn, delay, immediate, true);
     };
 
+    function getMousePoint(event){
+
+    }
+
 }(xCharts));
