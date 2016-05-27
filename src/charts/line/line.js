@@ -429,7 +429,7 @@
                             .classed('xc-tooltip-circle', false);
 
                         // 将其他circle都变小
-                        _this.circle.attr('r',function(){
+                        _this.circle.attr('r', function () {
                             return this.circleRadius;
                         })
 
@@ -441,8 +441,8 @@
                                 }
                             })
                             .classed('xc-tooltip-circle', true)
-                            .attr('r',function(){
-                               return this.circleRadius * 1.2;
+                            .attr('r', function () {
+                                return this.circleRadius * 1.2;
                             });
                     }
 
