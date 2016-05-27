@@ -23,8 +23,14 @@
 
         },
         render: function (animationEase, animationTime) {
+
             var _this = this;
-            var animationConfig = _this.config.animation;
+
+            // 手机模式下动画卡
+            if(_this.mobileMode){
+                animationTime = 0;
+            }
+
             var scatterGroup = _this.main.selectAll('.xc-scatter-group')
                 .data([1]);
 
@@ -34,7 +40,7 @@
             var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
                 .data(_this.data);
 
-            var transitionStr = "r "+animationConfig.animationTime+"ms linear,cx "+animationTime+"ms linear,cy "+animationTime+"ms linear";
+            var transitionStr = "r "+animationTime+"ms linear,cx "+animationTime+"ms linear,cy "+animationTime+"ms linear";
 
             scatterItem.enter().append('circle');
             scatterItem.exit().remove();
