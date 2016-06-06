@@ -9,6 +9,8 @@
     var funnel = charts.funnel;
 
     funnel.prototype.extend({
-       
+       mobileReady:function(){
+           this.funnelSection.on('touchstart.funnel',funnel.funnelSectionTrigger(this));
+       }
     });
 }(xCharts, d3));

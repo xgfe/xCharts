@@ -79,9 +79,9 @@
                 _this.display = true;
             });
 
-            if(_this.mobileMode){
+            if (_this.mobileMode) {
                 _this.mobileReady();
-            }else{
+            } else {
                 _this.div.on('mousemove.tooltip', tooltipMousemove(_this));
                 _this.div.on('mouseleave.tooltip', function () {
                     _this.hiddenTooltip();//鼠标过快划出，单纯监听mousemove很容易造成隐藏失败，这里加重保险
@@ -146,7 +146,7 @@
             //tooltip当前位置超出div最大宽度,强制往左边走
             if (tooltipX + tooltipWidth > width) {
                 tooltipX = tooltipX - tooltipWidth - offsetX;
-                tooltipX = tooltipX < 0 ? 0: tooltipX;
+                tooltipX = tooltipX < 0 ? 0 : tooltipX;
             } else {
                 tooltipX += offsetX;
             }
@@ -257,10 +257,21 @@
 
             // TODO 有结束绘制事件后，只需计算一次
                 width = _this.originalWidth - _this.margin.left - _this.margin.right,
-                height = _this.originalHeight - _this.margin.top - _this.margin.bottom,
-                sectionLength = xAxisData.length - 1,
-                sectionWidth = width / sectionLength; //计算每个区域的宽度,注意这里是均分
-            var sectionNumber = Math.round((mouseX - _this.margin.left) / sectionWidth);//得到在哪个区域，从0开始
+                height = _this.originalHeight - _this.margin.top - _this.margin.bottom;
+
+            var sectionLength = xAxisData.length - 1;
+
+            if (_this.messageCenter.xAxisScale[0].scaleType === 'barCategory') {
+                sectionLength++;
+            }
+
+            var sectionWidth = width / sectionLength; //计算每个区域的宽度,注意这里是均分
+            var sectionNumber = 0; //得到在哪个区域，从0开始
+            if(_this.messageCenter.xAxisScale[0].scaleType === 'barCategory'){
+                sectionNumber = Math.floor((mouseX - _this.margin.left) / sectionWidth);
+            }else{
+                sectionNumber = Math.round((mouseX - _this.margin.left) / sectionWidth);
+            }
 
 
             if (sectionNumber !== oldSectionNumber) {
