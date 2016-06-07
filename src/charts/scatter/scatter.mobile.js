@@ -10,6 +10,10 @@
     var scatter = charts.scatter;
 
     scatter.prototype.extend({
-       
+        mobileReady:function(){
+            var moveEvent = scatter.assitLineTrigger(this);
+            this.div.on('touchmove.scatter',moveEvent);
+            this.div.on('touchstart.scatter',moveEvent);
+        }
     });
 }(xCharts, d3));

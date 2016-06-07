@@ -28,13 +28,13 @@
             this.isXAxis = type === 'xAxis';
             this.axisConfig = config[type];
             this.series = series;
-
+            this.mergeConfig = [];
             var scales = [];
             for (var i = 0; i < this.axisConfig.length; i++) {
 
                 // 合并默认config
                 var config = utils.merage(defaultConfig(type), this.axisConfig[i]);
-
+                this.mergeConfig[i] = config;
                 // 计算需要显示的文字的宽高，y轴是宽，x轴是高
 
                 // 计算比例尺scale
@@ -205,6 +205,11 @@
                 _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
                 _this.legendRefresh = false;
             });
+        },
+        // 给散点图格式化值用
+        tickFormat: function (value, i) {
+            i = i === undefined ? 0 : i;
+            return this.mergeConfig[i].tickFormat(value);
         }
     });
 

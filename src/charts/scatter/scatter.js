@@ -2,7 +2,7 @@
  *  scatter 散点图
  *  继承自 Chart
  */
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
     xCharts.charts.extend({scatter: scatter});
@@ -27,7 +27,7 @@
             var _this = this;
 
             // 手机模式下动画卡
-            if(_this.mobileMode){
+            if (_this.mobileMode) {
                 animationTime = 0;
             }
 
@@ -40,16 +40,16 @@
             var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
                 .data(_this.data);
 
-            var transitionStr = "r "+animationTime+"ms linear,cx "+animationTime+"ms linear,cy "+animationTime+"ms linear";
+            var transitionStr = "r " + animationTime + "ms linear,cx " + animationTime + "ms linear,cy " + animationTime + "ms linear";
 
             scatterItem.enter().append('circle');
             scatterItem.exit().remove();
 
-            scatterItem.style("transition",transitionStr)
-                .attr('cx',function(d){
+            scatterItem.style("transition", transitionStr)
+                .attr('cx', function (d) {
                     return d._serie.xScale(d.data[0]);
                 })
-                .attr('cy',function(d){
+                .attr('cy', function (d) {
                     return d._serie.yScale(d.data[1]);
                 })
                 .attr('r', function (d) {
@@ -95,6 +95,35 @@
             //     })
 
             _this.scatterItem = scatterItem;//暴露出去，为了tooltip事件
+
+            // 画辅助线
+            this.renderAssistLine();
+        },
+        renderAssistLine: function () {
+            var xLine = this.svg.selectAll('line.xc-scatter-line-x').data([this]);
+            xLine.enter().append('line').attr('class', 'xc-scatter-line-x').style('pointer-events', 'none');
+            var yLine = this.svg.selectAll('line.xc-scatter-line-y').data([this])
+            yLine.enter().append('line').attr('class', 'xc-scatter-line-y').style('pointer-events', 'none');
+            var x1 = this.margin.left;
+            var x2 = this.margin.left + this.width;
+            var y1 = this.margin.top;
+            var y2 = this.height + y1;
+            xLine.attr('x1', x1)
+                .attr('x2', x1)
+                .attr('y1', y1)
+                .attr('y2', y2)
+                .style('display','none')
+
+            yLine.attr('x1', x1)
+                .attr('x2', x2)
+                .attr('y1', y1)
+                .attr('y2', y1)
+                .style('display','none')
+
+            this.xLine = xLine;
+            this.yLine = yLine;
+
+
         },
         ready: function () {
             this.__legendReady();
@@ -125,26 +154,112 @@
             var _this = this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            _this.scatterItem.on('mouseenter.scatter', function (data) {
 
-                d3.select(this).attr('opacity', 1);
-                //设置tooltip
-                var event = d3.event;
-                var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-                tooltip.showTooltip();
-                tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
-                tooltip.setPosition([x, y]);
-            })
 
-            _this.scatterItem.on('mouseleave.scatter', function (data) {
-                d3.select(this).attr('opacity', function (d) {
-                    return d._serie.opacity;
+            // TODO 这里修改为轴触发方式和点击共存
+            // 移动端就不需要点击了
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                _this.div.on('mousemove.scatter', assitLineTrigger(_this));
+
+                _this.scatterItem.on('mouseenter.scatter', function (data) {
+
+                    d3.select(this).attr('opacity', 1);
+                    //设置tooltip
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+                    tooltip.showTooltip();
+                    tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
+                    tooltip.setPosition([x, y]);
+                })
+
+                _this.scatterItem.on('mouseleave.scatter', function (data) {
+                    d3.select(this).attr('opacity', function (d) {
+                        return d._serie.opacity;
+                    });
+                    tooltip.hiddenTooltip();
                 });
-                tooltip.hiddenTooltip();
-            })
+            }
+
+
         }
-    })
+    });
+
+    scatter.assitLineTrigger = assitLineTrigger;
+
+    function assitLineTrigger(ctx) {
+        var textBox = ctx.svg.selectAll('text.xc-scatter-assitline')
+            .data([ctx])
+            .enter()
+            .append('text')
+            .attr('class', 'xc-scatter-assitline')
+            .attr('text-anchor', 'left');
+
+        var textSpan = textBox.selectAll('tspan.xc-span').data([ctx]).enter().append('tspan').attr('class', 'xc-span');
+        var margin = ctx.margin;
+        var yScale = ctx.messageCenter.yAxisScale[0];
+        var xScale = ctx.messageCenter.xAxisScale[0];
+        var xLine = ctx.xLine;
+        var yLine = ctx.yLine;
+        return function () {
+
+            var position = d3.mouse(ctx.svg.node());
+            if(!judgeOutBoundary(ctx,position)){
+                xLine.style('display','none');
+                yLine.style('display','none');
+                textBox.style('display','none');
+                return false;
+            }
+            var x = position[0] - margin.left;
+            var y = position[1] - margin.top;
+
+            var xValue = xScale.invert(x).toFixed(2);
+            var yValue = yScale.invert(y).toFixed(2);
+
+            textBox.style('display','block');
+            textSpan.text(xValue + ',' + yValue);
+
+            xLine.attr('x1', position[0])
+                .attr('x2', position[0])
+                .style('display','block');
+            yLine.attr('y1', position[1])
+                .attr('y2', position[1])
+                .style('display','block');
+
+            // 文字向上偏移
+            position[1] -= 10;
+            position[0] += 10;
+            textBox.attr('transform', 'translate(' + position.join(',') + ')');
+        }
+    }
+
+    /**
+     * 判断超出边界,边界以坐标轴为准
+     * @param ctx 上下文this
+     * @param position 当前鼠标坐标
+     * @return {boolean} true:未超出边界,false超出边界
+     */
+    function judgeOutBoundary(ctx,position){
+        var x1 = ctx.margin.left;
+        var x2 = ctx.margin.left + ctx.width;
+        if(position[0] <= x1 || position[0] >= x2){
+            return false;
+        }
+
+        var y1 = ctx.margin.top;
+        var y2 = ctx.margin.top+ctx.height;
+
+        if(position[1] <= y1 || position[1] >= y2){
+            return false;
+        }
+
+        return true;
+    }
+
+    // function
+
     /**
      * 通过name找到对应的serie
      * @param series
@@ -311,4 +426,4 @@
         return scatter;
     }
 
-}(xCharts,d3));
+}(xCharts, d3));

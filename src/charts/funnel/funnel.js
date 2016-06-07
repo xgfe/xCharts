@@ -87,7 +87,7 @@
                 .attrTween('transform', function (d) {
 
                     if (this.labelPosition === undefined) {
-                        this.labelPosition = [d.labelPosition[0] *1.1 , d.labelPosition[1]];
+                        this.labelPosition = [d.labelPosition[0] * 1.1, d.labelPosition[1]];
                     }
 
                     // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
@@ -165,27 +165,33 @@
             var _this = this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            _this.funnelSection.on('mousemove.funnel', function (data) {
-                var event = d3.event;
-                var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
 
-                var title = "<p>" + data._serie.name + "</p>";
-                tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
-                tooltip.setPosition([x, y]);
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                _this.funnelSection.on('mousemove.funnel', function (data) {
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
 
-            })
-            _this.funnelSection.on('mouseenter.funnel', function (data) {
-                d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
-                tooltip.showTooltip();
-            })
-            _this.funnelSection.on('mouseleave.funnel', function () {
-                d3.select(this).attr('opacity', 1);
-                tooltip.hiddenTooltip();
-            })
+                    var title = "<p>" + data._serie.name + "</p>";
+                    tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+                    tooltip.setPosition([x, y]);
+                });
+
+                _this.funnelSection.on('mouseenter.funnel', function (data) {
+                    d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+                    tooltip.showTooltip();
+                })
+
+                _this.funnelSection.on('mouseleave.funnel', function () {
+                    d3.select(this).attr('opacity', 1);
+                    tooltip.hiddenTooltip();
+                });
+            }
         }
-
     });
+
 
     function legendClickSeries(series, nameList) {
         series.forEach(function (serie) {
@@ -400,6 +406,7 @@
         serie.yOffset = yOffset;
     }
 
+    funnel.defaultFormatter = defaultFormatter;
     function defaultFormatter(name, value, percentage) {
         return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
     }
