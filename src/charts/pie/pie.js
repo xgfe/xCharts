@@ -52,14 +52,54 @@
             }
         },
         ready: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendReady.apply(this);
+            if(this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if(this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if(this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
             }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipReady.apply(this);
+        },
+        _reRenderArcs: function(nameList) {
+            var animationConfig = this.config.animation;
+            if(!nameList.length) {
+                this.pieData.forEach(function(d) {
+                    d.startAngle = 0;
+                    d.endAngle = 0;
+                    d.data.isShow = false;
+                });
+            } else {
+                // 先把所有弧形的可见配置设为不可见
+                this.pieConfig.data.forEach(function(d) {
+                    d.isShow = false;
+                    d.value = 0;
+                });
+                for(var i=0;i<nameList.length;i++) {
+                    var name = nameList[i];
+                    for(var k=0;k<this.pieConfig.data.length;k++) {
+                        if(this.pieConfig.data[k].name == name) {
+                            this.pieConfig.data[k].isShow = true;
+                            this.pieConfig.data[k].value = this.pieConfig.data[k].initialValue;
+                            break;
+                        }
+                    }
+                }
+                this.pieData = __getPieData(this.pieConfig.data);
             }
+            __renderArcs.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+                __renderText.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+                __renderTextLine.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+            }
+        },
+        _defaultTooltipFormatter: function (name, value) {
+            return "<div>" + name + '：' + value + "</div>";
         }
     });
+    
     /**
      * @description 合并默认值,转换百分比,并添加一些属性
      */
@@ -97,7 +137,6 @@
     function __getPieData(data) {
         var pieFunc = d3.layout.pie()
             .sort(null)
-            //.padAngle(0.005)
             .value(function(d, i) {
                 return d.value;
             }),
@@ -244,137 +283,82 @@
             });
     }
     function __legendReady() {
-        var _self = this;
-        var mobileMode = this.messageCenter.mobileMode;
+        // 绑定hover事件
+        __legendMouseEnter.apply(this);
+        __legendMouseLeave.apply(this);
 
-        // 只有在PC端才有需要去绑定hover事件
-        if(!mobileMode) {
-            this.on('legendMouseenter.pie', function(name) {
-                for(var i=0;i<_self.arcList[0].length;i++) {
-                    var arcEle = d3.select(_self.arcList[0][i]);
-                    if(arcEle.datum().data.name == name) {
-                        arcEle.attr('d', function(d) {
-                            return _self.bigArcFunc(d);
-                        });
-                        break;
-                    }
+        // 绑定click事件
+        __legendClick.apply(this);
+    }
+    function __legendMouseEnter () {
+        var _this = this;
+        this.on('legendMouseenter.pie', function(name) {
+            for(var i=0;i<_this.arcList[0].length;i++) {
+                var arcEle = d3.select(_this.arcList[0][i]);
+                if(arcEle.datum().data.name == name) {
+                    arcEle.attr('d', function(d) {
+                        return _this.bigArcFunc(d);
+                    });
+                    break;
                 }
-            });
-            this.on('legendMouseleave.pie', function(name) {
-                for(var i=0;i<_self.arcList[0].length;i++) {
-                    var arcEle = d3.select(_self.arcList[0][i]);
-                    if(arcEle.datum().data.name == name) {
-                        arcEle.attr('d', function(d) {
-                            return _self.arcFunc(d);
-                        });
-                        break;
-                    }
-                }
-            });
-        }
-        this.on('legendClick.pie', function(nameList) {
-            var animationConfig = _self.config.animation;
-            if(!nameList.length) {
-                _self.pieData.forEach(function(d) {
-                    d.startAngle = 0;
-                    d.endAngle = 0;
-                    d.data.isShow = false;
-                });
-            } else {
-                // 先把所有弧形的可见配置设为不可见
-                _self.pieConfig.data.forEach(function(d) {
-                    d.isShow = false;
-                    d.value = 0;
-                });
-                for(var i=0;i<nameList.length;i++) {
-                    var name = nameList[i];
-                    for(var k=0;k<_self.pieConfig.data.length;k++) {
-                        if(_self.pieConfig.data[k].name == name) {
-                            _self.pieConfig.data[k].isShow = true;
-                            _self.pieConfig.data[k].value = _self.pieConfig.data[k].initialValue;
-                            break;
-                        }
-                    }
-                }
-                _self.pieData = __getPieData(_self.pieConfig.data);
-            }
-            __renderArcs.apply(_self, [animationConfig.animationEase, animationConfig.animationTime]);
-            if(_self.pieConfig.labels && _self.pieConfig.labels.enable) {
-                __renderText.apply(_self, [animationConfig.animationEase, animationConfig.animationTime]);
-                __renderTextLine.apply(_self, [animationConfig.animationEase, animationConfig.animationTime]);
-            }
-            if(mobileMode) {
-                _self.messageCenter.components.tooltip.hiddenTooltip();
             }
         });
     }
-    function __tooltipReady() {
-        var _self = this;
-        var mobileMode = _self.messageCenter.mobileMode;
-        var tooltip = _self.messageCenter.components.tooltip;
-        if(mobileMode) {
-
-            // 移动场景下绑定点击事件
-            this.arcList.on('click.pie', function () {
-                var bindData = d3.select(this).datum();
-                var bigD = _self.bigArcFunc(bindData);
-                if(bigD === d3.select(this).attr('d')) {
-
-                    // 此时弧形处于放大的状态,应该被恢复正常状态并隐藏tooltip
-                    d3.select(this).attr('d', function(d) {
-                        return _self.arcFunc(d);
+    function __legendMouseLeave () {
+        var _this = this;
+        this.on('legendMouseleave.pie', function(name) {
+            for(var i=0;i<_this.arcList[0].length;i++) {
+                var arcEle = d3.select(_this.arcList[0][i]);
+                if(arcEle.datum().data.name == name) {
+                    arcEle.attr('d', function(d) {
+                        return _this.arcFunc(d);
                     });
-                    tooltip.hiddenTooltip();
-                } else {
-
-                    // 此时弧形处于正常状态,应该被放大并且显示tooltip
-                    _self.arcList.attr('d', function (d) {
-                        return _self.arcFunc(d);
-                    });
-                    d3.select(this).attr('d', function(d) {
-                        return _self.bigArcFunc(d);
-                    });
-
-                    var event = d3.event;
-                    var x = event.layerX || event.offsetX,
-                        y = event.layerY || event.offsetY;
-                    var tooltipFormatter = tooltip.tooltipConfig.formatter;
-                    var pieFormatter = _self.pieConfig.formatter;
-                    var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
-                    tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
-                    tooltip.showTooltip();
-                    tooltip.setPosition([x,y], 10, 10);
+                    break;
                 }
-            });
-        } else {
-
-            // PC场景下绑定hover事件
-            this.arcList.on('mousemove.pie', function() {
-                var bindData = d3.select(this).datum();
-                var event = d3.event;
-                var x = event.layerX || event.offsetX,
-                    y = event.layerY || event.offsetY;
-                var tooltipFormatter = tooltip.tooltipConfig.formatter,
-                    pieFormatter = _self.pieConfig.formatter;
-                var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
-                tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
-                tooltip.showTooltip();
-                tooltip.setPosition([x,y], 10, 10);
-
-                d3.select(this).attr('d', function(d) {
-                    return _self.bigArcFunc(d);
-                });
-            });
-            this.arcList.on('mouseout.pie', function() {
-                tooltip.hiddenTooltip();
-                d3.select(this).attr('d', function(d) {
-                    return _self.arcFunc(d);
-                });
-            });
-        }
+            }
+        });
     }
-    function defaultTooltipFormatter(name, value) {
-        return "<div>" + name + '：' + value + "</div>";
+    function __legendClick () {
+        var _this = this;
+        this.on('legendClick.pie', function(nameList) {
+            _this._reRenderArcs(nameList);
+        });
+    }
+    function __tooltipReady() {
+        __tooltipMouseMove.apply(this);
+        __tooltipMouseOut.apply(this);
+    }
+    function __tooltipMouseMove() {
+        var _this = this;
+        var tooltip = this.messageCenter.components.tooltip;
+        this.arcList.on('mousemove.pie', function() {
+            var bindData = d3.select(this).datum();
+            var position = d3.mouse(_this.svg.node());
+            position = [
+                position[0] + 40,
+                position[1] + 40
+            ];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter,
+                pieFormatter = _this.pieConfig.formatter;
+            var formatter = pieFormatter || tooltipFormatter || _this._defaultTooltipFormatter;
+            tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
+            tooltip.showTooltip();
+            tooltip.setPosition(position);
+
+            d3.select(this).attr('d', function(d) {
+                return _this.bigArcFunc(d);
+            });
+        });
+    }
+    function __tooltipMouseOut() {
+        var _this = this;
+        var tooltip = this.messageCenter.components.tooltip;
+        this.arcList.on('mouseout.pie', function() {
+            tooltip.hiddenTooltip();
+            d3.select(this).attr('d', function(d) {
+                return _this.arcFunc(d);
+            });
+        });
     }
     function defaultLabelFormatter(name) {
         return name;
