@@ -92,7 +92,14 @@
     visibility: hidden;
 }
 
-
+/* 饼图样式 */
+.xc-pie-textLine {
+    fill: none;
+    stroke: #000;
+    stroke-width: 2px;
+    stroke-dasharray: 5px;
+    opacity: 0.5;
+}
 
 /* 柱状图样式 */
 .xc-bar-rect {
