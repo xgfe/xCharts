@@ -513,13 +513,8 @@
             var title = "<p>" + xData + "</p>";
             tooltip.showTooltip();
             tooltip.setTooltipHtml(title + html);
-            // var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-            var position = d3.mouse(this);
 
-            position = [
-                position[0] + 40,
-                position[1] + 40
-            ];
+            var position = d3.mouse(ctx.svg.node());
 
             tooltip.setPosition(position);
 
