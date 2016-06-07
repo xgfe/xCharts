@@ -55,12 +55,63 @@
             this.coverPolygonList = __renderCoverPolygons.apply(this);
         },
         ready: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendReady.apply(this);
+            if(this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if(this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if(this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
             }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipReady.apply(this);
+        },
+        _reRenderAreas: function(nameList) {
+            for(var i=0;i<this.areas.length;i++) {
+                this.areas[i].isShow = false;
             }
+            for(var i=0;i<nameList.length;i++) {
+                for(var k=0;k<this.areas.length;k++) {
+                    if(nameList[i] == this.areas[k].originalData.name) {
+                        this.areas[k].isShow = true;
+                        break;
+                    }
+                }
+            }
+            for(var i=0;i<this.areas.length;i++) {
+                d3.select(this.areaList[0][i]).classed('hidden', !this.areas[i].isShow);
+            }
+        },
+        _showTooltip: function(index, ele) {
+            var tooltip = this.messageCenter.components.tooltip;
+            var tooltipFormatter = tooltip.tooltipConfig.formatter,
+                radarFormatter = this.radarConfig.formatter;
+            var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
+            var position = d3.mouse(this.svg.node());
+            position = [
+                position[0] + 40,
+                position[1] + 40
+            ];
+            var indicator = this.radarConfig.indicator[index].text;
+            var valueList = [];
+            for(var i=0;i<this.radarConfig.data.length;i++) {
+                if(this.areas[i].isShow) {
+                    valueList.push({
+                        name: this.radarConfig.data[i].name,
+                        value: this.radarConfig.data[i].value[index]
+                    });
+                }
+            }
+            tooltip.setTooltipHtml(formatter(indicator, valueList));
+            tooltip.showTooltip();
+            tooltip.setPosition(position);
+            var areaPointsList = this.areaList.selectAll('.xc-radar-area-point');
+            for(var i=0;i<areaPointsList.length;i++) {
+                var areaPoints = areaPointsList[i];
+                d3.select(areaPoints[index]).style('stroke-width', 5);
+            }
+            this.lineList.classed('xc-radar-tooltip-line', false);
+            d3.select(this.lineList[0][index]).classed('xc-radar-tooltip-line', true);
         }
     });
     function __correctConfig() {
@@ -342,118 +393,80 @@
         return coverPolygonList;
     }
     function __legendReady() {
-        var _self = this,
-            areas = _self.areas,
-            mobileMode = this.messageCenter.mobileMode;
-        if(mobileMode) {
-            // TODO 去掉mouseenter和mouseleave的重复代码
-            this.on('legendMouseenter.radar', function (name) {
-                var areaData = {};
-                for(var i=0;i<areas.length;i++) {
-                    if(name == areas[i].originalData.name) {
-                        areaData = areas[i];
-                        break;
-                    }
-                }
-                for(var i=0;i<_self.areaList[0].length;i++) {
-                    var areaEle = d3.select(_self.areaList[0][i]);
-                    if(areaEle.datum() == areaData) {
-                        areaEle.selectAll('.xc-radar-area-point')
-                            .style('stroke-width', 5);
-                        break;
-                    }
-                }
-            });
-            this.on('legendMouseleave.radar', function(name) {
-                var areaData = {};
-                for(var i=0;i<areas.length;i++) {
-                    if(name == areas[i].originalData.name) {
-                        areaData = areas[i];
-                        break;
-                    }
-                }
-                for(var i=0;i<_self.areaList[0].length;i++) {
-                    var areaEle = d3.select(_self.areaList[0][i]);
-                    if(areaEle.datum() == areaData) {
-                        areaEle.selectAll('.xc-radar-area-point')
-                            .style('stroke-width', 3);
-                        break;
-                    }
-                }
-            });
-        }
-        this.on('legendClick.radar', function(nameList) {
-            for(var i=0;i<_self.areas.length;i++) {
-                _self.areas[i].isShow = false;
-            }
-            for(var i=0;i<nameList.length;i++) {
-                for(var k=0;k<_self.areas.length;k++) {
-                    if(nameList[i] == _self.areas[k].originalData.name) {
-                        _self.areas[k].isShow = true;
-                        break;
-                    }
+        __legendMouseEnter.apply(this);
+        __legendMouseOut.apply(this);
+        __legendClick.apply(this);
+    }
+    function __legendMouseEnter() {
+        var _this = this;
+        var areas = this.areas;
+        this.on('legendMouseenter.radar', function (name) {
+            var areaData = {};
+            for(var i=0;i<areas.length;i++) {
+                if(name == areas[i].originalData.name) {
+                    areaData = areas[i];
+                    break;
                 }
             }
-            for(var i=0;i<_self.areas.length;i++) {
-                d3.select(_self.areaList[0][i]).classed('hidden', !_self.areas[i].isShow);
+            for(var i=0;i<_this.areaList[0].length;i++) {
+                var areaEle = d3.select(_this.areaList[0][i]);
+                if(areaEle.datum() == areaData) {
+                    areaEle.selectAll('.xc-radar-area-point')
+                        .style('stroke-width', 5);
+                    break;
+                }
             }
         });
     }
-    function __tooltipReady() {
-        var _self = this,
-            mobileMode = this.messageCenter.mobileMode;
-
-        if(mobileMode) {
-            // 移动端绑定click事件
-            this.coverPolygonList.on('click.radar', function () {
-                var index = d3.select(this).datum().index;
-                _self.areaList.selectAll('.xc-radar-area-point').style('stroke-width', 3);
-                __showTooltip.apply(_self, [index]);
-            });
-        } else {
-            // PC端绑定hover事件
-            this.coverPolygonList.on('mousemove.radar', function () {
-                var index = d3.select(this).datum().index;
-                __showTooltip.apply(_self, [index]);
-            });
-            this.coverPolygonList.on('mouseout.radar', function () {
-                var tooltip = _self.messageCenter.components.tooltip;
-                tooltip.hiddenTooltip();
-                var areaPointsList = _self.areaList.selectAll('.xc-radar-area-point');
-                areaPointsList.style('stroke-width', 3);
-                _self.lineList.classed('xc-radar-tooltip-line', false);
-            });
-        }
-    }
-    function __showTooltip(index) {
-        var tooltip = this.messageCenter.components.tooltip;
-        var tooltipFormatter = tooltip.tooltipConfig.formatter,
-            radarFormatter = this.radarConfig.formatter;
-        var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
-        var event = d3.event;
-        var x = event.layerX || event.offsetX,
-            y = event.layerY || event.offsetY;
-        var indicator = this.radarConfig.indicator[index].text;
-        var valueList = [];
-        for(var i=0;i<this.radarConfig.data.length;i++) {
-            if(this.areas[i].isShow) {
-                valueList.push({
-                    name: this.radarConfig.data[i].name,
-                    value: this.radarConfig.data[i].value[index]
-                });
+    function __legendMouseOut() {
+        var _this = this;
+        var areas = this.areas;
+        this.on('legendMouseleave.radar', function(name) {
+            var areaData = {};
+            for(var i=0;i<areas.length;i++) {
+                if(name == areas[i].originalData.name) {
+                    areaData = areas[i];
+                    break;
+                }
             }
-        }
-        tooltip.setTooltipHtml(formatter(indicator, valueList));
-        tooltip.showTooltip();
-        tooltip.setPosition([x,y], 10, 10);
-        var areaPointsList = this.areaList.selectAll('.xc-radar-area-point');
-        for(var i=0;i<areaPointsList.length;i++) {
-            var areaPoints = areaPointsList[i];
-            d3.select(areaPoints[index]).style('stroke-width', 5);
-        }
-        this.lineList.classed('xc-radar-tooltip-line', false);
-        d3.select(this.lineList[0][index]).classed('xc-radar-tooltip-line', true);
+            for(var i=0;i<_this.areaList[0].length;i++) {
+                var areaEle = d3.select(_this.areaList[0][i]);
+                if(areaEle.datum() == areaData) {
+                    areaEle.selectAll('.xc-radar-area-point')
+                        .style('stroke-width', 3);
+                    break;
+                }
+            }
+        });
     }
+    function __legendClick() {
+        var _this = this;
+        this.on('legendClick.radar', function(nameList) {
+            _this._reRenderAreas(nameList);
+        });
+    }
+    function __tooltipReady() {
+        __tooltipMouseMove.apply(this);
+        __tooltipMouseOut.apply(this);
+    }
+    function __tooltipMouseMove() {
+        var _this = this;
+        this.coverPolygonList.on('mousemove.radar', function () {
+            var index = d3.select(this).datum().index;
+            _this._showTooltip(index, this);
+        });
+    }
+    function __tooltipMouseOut() {
+        var _this = this;
+        this.coverPolygonList.on('mouseout.radar', function () {
+            var tooltip = _this.messageCenter.components.tooltip;
+            tooltip.hiddenTooltip();
+            var areaPointsList = _this.areaList.selectAll('.xc-radar-area-point');
+            areaPointsList.style('stroke-width', 3);
+            _this.lineList.classed('xc-radar-tooltip-line', false);
+        });
+    }
+
     function defaultFormatter(indicator, valueList) {
         var htmlStr = '';
         htmlStr += "<h3>" + indicator + "</h3>";
