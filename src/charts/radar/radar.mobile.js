@@ -39,4 +39,4 @@
             _this._showTooltip(index, this);
         });
     }
-}(xCharts, d3))
+}(xCharts, d3));
