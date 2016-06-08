@@ -3,6 +3,23 @@
  * @author chenxuan
  */
 $(document).ready(function() {
+    var data = {
+        xAxisData: [],
+        seriesData: []
+    };
+    if(!isSmartDevice()) {
+        // PC打开页面
+        var btns = document.querySelectorAll('a.fixedWidth');
+        for(var i = 0; i < btns.length; i++) {
+            btns[i].classList.add('btn-lg');
+        }
+        data.xAxisData = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19'];
+        data.seriesData = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
+    } else {
+        // 移动设备打开页面
+        data.xAxisData = ['1','2','3','4','5','6','7'];
+        data.seriesData = [10, 30, 50, 70, 50, 30, 10];
+    }
     var chart = xCharts(document.querySelector('#chart'));
     var option = {
         tooltip: {
@@ -12,7 +29,7 @@ $(document).ready(function() {
         xAxis: [
             {
                 type: 'category',
-                data: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19']
+                data: data.xAxisData
             }
         ],
         yAxis: [
@@ -26,7 +43,7 @@ $(document).ready(function() {
             {
                 name: 'series',
                 type: 'bar',
-                data: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+                data: data.seriesData
             }
         ],
         resize: {
@@ -344,3 +361,9 @@ $(document).ready(function() {
         charts[i].loadConfig(options[i]);
     }
 });
+function isSmartDevice () {
+    // Adapted from http://www.detectmobilebrowsers.com
+    var ua = window['navigator']['userAgent'] || window['navigator']['vendor'] || window['opera'];
+    // Checks for iOs, Android, Blackberry, Opera Mini, and Windows mobile devices
+    return (/iPhone|iPod|iPad|Silk|Android|BlackBerry|Opera Mini|IEMobile/).test(ua);
+}

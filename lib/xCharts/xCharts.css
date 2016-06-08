@@ -10,7 +10,6 @@
     stroke: none;
 }
 
-.xc-axis line,
 .xc-axis path {
     stroke: #a2a2a2;
 }
@@ -19,9 +18,7 @@
     display: none;
 }
 
-.xc-axis > .tick > line {
-    opacity: 0.2;
-}
+
 
 .xc-axis > .tick:first-child > line {
     opacity: 0;
@@ -95,9 +92,29 @@
     visibility: hidden;
 }
 
+/* 饼图样式 */
+.xc-pie-textLine {
+    fill: none;
+    stroke: #000;
+    stroke-width: 2px;
+    stroke-dasharray: 5px;
+    opacity: 0.5;
+}
+
 /* 柱状图样式 */
 .xc-bar-rect {
     rx: 5;
     ry: 5;
 }
 
+/*散点图*/
+.xc-scatter-assitline {
+    font-size:14px;
+    fill: #a2a2a2;
+}
+
+.xc-scatter-line-x,.xc-scatter-line-y{
+    stroke-width: 1px;
+    stroke: #a2a2a2;
+    stroke-dasharray: 5;
+}
