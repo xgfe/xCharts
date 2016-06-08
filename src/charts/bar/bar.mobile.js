@@ -35,4 +35,4 @@
             //TODO 待添加trigger为 'item'时的tooltip事件
         }
     }
-}(xCharts, d3))
+}(xCharts, d3));
