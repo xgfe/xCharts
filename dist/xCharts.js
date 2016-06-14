@@ -826,13 +826,13 @@ var animationConfig = {
             this.isXAxis = type === 'xAxis';
             this.axisConfig = config[type];
             this.series = series;
-
+            this.mergeConfig = [];
             var scales = [];
             for (var i = 0; i < this.axisConfig.length; i++) {
 
                 // 合并默认config
                 var config = utils.merage(defaultConfig(type), this.axisConfig[i]);
-
+                this.mergeConfig[i] = config;
                 // 计算需要显示的文字的宽高，y轴是宽，x轴是高
 
                 // 计算比例尺scale
@@ -1003,6 +1003,11 @@ var animationConfig = {
                 _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
                 _this.legendRefresh = false;
             });
+        },
+        // 给散点图格式化值用
+        tickFormat: function (value, i) {
+            i = i === undefined ? 0 : i;
+            return this.mergeConfig[i].tickFormat(value);
         }
     });
 
@@ -3188,7 +3193,7 @@ var animationConfig = {
                 this.barSeries = [];
                 for(var i=0;i<series.length;i++) {
                     if(series[i].type == 'bar') {
-                        this.barSeries.push(series[i]);
+                        this.barSeries.push(utils.copy(series[i], true));
                     }
                 }
                 // 给每种柱状添加颜色值
@@ -3198,7 +3203,7 @@ var animationConfig = {
                 });
             }
 
-
+            __correctConfig.apply(this);
             // 用变量存储messageCenter里的一些信息，方便后面使用
             this.xAxisScale = messageCenter.xAxisScale;
             this.yAxisScale = messageCenter.yAxisScale;
@@ -3214,243 +3219,273 @@ var animationConfig = {
             this.barYScale = this.yAxisScale[0];
 
             // 获取每组矩形容器的左上角坐标以及其内的矩形左上角的坐标、宽度和高度
-            this.rectsData = this.__getDefaultData();
+            this.rectsData = __getDefaultData.apply(this);
             // 如果有series的isShow为false，则重新计算每组矩形的坐标和宽高
             for(var i=0;i<this.barSeries.length;i++) {
                 if(!this.barSeries[i].isShow) {
-                    this.__changeRectsData();
+                    __changeRectsData.apply(this);
                     break;
                 }
             }
         },
         render: function(animationEase, animationTime) {
             // 添加柱状图容器
-            this.bar = this.__renderBarWrapper();
+            this.bar = __renderBarWrapper.apply(this);
             // 添加每组矩形的容器
-            this.rectWrapperList = this.__renderRectWrapper();
+            this.rectWrapperList = __renderRectWrapper.apply(this);
             // 添加柱状
-            this.rectList = this.__renderRect(animationEase, animationTime);
+            this.rectList = __renderRect.apply(this, [animationEase, animationTime]);
         },
         ready: function() {
-            this.__legendReady();
-            this.__tooltipReady();
-        },
-        __getDefaultData: function() {
-            var rangeBand = this.barXScale.rangeBand(),
-                rangeBandNum = this.barXScale.domain().length,
-                xRange = this.barXScale.rangeExtent(),
-                yRange = this.barYScale.range();
-
-            this.xRange = xRange[1] - xRange[0];
-            this.yRange = yRange[0] - yRange[1];
-            var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
-            // 定义同组矩形之间的间距
-            var rectMargin = 10;
-            // 假设所有矩形均可见的情况下，计算矩形宽度
-            var seriesLength = this.barSeries.length;
-            var rectWidth = (rangeBand - (seriesLength+1)*rectMargin)/seriesLength;
-
-            var rectGroupData = [],
-                tempX = outPadding;
-            for(var i=0;i<rangeBandNum;i++) {
-                // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-                var rectsData = [];
-                var rectX = rectMargin;
-                for(var k=0;k<seriesLength;k++) {
-                    var tempRect = {
-                        x: rectX,
-                        y: this.barYScale(this.barSeries[k].data[i]),
-                        width: rectWidth > 0 ? rectWidth : 0,
-                        height: this.yRange - this.barYScale(this.barSeries[k].data[i]),
-                        color: this.barSeries[k].color
-                    };
-                    rectsData.push(tempRect);
-                    rectX += rectWidth + rectMargin;
-                }
-                // 每组矩形容器的坐标以及每组矩形的坐标和宽高
-                var tempData = {
-                    x: tempX,
-                    y: 0,
-                    rectsData: rectsData
-                };
-                rectGroupData.push(tempData);
-                tempX += rangeBand;
-            }
-            return rectGroupData;
-        },
-        __changeRectsData: function() {
-            var rangeBand = this.barXScale.rangeBand();
-            // 定义同组矩形之间的间距
-            var rectMargin = 10;
-
-            // 根据矩形是否可见，求出实际的矩形宽度
-            var visibleSeriesLength = 0;
-            for(var i=0;i<this.barSeries.length;i++) {
-                if(this.barSeries[i].isShow) {
-                    visibleSeriesLength++;
-                }
-            }
-            var realRectWidth = (rangeBand - (visibleSeriesLength+1)*rectMargin)/visibleSeriesLength;
-
-            for(var i=0;i<this.rectsData.length;i++) {
-                // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-                var tempRect = this.rectsData[i].rectsData;
-                var rectX = rectMargin;
-                for(var k=0;k<tempRect.length;k++) {
-                    // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
-                    if(this.barSeries[k].isShow) {
-                        tempRect[k].x = rectX;
-                        tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
-                        tempRect[k].width = realRectWidth;
-                        tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
-                        rectX += realRectWidth + rectMargin;
-                    } else {
-                        tempRect[k].y = this.yRange;
-                        tempRect[k].height = 0;
-                    }
-                }
-            }
-        },
-        __renderBarWrapper: function() {
-            var bar = this.main
-                .selectAll('.xc-bar')
-                .data([1]);
-            bar.enter()
-                .append('g')
-                .classed('xc-bar', true);
-            return bar;
-        },
-        __renderRectWrapper: function() {
-            var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
-                .data(this.rectsData);
-            rectWrapperList.enter()
-                .append('g')
-                .classed('xc-bar-rectWrapper', true);
-            rectWrapperList.attr('transform', function(d) {
-                return 'translate(' + d.x + ',' + d.y + ')';
-            });
-            return rectWrapperList;
-        },
-        __renderRect: function(animationEase, animationTime) {
-            var rectList = this.rectWrapperList
-                .selectAll('.xc-bar-rect')
-                .data(function(d) {
-                    return d.rectsData;
-                });
-            rectList.enter()
-                .append('rect')
-                .classed('xc-bar-rect', true)
-                .attr('x', function(d) {
-                    return d.x;
-                })
-                .attr('y', this.yRange)
-                .attr('width', function(d) {
-                    return d.width;
-                })
-                .attr('height', 0)
-                .attr('fill', function(d) {
-                    return d.color;
-                });
-            rectList.transition()
-                .duration(animationTime)
-                .ease(animationEase)
-                .attr('x', function(d) {
-                    return d.x;
-                })
-                .attr('y', function(d) {
-                    return d.y;
-                })
-                .attr('width', function(d) {
-                    return d.width;
-                })
-                .attr('height', function(d) {
-                    return d.height;
-                });
-            return rectList;
-        },
-        __legendReady: function() {
-            var _self = this;
-            this.on('legendMouseenter.bar', function(name) {
-                // 取出对应rect的idx
-                var idx = 0;
-                for(var i=0;i<_self.barSeries.length;i++) {
-                    if(_self.barSeries[i].name == name) {
-                        idx = _self.barSeries[i].idx;
-                        break;
-                    }
-                }
-                // 把对应的矩形透明度设成0.5
-                _self.rectList.forEach(function(rectArr) {
-                     d3.select(rectArr[idx])
-                         .attr('fill-opacity', 0.5);
-                });
-            });
-            this.on('legendMouseleave.bar', function(name) {
-                // 取出对应rect的idx
-                var idx = 0;
-                for(var i=0;i<_self.barSeries.length;i++) {
-                    if(_self.barSeries[i].name == name) {
-                        idx = _self.barSeries[i].idx;
-                        break;
-                    }
-                }
-                // 把对应的矩形透明度的属性去掉
-                _self.rectList.forEach(function(rectArr) {
-                    d3.select(rectArr[idx])
-                        .attr('fill-opacity', null);
-                });
-            });
-            this.on('legendClick.bar', function(nameList) {
-                var animationConfig = _self.config.animation;
-                // 先把所有series的isShow属性设为false
-                _self.barSeries.forEach(function(series) {
-                    series.isShow = false;
-                });
-                // 根据nameList把其中对应的series的isShow属性设为true
-                for(var i=0;i<nameList.length;i++) {
-                    for(var k=0;k<_self.barSeries.length;k++) {
-                        if(nameList[i] == _self.barSeries[k].name) {
-                            _self.barSeries[k].isShow = true;
-                            break;
-                        }
-                    }
-                }
-                // 根据新的isShow配置进行计算
-                _self.__changeRectsData();
-                _self.__renderRect(animationConfig.animationEase, animationConfig.animationTime);
-            });
-        },
-        __tooltipReady: function() {
-            var _self = this;
-            // 如果没有对tooltip进行配置或设置tooltip不显示,则不绑定事件监听
-            if(!this.config.tooltip || !this.config.tooltip.show) {
-                return;
-            }
-            if(this.config.tooltip.trigger == 'axis') {
-                this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
-                    var htmlStr = '';
-                    _self.barSeries.forEach(function (series) {
-                        if (!series.isShow) {
-                            return;
-                        } else {
-                            var formatter = series.formatter || format || defaultFormatter;
-                            htmlStr += formatter(series.name, series.data[sectionNumber]);
-                        }
-                    })
-                    callback(htmlStr);
-                });
+            if(this.mobileMode) {
+                this.mobileReady();
             } else {
-                //TODO 待添加trigger为 'item'时的tooltip事件
+                if(this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if(this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
             }
         },
-        getTooltipPosition: function(tickIndex) {
+        getTooltipPosition: function (tickIndex) {
             var rangeBand = this.barXScale.rangeBand(),
                 rangeBandNum = this.barXScale.domain().length,
                 xRange = this.barXScale.rangeExtent();
             var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
             return xRange[0] + outPadding + tickIndex*rangeBand + rangeBand/2;
+        },
+        _reRenderBars: function(nameList) {
+            var animationConfig = this.config.animation;
+            // 先把所有series的isShow属性设为false
+            this.barSeries.forEach(function(series) {
+                series.isShow = false;
+            });
+            // 根据nameList把其中对应的series的isShow属性设为true
+            for(var i=0;i<nameList.length;i++) {
+                for(var k=0;k<this.barSeries.length;k++) {
+                    if(nameList[i] == this.barSeries[k].name) {
+                        this.barSeries[k].isShow = true;
+                        break;
+                    }
+                }
+            }
+            // 根据新的isShow配置进行计算
+            __changeRectsData.apply(this);
+            __renderRect.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+        },
+        _tooltipSectionChange: function() {
+            var _this = this;
+            this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
+                var htmlStr = '';
+                _this.barSeries.forEach(function (series) {
+                    if (!series.isShow) {
+                        return;
+                    } else {
+                        var formatter = series.formatter || format || defaultFormatter;
+                        htmlStr += formatter(series.name, series.data[sectionNumber]);
+                    }
+                })
+                callback(htmlStr);
+            });
         }
     });
+    function __correctConfig() {
+        // 合并默认值
+        this.barSeries.forEach(function (item) {
+            item = utils.merage(defaultConfig(), item);
+        });
+    }
+    function __getDefaultData() {
+        var rangeBand = this.barXScale.rangeBand(),
+            rangeBandNum = this.barXScale.domain().length,
+            xRange = this.barXScale.rangeExtent(),
+            yRange = this.barYScale.range();
+
+        this.xRange = xRange[1] - xRange[0];
+        this.yRange = yRange[0] - yRange[1];
+        var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
+        // 定义同组矩形之间的间距
+        var rectMargin = 10;
+        // 假设所有矩形均可见的情况下，计算矩形宽度
+        var seriesLength = this.barSeries.length;
+        var rectWidth = (rangeBand - (seriesLength+1)*rectMargin)/seriesLength;
+
+        var rectGroupData = [],
+            tempX = outPadding;
+        for(var i=0;i<rangeBandNum;i++) {
+            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
+            var rectsData = [];
+            var rectX = rectMargin;
+            for(var k=0;k<seriesLength;k++) {
+                var tempRect = {
+                    x: rectX,
+                    y: this.barYScale(this.barSeries[k].data[i]),
+                    width: rectWidth > 0 ? rectWidth : 0,
+                    height: this.yRange - this.barYScale(this.barSeries[k].data[i]),
+                    color: this.barSeries[k].color
+                };
+                rectsData.push(tempRect);
+                rectX += rectWidth + rectMargin;
+            }
+            // 每组矩形容器的坐标以及每组矩形的坐标和宽高
+            var tempData = {
+                x: tempX,
+                y: 0,
+                rectsData: rectsData
+            };
+            rectGroupData.push(tempData);
+            tempX += rangeBand;
+        }
+        return rectGroupData;
+    }
+    function __changeRectsData() {
+        var rangeBand = this.barXScale.rangeBand();
+        // 定义同组矩形之间的间距
+        var rectMargin = 10;
+
+        // 根据矩形是否可见，求出实际的矩形宽度
+        var visibleSeriesLength = 0;
+        for(var i=0;i<this.barSeries.length;i++) {
+            if(this.barSeries[i].isShow) {
+                visibleSeriesLength++;
+            }
+        }
+        var realRectWidth = (rangeBand - (visibleSeriesLength+1)*rectMargin)/visibleSeriesLength;
+
+        for(var i=0;i<this.rectsData.length;i++) {
+            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
+            var tempRect = this.rectsData[i].rectsData;
+            var rectX = rectMargin;
+            for(var k=0;k<tempRect.length;k++) {
+                // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
+                if(this.barSeries[k].isShow) {
+                    tempRect[k].x = rectX;
+                    tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
+                    tempRect[k].width = realRectWidth;
+                    tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
+                    rectX += realRectWidth + rectMargin;
+                } else {
+                    tempRect[k].y = this.yRange;
+                    tempRect[k].height = 0;
+                }
+            }
+        }
+    }
+    function __renderBarWrapper() {
+        var bar = this.main
+            .selectAll('.xc-bar')
+            .data([1]);
+        bar.enter()
+            .append('g')
+            .classed('xc-bar', true);
+        return bar;
+    }
+    function __renderRectWrapper() {
+        var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
+            .data(this.rectsData);
+        rectWrapperList.enter()
+            .append('g')
+            .classed('xc-bar-rectWrapper', true);
+        rectWrapperList.attr('transform', function(d) {
+            return 'translate(' + d.x + ',' + d.y + ')';
+        });
+        return rectWrapperList;
+    }
+    function __renderRect(animationEase, animationTime) {
+        var rectList = this.rectWrapperList
+            .selectAll('.xc-bar-rect')
+            .data(function(d) {
+                return d.rectsData;
+            });
+        rectList.enter()
+            .append('rect')
+            .classed('xc-bar-rect', true)
+            .attr('x', function(d) {
+                return d.x;
+            })
+            .attr('y', this.yRange)
+            .attr('width', function(d) {
+                return d.width;
+            })
+            .attr('height', 0)
+            .attr('fill', function(d) {
+                return d.color;
+            })
+            // 通过js设置rx和ry是因为
+            .attr('rx', 5)
+            .attr('ry', 5);
+        rectList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('x', function(d) {
+                return d.x;
+            })
+            .attr('y', function(d) {
+                return d.y;
+            })
+            .attr('width', function(d) {
+                return d.width;
+            })
+            .attr('height', function(d) {
+                return d.height;
+            });
+        return rectList;
+    }
+    function __legendReady() {
+        __legendMouseenter.apply(this);
+        __legendMouseleave.apply(this);
+        __legendClick.apply(this);
+    }
+    function __legendMouseenter() {
+        var _this = this;
+        this.on('legendMouseenter.bar', function(name) {
+            // 取出对应rect的idx
+            var idx = 0;
+            for(var i=0;i<_this.barSeries.length;i++) {
+                if(_this.barSeries[i].name == name) {
+                    idx = _this.barSeries[i].idx;
+                    break;
+                }
+            }
+            // 把对应的矩形透明度设成0.5
+            _this.rectList.forEach(function(rectArr) {
+                d3.select(rectArr[idx])
+                    .attr('fill-opacity', 0.5);
+            });
+        });
+    }
+    function __legendMouseleave() {
+        var _this = this;
+        this.on('legendMouseleave.bar', function(name) {
+            // 取出对应rect的idx
+            var idx = 0;
+            for(var i=0;i<_this.barSeries.length;i++) {
+                if(_this.barSeries[i].name == name) {
+                    idx = _this.barSeries[i].idx;
+                    break;
+                }
+            }
+            // 把对应的矩形透明度的属性去掉
+            _this.rectList.forEach(function(rectArr) {
+                d3.select(rectArr[idx])
+                    .attr('fill-opacity', null);
+            });
+        });
+    }
+    function __legendClick() {
+        var _this = this;
+        this.on('legendClick.bar', function(nameList) {
+            _this._reRenderBars(nameList);
+        });
+    }
+    function __tooltipReady() {
+        if(this.config.tooltip.trigger == 'axis') {
+            this._tooltipSectionChange();
+        } else {
+            //TODO 待添加trigger为 'item'时的tooltip事件
+        }
+    }
     function defaultFormatter(name, value) {
         var htmlStr = '';
         htmlStr += "<div>" + name + "：" + value + "</div>";
@@ -3479,1077 +3514,21 @@ var animationConfig = {
              * @description 数据项名称
              * @extends xCharts.series.bar
              */
-            name: '',
+            // name: '',
             /**
              * @var data
              * @type Array
              * @description 柱状图数据项对应的各项指标的值的集合
              * @extends xCharts.series.bar
              */
-            data: [],
+            // data: [],
             /**
              * @var formatter
              * @type function
              * @description 数据项信息展示文本的格式化函数
              * @extends xCharts.series.bar
              */
-            formatter: function(name, value) {}
-        }
-        return config;
-    }
-}(xCharts, d3));
-/**
- * @file 饼图
- * @author chenwubai.cx@gmail.com
- */
-// TODO 把代码里的魔数尽量提出来作为配置项
-(function(xCharts, d3) {
-    var utils = xCharts.utils;
-    var Chart = xCharts.charts.Chart;
-
-    // 创建pie构造函数
-    function pie(messageCenter, config) {
-        // 调用这一步的原因是为了继承属性
-        Chart.call(this, messageCenter, config, 'pie');
-    }
-
-    // 在xCharts中注册pie构造函数
-    xCharts.charts.extend({ pie: pie });
-    // 从父类Chart里继承一系列的方法
-    utils.inherits(pie, Chart);
-
-    pie.prototype.extend = xCharts.extend;
-    pie.prototype.extend({
-        // config是option的深拷贝的对象
-        // series是config里的series的引用,修改series后config内部也会相应修改
-        init: function(messageCenter, config, type, series) {
-            // 提取饼图配置项(目前不支持多图,直接忽略其他图表配置项)
-            for(var i=0, length=series.length;i<length;i++) {
-                if(series[i].type === 'pie') {
-                    this.pieConfig = utils.copy(series[i], true);
-                    break;
-                }
-            }
-            // 合并默认值, 转换百分比为数值等
-            __correctConfig.apply(this);
-            // 转化原始数据为画弧形需要的数据
-            this.pieData = __getPieData(this.pieConfig.data);
-            // 生成弧形路径计算函数
-            this.arcFunc = __getArcFunc(this.pieConfig.radius);
-            this.bigArcFunc = __getBigArcFunc(this.pieConfig.radius);
-            this.textArcFunc = __getTextArcFunc(this.pieConfig.radius);
-        },
-        render: function(animationEase, animationTime) {
-            // 添加饼图g容器
-            this.pieWrapper = __renderPieWrapper.apply(this);
-            // 添加弧形
-            this.arcList = __renderArcs.apply(this, [animationEase, animationTime]);
-            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
-                // 添加文字标签
-                this.textList = __renderText.apply(this, [animationEase, animationTime]);
-                // 添加连接弧形和文字标签的线条
-                this.textLineList = __renderTextLine.apply(this, [animationEase, animationTime]);
-            }
-        },
-        ready: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendReady.apply(this);
-            }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipReady.apply(this);
-            }
-        }
-    });
-    /**
-     * @description 合并默认值,转换百分比,并添加一些属性
-     */
-    function __correctConfig() {
-        // 合并默认值
-        this.pieConfig = utils.merage(defaultConfig(), this.pieConfig);
-        // 计算饼图原点
-        var center = this.pieConfig.center;
-        if(typeof center[0] === 'string') {
-            center[0] = parseInt(center[0]) * 0.01 * this.width;
-        }
-        if(typeof center[1] === 'string') {
-            center[1] = parseInt(center[1]) * 0.01 * this.height;
-        }
-        // 计算饼图半径
-        var radius = this.pieConfig.radius;
-        if(typeof radius.innerRadius === 'string') {
-            radius.innerRadius = parseInt(radius.innerRadius) * 0.01 * this.width;
-        }
-        if(typeof radius.outerRadius === 'string') {
-            radius.outerRadius = parseInt(radius.outerRadius) * 0.01 * this.width;
-        }
-        // 添加对饼图大小的处理,如果半径太大,自动把半径保持在可控的最大值
-        // 这里只考虑了原点在[50%, 50%]的位置,如果原点在其他位置该处理不能起到作用
-        var minLength = this.width<this.height ? this.width : this.height;
-        if(radius.outerRadius*2 > minLength) {
-            radius.outerRadius = minLength/2;
-        }
-        // 添加一些属性供后面render和ready使用
-        this.pieConfig.data.forEach(function(d) {
-            d.isShow = true;
-            d.initialValue = d.value;
-        });
-    }
-    function __getPieData(data) {
-        var pieFunc = d3.layout.pie()
-            .sort(null)
-            //.padAngle(0.005)
-            .value(function(d, i) {
-                return d.value;
-            }),
-            pieData = pieFunc(data);
-        return pieData;
-    }
-    function __getArcFunc(radius) {
-        var arcFunc = d3.svg.arc()
-            .innerRadius(radius.innerRadius)
-            .outerRadius(radius.outerRadius);
-        return arcFunc;
-    }
-    function __getBigArcFunc(radius) {
-        var distance = 10;
-        var bigArcFunc = d3.svg.arc()
-            .innerRadius(radius.innerRadius)
-            .outerRadius(radius.outerRadius + distance);
-        return bigArcFunc;
-    }
-    function __getTextArcFunc(radius) {
-        var mulriple = 1.1;
-        var textArcFunc = d3.svg.arc()
-            .innerRadius(radius.outerRadius * mulriple)
-            .outerRadius(radius.outerRadius * mulriple);
-        return textArcFunc;
-    }
-    function __renderPieWrapper() {
-        var pieWrapper = this.main
-            .selectAll('.xc-pie')
-            .data([1]);
-        pieWrapper.enter()
-            .append('g')
-            .classed('xc-pie', true);
-        pieWrapper.attr('transform', 'translate(' + this.pieConfig.center[0] + ',' + this.pieConfig.center[1] + ')');
-        return pieWrapper;
-    }
-    function __renderArcs(animationEase, animationTime) {
-        var _self = this;
-        // 这里selectAll和enter不要连续写
-        // arcs = var.selectAll.enter.append
-        // arcs = var.selectAll; arcs.enter.append
-        // 上面两种方式得到的arcs是不一样的
-        var arcs = this.pieWrapper
-            .selectAll('.xc-pie-arcs')
-            .data([1]);
-        arcs.enter()
-            .append('g')
-            .classed('xc-pie-arcs', true);
-        var arcList = arcs.selectAll('.xc-pie-arc')
-            .data(this.pieData);
-        // 如果不是初次加载,则enter这一步什么都不会做
-        arcList.enter()
-            .append('path')
-            .classed('xc-pie-arc', true)
-            .style('fill', function(d) {
-                if(!d.data.color) {
-                    d.data.color = _self.getColor(d.data.idx);
-                }
-                return d.data.color;
-            });
-        arcList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attrTween('d', function(d) {
-                this._current = this._current || {startAngle: 0, endAngle: 0};
-                var interpolate = d3.interpolate(this._current, d);
-                this._current = interpolate(1);
-                return function (t) {
-                    return _self.arcFunc(interpolate(t));
-                }
-            });
-        return arcList;
-    }
-    function __renderText(animationEase, animationTime) {
-        var _this = this;
-        var texts = this.pieWrapper
-            .selectAll('.xc-pie-texts')
-            .data([1]);
-        texts.enter()
-            .append('g')
-            .classed('xc-pie-texts', true);
-        var textList = texts.selectAll('.xc-pie-text')
-            .data(this.pieData);
-        textList.enter()
-            .append('text')
-            .classed('xc-pie-text', true)
-            // TODO 后面考虑是否把这个提成配置项
-            .attr('dy', '0.35em')
-            .attr('fill', function(d) {
-                return d.data.color;
-            })
-            .text(function(d) {
-                var formatter = _this.pieConfig.labels.formatter || defaultLabelFormatter;
-                return formatter(d.data.name, d.data.value);
-            });
-        textList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('transform', function(d) {
-                // 找出外弧形的中心点
-                var pos = _this.textArcFunc.centroid(d);
-                // 适当改变文字标签的x坐标
-                pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
-                return 'translate(' + pos + ')';
-            })
-            .style('display', function(d) {
-                return d.data.isShow ? null : 'none';
-            })
-            .style('text-anchor', function(d) {
-                return midAngel(d)<Math.PI ? 'start' : 'end';
-            });
-    }
-    function __renderTextLine(animationEase, animationTime) {
-        var _this = this;
-        var arcFunc = d3.svg.arc()
-            .innerRadius(this.pieConfig.radius.outerRadius * 1.05)
-            .outerRadius(this.pieConfig.radius.outerRadius * 1.05);
-        var textLines = this.pieWrapper
-            .selectAll('.xc-pie-textLines')
-            .data([1]);
-        textLines.enter()
-            .append('g')
-            .classed('xc-pie-textLines', true);
-        var textLineList = textLines.selectAll('.xc-pie-textLine')
-            .data(this.pieData);
-        textLineList.enter()
-            .append('polyline')
-            .classed('xc-pie-textLine', true)
-            .attr('points', function(d) {
-                return [arcFunc.centroid(d), arcFunc.centroid(d), arcFunc.centroid(d)];
-            });
-        textLineList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('points', function(d) {
-                // 找出外弧形的中心点
-                var pos = _this.textArcFunc.centroid(d);
-                // 适当改变文字标签的x坐标
-                pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
-                return [arcFunc.centroid(d), _this.textArcFunc.centroid(d), pos];
-            })
-            .style('display', function(d) {
-                return d.data.isShow ? null : 'none';
-            });
-    }
-    function __legendReady() {
-        var _self = this;
-        var mobileMode = this.messageCenter.mobileMode;
-
-        // 只有在PC端才有需要去绑定hover事件
-        if(!mobileMode) {
-            this.on('legendMouseenter.pie', function(name) {
-                for(var i=0;i<_self.arcList[0].length;i++) {
-                    var arcEle = d3.select(_self.arcList[0][i]);
-                    if(arcEle.datum().data.name == name) {
-                        arcEle.attr('d', function(d) {
-                            return _self.bigArcFunc(d);
-                        });
-                        break;
-                    }
-                }
-            });
-            this.on('legendMouseleave.pie', function(name) {
-                for(var i=0;i<_self.arcList[0].length;i++) {
-                    var arcEle = d3.select(_self.arcList[0][i]);
-                    if(arcEle.datum().data.name == name) {
-                        arcEle.attr('d', function(d) {
-                            return _self.arcFunc(d);
-                        });
-                        break;
-                    }
-                }
-            });
-        }
-        this.on('legendClick.pie', function(nameList) {
-            var animationConfig = _self.config.animation;
-            if(!nameList.length) {
-                _self.pieData.forEach(function(d) {
-                    d.startAngle = 0;
-                    d.endAngle = 0;
-                    d.data.isShow = false;
-                });
-            } else {
-                // 先把所有弧形的可见配置设为不可见
-                _self.pieConfig.data.forEach(function(d) {
-                    d.isShow = false;
-                    d.value = 0;
-                });
-                for(var i=0;i<nameList.length;i++) {
-                    var name = nameList[i];
-                    for(var k=0;k<_self.pieConfig.data.length;k++) {
-                        if(_self.pieConfig.data[k].name == name) {
-                            _self.pieConfig.data[k].isShow = true;
-                            _self.pieConfig.data[k].value = _self.pieConfig.data[k].initialValue;
-                            break;
-                        }
-                    }
-                }
-                _self.pieData = __getPieData(_self.pieConfig.data);
-            }
-            __renderArcs.apply(_self, [animationConfig.animationEase, animationConfig.animationTime]);
-            if(_self.pieConfig.labels && _self.pieConfig.labels.enable) {
-                __renderText.apply(_self, [animationConfig.animationEase, animationConfig.animationTime]);
-                __renderTextLine.apply(_self, [animationConfig.animationEase, animationConfig.animationTime]);
-            }
-            if(mobileMode) {
-                _self.messageCenter.components.tooltip.hiddenTooltip();
-            }
-        });
-    }
-    function __tooltipReady() {
-        var _self = this;
-        var mobileMode = _self.messageCenter.mobileMode;
-        var tooltip = _self.messageCenter.components.tooltip;
-        if(mobileMode) {
-
-            // 移动场景下绑定点击事件
-            this.arcList.on('click.pie', function () {
-                var bindData = d3.select(this).datum();
-                var bigD = _self.bigArcFunc(bindData);
-                if(bigD === d3.select(this).attr('d')) {
-
-                    // 此时弧形处于放大的状态,应该被恢复正常状态并隐藏tooltip
-                    d3.select(this).attr('d', function(d) {
-                        return _self.arcFunc(d);
-                    });
-                    tooltip.hiddenTooltip();
-                } else {
-
-                    // 此时弧形处于正常状态,应该被放大并且显示tooltip
-                    _self.arcList.attr('d', function (d) {
-                        return _self.arcFunc(d);
-                    });
-                    d3.select(this).attr('d', function(d) {
-                        return _self.bigArcFunc(d);
-                    });
-
-                    var event = d3.event;
-                    var x = event.layerX || event.offsetX,
-                        y = event.layerY || event.offsetY;
-                    var tooltipFormatter = tooltip.tooltipConfig.formatter;
-                    var pieFormatter = _self.pieConfig.formatter;
-                    var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
-                    tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
-                    tooltip.showTooltip();
-                    tooltip.setPosition([x,y], 10, 10);
-                }
-            });
-        } else {
-
-            // PC场景下绑定hover事件
-            this.arcList.on('mousemove.pie', function() {
-                var bindData = d3.select(this).datum();
-                var event = d3.event;
-                var x = event.layerX || event.offsetX,
-                    y = event.layerY || event.offsetY;
-                var tooltipFormatter = tooltip.tooltipConfig.formatter,
-                    pieFormatter = _self.pieConfig.formatter;
-                var formatter = pieFormatter || tooltipFormatter || defaultTooltipFormatter;
-                tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
-                tooltip.showTooltip();
-                tooltip.setPosition([x,y], 10, 10);
-
-                d3.select(this).attr('d', function(d) {
-                    return _self.bigArcFunc(d);
-                });
-            });
-            this.arcList.on('mouseout.pie', function() {
-                tooltip.hiddenTooltip();
-                d3.select(this).attr('d', function(d) {
-                    return _self.arcFunc(d);
-                });
-            });
-        }
-    }
-    function defaultTooltipFormatter(name, value) {
-        return "<div>" + name + '：' + value + "</div>";
-    }
-    function defaultLabelFormatter(name) {
-        return name;
-    }
-    function midAngel(d) {
-        return d.startAngle + (d.endAngle - d.startAngle)/2;
-    }
-    function defaultConfig() {
-        /**
-         * @var pie
-         * @type Object
-         * @extends xCharts.series
-         * @description 饼图配置项
-         */
-        var config = {
-            /**
-             * 定义图表类型是饼图
-             * @var type
-             * @type String
-             * @description 指定图表类型
-             * @values 'pie'
-             * @extends xCharts.series.pie
-             */
-            type: 'pie',
-            /**
-             * @var center
-             * @type Array
-             * @description 饼图圆心位置，可为百分比或数值。若为百分比则center[0]（圆心x坐标）参照容器宽度，center[1]（圆心y坐标）参照容器高度。
-             * @default ['50%','50%']
-             * @extends xCharts.series.pie
-             */
-            center: ['50%', '50%'],
-            /**
-             * @var radius
-             * @type Object
-             * @description 定义饼图的内半径和外半径
-             * @extends xCharts.series.pie
-             */
-            radius: {
-                /**
-                 * @var outerRadius
-                 * @type String|Number
-                 * @description 定义饼图的外半径，可取百分比或数值，若为百分比则参照容器宽度进行计算。
-                 * @default '30%'
-                 * @extends xCharts.series.pie.radius
-                 */
-                outerRadius: '30%',
-                /**
-                 * @var innerRadius
-                 * @type String|Number
-                 * @description 定义饼图的内半径，可取百分比或数值，若为百分比，则参照容器宽度进行计算。
-                 * @default 0
-                 * @extends xCharts.series.pie.radius
-                 */
-                innerRadius: 0
-            },
-            /**
-             * @var labels
-             * @type Object
-             * @description 定义饼图弧形的文字标签
-             * @extends xCharts.series.pie
-             */
-            labels: {
-                /**
-                 * @var enable
-                 * @type Boolean
-                 * @description 定义是否绘制弧形的文字标签
-                 * @default false
-                 * @extends xCharts.series.pie.labels
-                 */
-                enable: false,
-                /**
-                 * @var formatter
-                 * @type Function
-                 * @description 定义弧形的文字标签的显示格式
-                 * @default 返回弧形的名称
-                 * @extends xCharts.series.pie.labels
-                 */
-                formatter: defaultLabelFormatter
-            },
-            /**
-             * @var data
-             * @type Array
-             * @description 饼图数据
-             * @extends xCharts.series.pie
-             */
-            data: [
-                {
-                    /**
-                     * @var name
-                     * @type String
-                     * @description 弧形名称
-                     * @extends xCharts.series.pie.data
-                     */
-                    // name: '',
-                    /**
-                     * @var value
-                     * @type Number
-                     * @description 弧形所代表的项的数据值
-                     * @extends xCharts.series.pie.data
-                     */
-                    // value: 0
-                }
-            ]
-        }
-        return config;
-    }
-}(xCharts, d3));
-/**
- * @file 雷达图
- * @author chenwubai.cx@gmail.com
- */
-(function(xCharts, d3) {
-    var utils = xCharts.utils;
-    var Chart = xCharts.charts.Chart;
-    // 创建radar构造函数
-    function radar(messageCenter, config) {
-        // 调用这一步的原因是为了继承属性
-        Chart.call(this, messageCenter, config, 'radar');
-    }
-
-    // 在xCharts中注册radar构造函数
-    xCharts.charts.extend({ radar: radar });
-    // 从父类Chart里继承一系列的方法
-    utils.inherits(radar, Chart);
-
-    radar.prototype.extend = xCharts.extend;
-    radar.prototype.extend({
-        init: function(messageCenter, config, type, series) {
-
-            // 提取雷达图配置项(目前不支持多图,直接忽略其他图表配置项)
-            for(var i = 0, length = series.length; i < length; i++) {
-                if(series[i].type === 'radar') {
-                    this.radarConfig = utils.copy(series[i], true);
-                    break;
-                }
-            }
-
-            // 合并默认值,转换百分比为数值等
-            __correctConfig.apply(this);
-
-            // 计算网轴点坐标
-            this.polygonWebs = __getPolygonWebs.apply(this);
-            // 计算雷达图形的点坐标
-            this.areas = __getAreas.apply(this);
-            // 计算文字标签的点
-            this.textPoints = __getTextPoints.apply(this);
-            // 计算覆盖整个网轴的多边形的点坐标
-            this.coverPolygons = __getCoverPolygons.apply(this);
-        },
-        render: function(animationEase, animationTime) {
-            // 添加雷达图的g容器
-            this.radar = __renderRadarWrapper.apply(this);
-            // 添加网轴
-            this.webList = __renderWebs.apply(this);
-            // 添加网轴线
-            this.lineList = __renderLines.apply(this);
-            // 添加雷达图形
-            this.areaList = __renderAreas.apply(this, [animationEase, animationTime]);
-            // 添加文字标签
-            this.textList = __renderText.apply(this);
-            // 添加覆盖的多边形
-            this.coverPolygonList = __renderCoverPolygons.apply(this);
-        },
-        ready: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendReady.apply(this);
-            }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipReady.apply(this);
-            }
-        }
-    });
-    function __correctConfig() {
-
-        // 合并默认值
-        this.radarConfig = utils.merage(defaultConfig(), this.radarConfig);
-
-        // 计算图的中心坐标
-        var center = this.radarConfig.center;
-        if(typeof center[0] === 'string') {
-            center[0] = parseFloat(center[0]) * 0.01 * this.width;
-        }
-        if(typeof center[1] === 'string') {
-            center[1] = parseFloat(center[1]) * 0.01 * this.height;
-        }
-        // 计算最大的多边形的半径
-        if(typeof this.radarConfig.radius === 'string') {
-            this.radarConfig.radius = parseFloat(this.radarConfig.radius) * 0.01 * this.width;
-        }
-        // 添加对雷达图大小的处理,如果半径太大,自动把半径保持在可控的最大值
-        var minLength = this.width < this.height ? this.width : this.height;
-        // 减20是考虑到还有文字标签占着位置
-        if(this.radarConfig.radius * 2 + 20 > minLength) {
-            this.radarConfig.radius = (minLength - 20)/2 ;
-        }
-    }
-    function __getPolygonWebs() {
-
-        // 计算网轴多边形的点
-        this.radarConfig.total = this.radarConfig.data[0].value.length;
-        var onePiece = 2 * Math.PI/this.radarConfig.total;
-        var polygonWebs = [];
-        for(var k=this.radarConfig.levels;k>0;k--) {
-            var web = '',
-                points = [];
-            var r = this.radarConfig.radius/this.radarConfig.levels * k;
-            for(var i=0;i<this.radarConfig.total;i++) {
-                var x = r * Math.sin(i * onePiece),
-                    y = r * Math.cos(i * onePiece);
-                web += x + ',' + y + ' ';
-                points.push({ x: x, y: y });
-            }
-            polygonWebs.push({
-                webString: web,
-                webPoints: points
-            });
-        }
-        return polygonWebs;
-    }
-    function __getAreas() {
-        // 计算雷达图形的点
-        var areas = [];
-        for(var i=0; i<this.radarConfig.data.length;i++) {
-            var d = this.radarConfig.data[i],
-                max = this.radarConfig.indicator[i].max,
-                min = this.radarConfig.indicator[i].min,
-                area = '',
-                points = [];
-            for(var k=0;k< d.value.length;k++) {
-                var x = this.polygonWebs[0].webPoints[k].x * d.value[k]/(max - min),
-                    y = this.polygonWebs[0].webPoints[k].y * d.value[k]/(max - min);
-                area += x + ',' + y + ' ';
-                points.push({
-                    x: x,
-                    y: y,
-                    // 增加一个属性存放原始属性,方便后面设置颜色
-                    originalData: d
-                });
-            }
-            areas.push({
-                areaString: area,
-                areaPoints: points,
-                originalData: d,
-                isShow: true
-            });
-        }
-        return areas;
-    }
-    function __getTextPoints() {
-        // 计算文字标签的点
-        // TODO 优化文字标签分布
-        var textPoints = [];
-        var textRadius = this.radarConfig.radius + 20;
-        for(var i=0;i<this.radarConfig.total;i++) {
-            textPoints.push({
-                x: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].x,
-                y: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].y + 8
-            });
-        }
-        return textPoints;
-    }
-    function __getCoverPolygons() {
-        // 计算覆盖整个多边形网轴的多边形的坐标
-        var webPoints = this.polygonWebs[0].webPoints;
-        var coverPolygons = [];
-        var length = webPoints.length;
-        for(var i=0;i<length;i++) {
-            var lastPoint = i==0 ? webPoints[length-1] : webPoints[i-1],
-                currentPoint = webPoints[i],
-                nextPoint = webPoints[(i+1)%length];
-            var pointsStr = '0,0',
-                points = [ {x:0, y:0} ];
-            pointsStr += ' ' + (lastPoint.x+currentPoint.x)/2 + ',' + (lastPoint.y+currentPoint.y)/2;
-            points.push({
-                x: (lastPoint.x+currentPoint.x)/2,
-                y: (lastPoint.y+currentPoint.y)/2
-            });
-            pointsStr += ' ' + currentPoint.x + ',' + currentPoint.y;
-            points.push({
-                x: currentPoint.x,
-                y: currentPoint.y
-            });
-            pointsStr += ' ' + (currentPoint.x+nextPoint.x)/2 + ',' + (currentPoint.y+nextPoint.y)/2;
-            points.push({
-                x: (currentPoint.x+nextPoint.x)/2,
-                y: (currentPoint.y+nextPoint.y)/2
-            });
-            coverPolygons.push({
-                pointsStr: pointsStr,
-                points: points,
-                index: i
-            });
-        }
-        return coverPolygons;
-    }
-    function __renderRadarWrapper() {
-        var radar = this.main
-            .selectAll('.xc-radar')
-            .data([1]);
-        radar.enter()
-            .append('g')
-            .classed('xc-radar', true);
-        radar.attr('transform', 'translate(' + this.radarConfig.center[0] + ',' + this.radarConfig.center[1] + ')');
-        return radar;
-    }
-    function __renderWebs() {
-        var webs = this.radar
-            .selectAll('.xc-radar-webs')
-            .data([1]);
-        webs.enter()
-            .append('g')
-            .classed('xc-radar-webs', true);
-        var webList = webs.selectAll('.xc-radar-web')
-            .data(this.polygonWebs);
-        webList.enter()
-            .append('polygon')
-            .classed('xc-radar-web', true);
-        webList.attr('points', function(d) { return d.webString; });
-        return webList;
-    }
-    function __renderLines() {
-        var lines = this.radar
-            .selectAll('.xc-radar-lines')
-            .data([1]);
-        lines.enter()
-            .append('g')
-            .classed('xc-radar-lines', true);
-        var lineList = lines.selectAll('.xc-radar-line')
-            .data(this.polygonWebs[0].webPoints);
-        lineList.enter()
-            .append('line')
-            .classed('xc-radar-line', true);
-        lineList.attr({
-            x1: 0,
-            y1: 0,
-            x2: function(d) {
-                return d.x;
-            },
-            y2: function(d) {
-                return d.y;
-            }
-        });
-        return lineList;
-    }
-    function __renderAreas(animationEase, animationTime) {
-        var _self = this;
-        var areas = this.radar
-            .selectAll('.xc-radar-areas')
-            .data([1]);
-        areas.enter()
-            .append('g')
-            .classed('xc-radar-areas', true);
-        var areaList = areas.selectAll('.xc-radar-area')
-            .data(this.areas);
-        areaList.enter()
-            .append('g')
-            .attr('class', function(d, i) {
-                return 'xc-radar-area xc-radar-area' + d.originalData.idx;
-            });
-        var polygonList = areaList.selectAll('polygon')
-            .data(function(d) {
-                return [d];
-            });
-        polygonList.enter()
-            .append('polygon')
-            .attr('points', function(d) {
-                return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
-                    return '0,0';
-                }).join(' ');
-            })
-            .style({
-                stroke: function(d) {
-                    if(!d.originalData.color) {
-                        d.originalData.color = _self.getColor(d.originalData.idx);
-                    }
-                    return d.originalData.color;
-                },
-                fill: !this.radarConfig.fill ? '' : function(d) {
-                    return d.originalData.color;
-                }
-            });
-        polygonList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('points', function(d) {
-                return d.areaString;
-            });
-        var pointsList = areaList.selectAll('.xc-radar-area-point')
-            .data(function(d) {
-                return d.areaPoints;
-            });
-        pointsList.enter()
-            .append('circle')
-            .classed('xc-radar-area-point', true)
-            .attr({
-                cx: 0,
-                cy: 0
-            })
-            .style('stroke', function(d){
-                return d.originalData.color;
-            });
-        pointsList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr({
-                cx: function(d) { return d.x; },
-                cy: function(d) { return d.y; }
-            });
-        return areaList;
-    }
-    function __renderText() {
-        var _self = this;
-        var texts = this.radar
-            .selectAll('.xc-radar-texts')
-            .data([1]);
-        texts.enter()
-            .append('g')
-            .classed('xc-radar-texts', true);
-        var textList = texts.selectAll('.xc-radar-text')
-            .data(this.textPoints);
-        textList.enter()
-            .append('text')
-            .classed('xc-radar-text', true)
-            .text(function(d, i) {
-                return _self.radarConfig.indicator[i].text;
-            })
-            .attr('text-anchor', 'middle');
-        textList.attr({
-            x: function(d) { return d.x; },
-            y: function(d) { return d.y; }
-        });
-        return textList;
-    }
-    function __renderCoverPolygons() {
-        var coverPolygons = this.radar
-            .selectAll('.xc-radar-coverPolygons')
-            .data([1]);
-        coverPolygons.enter()
-            .append('g')
-            .classed('xc-radar-coverPolygons', true);
-        var coverPolygonList = coverPolygons.selectAll('.xc-radar-coverPolygon')
-            .data(this.coverPolygons);
-        coverPolygonList.enter()
-            .append('polygon')
-            .classed('xc-radar-coverPolygon', true);
-        coverPolygonList.attr('points', function(d) {
-            return d.pointsStr;
-        });
-        return coverPolygonList;
-    }
-    function __legendReady() {
-        var _self = this,
-            areas = _self.areas,
-            mobileMode = this.messageCenter.mobileMode;
-        if(mobileMode) {
-            // TODO 去掉mouseenter和mouseleave的重复代码
-            this.on('legendMouseenter.radar', function (name) {
-                var areaData = {};
-                for(var i=0;i<areas.length;i++) {
-                    if(name == areas[i].originalData.name) {
-                        areaData = areas[i];
-                        break;
-                    }
-                }
-                for(var i=0;i<_self.areaList[0].length;i++) {
-                    var areaEle = d3.select(_self.areaList[0][i]);
-                    if(areaEle.datum() == areaData) {
-                        areaEle.selectAll('.xc-radar-area-point')
-                            .style('stroke-width', 5);
-                        break;
-                    }
-                }
-            });
-            this.on('legendMouseleave.radar', function(name) {
-                var areaData = {};
-                for(var i=0;i<areas.length;i++) {
-                    if(name == areas[i].originalData.name) {
-                        areaData = areas[i];
-                        break;
-                    }
-                }
-                for(var i=0;i<_self.areaList[0].length;i++) {
-                    var areaEle = d3.select(_self.areaList[0][i]);
-                    if(areaEle.datum() == areaData) {
-                        areaEle.selectAll('.xc-radar-area-point')
-                            .style('stroke-width', 3);
-                        break;
-                    }
-                }
-            });
-        }
-        this.on('legendClick.radar', function(nameList) {
-            for(var i=0;i<_self.areas.length;i++) {
-                _self.areas[i].isShow = false;
-            }
-            for(var i=0;i<nameList.length;i++) {
-                for(var k=0;k<_self.areas.length;k++) {
-                    if(nameList[i] == _self.areas[k].originalData.name) {
-                        _self.areas[k].isShow = true;
-                        break;
-                    }
-                }
-            }
-            for(var i=0;i<_self.areas.length;i++) {
-                d3.select(_self.areaList[0][i]).classed('hidden', !_self.areas[i].isShow);
-            }
-        });
-    }
-    function __tooltipReady() {
-        var _self = this,
-            mobileMode = this.messageCenter.mobileMode;
-
-        if(mobileMode) {
-            // 移动端绑定click事件
-            this.coverPolygonList.on('click.radar', function () {
-                var index = d3.select(this).datum().index;
-                _self.areaList.selectAll('.xc-radar-area-point').style('stroke-width', 3);
-                __showTooltip.apply(_self, [index]);
-            });
-        } else {
-            // PC端绑定hover事件
-            this.coverPolygonList.on('mousemove.radar', function () {
-                var index = d3.select(this).datum().index;
-                __showTooltip.apply(_self, [index]);
-            });
-            this.coverPolygonList.on('mouseout.radar', function () {
-                var tooltip = _self.messageCenter.components.tooltip;
-                tooltip.hiddenTooltip();
-                var areaPointsList = _self.areaList.selectAll('.xc-radar-area-point');
-                areaPointsList.style('stroke-width', 3);
-                _self.lineList.classed('xc-radar-tooltip-line', false);
-            });
-        }
-    }
-    function __showTooltip(index) {
-        var tooltip = this.messageCenter.components.tooltip;
-        var tooltipFormatter = tooltip.tooltipConfig.formatter,
-            radarFormatter = this.radarConfig.formatter;
-        var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
-        var event = d3.event;
-        var x = event.layerX || event.offsetX,
-            y = event.layerY || event.offsetY;
-        var indicator = this.radarConfig.indicator[index].text;
-        var valueList = [];
-        for(var i=0;i<this.radarConfig.data.length;i++) {
-            if(this.areas[i].isShow) {
-                valueList.push({
-                    name: this.radarConfig.data[i].name,
-                    value: this.radarConfig.data[i].value[index]
-                });
-            }
-        }
-        tooltip.setTooltipHtml(formatter(indicator, valueList));
-        tooltip.showTooltip();
-        tooltip.setPosition([x,y], 10, 10);
-        var areaPointsList = this.areaList.selectAll('.xc-radar-area-point');
-        for(var i=0;i<areaPointsList.length;i++) {
-            var areaPoints = areaPointsList[i];
-            d3.select(areaPoints[index]).style('stroke-width', 5);
-        }
-        this.lineList.classed('xc-radar-tooltip-line', false);
-        d3.select(this.lineList[0][index]).classed('xc-radar-tooltip-line', true);
-    }
-    function defaultFormatter(indicator, valueList) {
-        var htmlStr = '';
-        htmlStr += "<h3>" + indicator + "</h3>";
-        for(var i=0;i<valueList.length;i++) {
-            htmlStr += "<div>" + valueList[i].name + "：" + valueList[i].value + "</div>";
-        }
-        return htmlStr;
-    }
-    function defaultConfig() {
-        /**
-         * @var radar
-         * @type Object
-         * @extends xCharts.series
-         * @description 雷达图配置项
-         */
-        var config = {
-            /**
-             * @var type
-             * @type String
-             * @description 指定图表类型
-             * @values 'radar'
-             * @extends xCharts.series.radar
-             */
-            type: 'radar',
-            /**
-             * @var levels
-             * @type Number
-             * @description 标记雷达图网轴有几层，取值必须为大于0的整数
-             * @default 4
-             * @extends xCharts.series.radar
-             */
-            levels: 4,
-            /**
-             * @var radius
-             * @type Number|String
-             * @description 定义雷达图的半径
-             * @default '15%'
-             * @extends xCharts.series.radar
-             */
-            radius: '15%',
-            /**
-             * @var fill
-             * @type Boolean
-             * @description 定义雷达图的区域是否填充，true为填充，false为不填充
-             * @default false
-             * @extends xCharts.series.radar
-             */
-            fill: false,
-            /**
-             * @var center
-             * @type Array
-             * @description 雷达图中心位置，可为百分比或数值。若为百分比则center[0]（中心x坐标）参照容器宽度，center[1]（中心y坐标）参照容器高度。
-             * @default ['50%','50%']
-             * @extends xCharts.series.radar
-             */
-            center: ['50%', '50%'],
-            /**
-             * @var indicator
-             * @type Array
-             * @description 雷达图各项指标
-             * @extends xCharts.series.radar
-             */
-            indicator: [
-                {
-                    /**
-                     * @var text
-                     * @type String
-                     * @description 指标名称
-                     * @extends xCharts.series.radar.indicator
-                     */
-                    // text: '',
-                    /**
-                     * @var max
-                     * @type Number
-                     * @description 指标取值范围的最大值
-                     * @extends xCharts.series.radar.indicator
-                     */
-                    max: 100,
-                    /**
-                     * @var min
-                     * @type Number
-                     * @description 指标取值范围的最大值
-                     * @extends xCharts.series.radar.indicator
-                     */
-                    min: 0
-                }
-            ],
-            /**
-             * @var data
-             * @type Array
-             * @description 雷达图数据
-             * @extends xCharts.series.radar
-             */
-            data: [
-                {
-                    /**
-                     * @var name
-                     * @type String
-                     * @description 数据项名称
-                     * @extends xCharts.series.radar.data
-                     */
-                    // name: '',
-                    /**
-                     * @var value
-                     * @type Array
-                     * @description 数据项对应所有指标的值的集合，其中的顺序必须和indicator中指标的顺序相对应。
-                     * @extends xCharts.series.radar.data
-                     */
-                    // value: []
-                }
-            ]
+            // formatter: function(name, value) {}
         }
         return config;
     }
@@ -4591,7 +3570,7 @@ var animationConfig = {
             //TODO 待添加trigger为 'item'时的tooltip事件
         }
     }
-}(xCharts, d3))
+}(xCharts, d3));
 /**
  * 漏斗图
  */
@@ -4681,7 +3660,7 @@ var animationConfig = {
                 .attrTween('transform', function (d) {
 
                     if (this.labelPosition === undefined) {
-                        this.labelPosition = [d.labelPosition[0] *1.1 , d.labelPosition[1]];
+                        this.labelPosition = [d.labelPosition[0] * 1.1, d.labelPosition[1]];
                     }
 
                     // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
@@ -4759,27 +3738,33 @@ var animationConfig = {
             var _this = this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            _this.funnelSection.on('mousemove.funnel', function (data) {
-                var event = d3.event;
-                var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
 
-                var title = "<p>" + data._serie.name + "</p>";
-                tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
-                tooltip.setPosition([x, y]);
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                _this.funnelSection.on('mousemove.funnel', function (data) {
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
 
-            })
-            _this.funnelSection.on('mouseenter.funnel', function (data) {
-                d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
-                tooltip.showTooltip();
-            })
-            _this.funnelSection.on('mouseleave.funnel', function () {
-                d3.select(this).attr('opacity', 1);
-                tooltip.hiddenTooltip();
-            })
+                    var title = "<p>" + data._serie.name + "</p>";
+                    tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+                    tooltip.setPosition([x, y]);
+                });
+
+                _this.funnelSection.on('mouseenter.funnel', function (data) {
+                    d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+                    tooltip.showTooltip();
+                })
+
+                _this.funnelSection.on('mouseleave.funnel', function () {
+                    d3.select(this).attr('opacity', 1);
+                    tooltip.hiddenTooltip();
+                });
+            }
         }
-
     });
+
 
     function legendClickSeries(series, nameList) {
         series.forEach(function (serie) {
@@ -4994,6 +3979,7 @@ var animationConfig = {
         serie.yOffset = yOffset;
     }
 
+    funnel.defaultFormatter = defaultFormatter;
     function defaultFormatter(name, value, percentage) {
         return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
     }
@@ -5119,10 +4105,35 @@ var animationConfig = {
     var funnel = charts.funnel;
 
     funnel.prototype.extend({
-       mobileReady:function(){
-           this.funnelSection.on('touchstart.funnel',funnel.funnelSectionTrigger(this));
-       }
+        mobileReady: function () {
+            this.funnelSection.on('touchstart.funnel', funnelSectionTrigger(this));
+        }
     });
+
+    var defaultFormatter = funnel.defaultFormatter;
+
+    function funnelSectionTrigger(ctx) {
+        var tooltip = ctx.messageCenter.components['tooltip'];
+        var tooltipFormatter = tooltip.tooltipConfig.formatter;
+
+        return function (data) {
+            ctx.funnelSection.attr('opacity', 1);
+            d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+            tooltip.showTooltip();
+
+            // 设置HTML
+            var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+
+            var title = "<p>" + data._serie.name + "</p>";
+            tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+
+            // 获取坐标
+            var position = d3.mouse(ctx.svg.node());
+            tooltip.setPosition(position);
+            
+
+        }
+    }
 }(xCharts, d3));
 /**
  * Created by liuyang on 15/10/27.
@@ -5639,13 +4650,8 @@ var animationConfig = {
             var title = "<p>" + xData + "</p>";
             tooltip.showTooltip();
             tooltip.setTooltipHtml(title + html);
-            // var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-            var position = d3.mouse(this);
 
-            position = [
-                position[0] + 40,
-                position[1] + 40
-            ];
+            var position = d3.mouse(ctx.svg.node());
 
             tooltip.setPosition(position);
 
@@ -6001,6 +5007,1102 @@ var animationConfig = {
     });
 }(xCharts, d3));
 /**
+ * @file 雷达图
+ * @author chenwubai.cx@gmail.com
+ */
+(function(xCharts, d3) {
+    var utils = xCharts.utils;
+    var Chart = xCharts.charts.Chart;
+    // 创建radar构造函数
+    function radar(messageCenter, config) {
+        // 调用这一步的原因是为了继承属性
+        Chart.call(this, messageCenter, config, 'radar');
+    }
+
+    // 在xCharts中注册radar构造函数
+    xCharts.charts.extend({ radar: radar });
+    // 从父类Chart里继承一系列的方法
+    utils.inherits(radar, Chart);
+
+    radar.prototype.extend = xCharts.extend;
+    radar.prototype.extend({
+        init: function(messageCenter, config, type, series) {
+
+            // 提取雷达图配置项(目前不支持多图,直接忽略其他图表配置项)
+            for(var i = 0, length = series.length; i < length; i++) {
+                if(series[i].type === 'radar') {
+                    this.radarConfig = utils.copy(series[i], true);
+                    break;
+                }
+            }
+
+            // 合并默认值,转换百分比为数值等
+            __correctConfig.apply(this);
+
+            // 计算网轴点坐标
+            this.polygonWebs = __getPolygonWebs.apply(this);
+            // 计算雷达图形的点坐标
+            this.areas = __getAreas.apply(this);
+            // 计算文字标签的点
+            this.textPoints = __getTextPoints.apply(this);
+            // 计算覆盖整个网轴的多边形的点坐标
+            this.coverPolygons = __getCoverPolygons.apply(this);
+        },
+        render: function(animationEase, animationTime) {
+            // 添加雷达图的g容器
+            this.radar = __renderRadarWrapper.apply(this);
+            // 添加网轴
+            this.webList = __renderWebs.apply(this);
+            // 添加网轴线
+            this.lineList = __renderLines.apply(this);
+            // 添加雷达图形
+            this.areaList = __renderAreas.apply(this, [animationEase, animationTime]);
+            // 添加文字标签
+            this.textList = __renderText.apply(this);
+            // 添加覆盖的多边形
+            this.coverPolygonList = __renderCoverPolygons.apply(this);
+        },
+        ready: function() {
+            if(this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if(this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if(this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
+            }
+        },
+        _reRenderAreas: function(nameList) {
+            for(var i=0;i<this.areas.length;i++) {
+                this.areas[i].isShow = false;
+            }
+            for(var i=0;i<nameList.length;i++) {
+                for(var k=0;k<this.areas.length;k++) {
+                    if(nameList[i] == this.areas[k].originalData.name) {
+                        this.areas[k].isShow = true;
+                        break;
+                    }
+                }
+            }
+            for(var i=0;i<this.areas.length;i++) {
+                d3.select(this.areaList[0][i]).classed('hidden', !this.areas[i].isShow);
+            }
+        },
+        _showTooltip: function(index, ele) {
+            var tooltip = this.messageCenter.components.tooltip;
+            var tooltipFormatter = tooltip.tooltipConfig.formatter,
+                radarFormatter = this.radarConfig.formatter;
+            var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
+            var position = d3.mouse(this.svg.node());
+            position = [
+                position[0] + 40,
+                position[1] + 40
+            ];
+            var indicator = this.radarConfig.indicator[index].text;
+            var valueList = [];
+            for(var i=0;i<this.radarConfig.data.length;i++) {
+                if(this.areas[i].isShow) {
+                    valueList.push({
+                        name: this.radarConfig.data[i].name,
+                        value: this.radarConfig.data[i].value[index]
+                    });
+                }
+            }
+            tooltip.setTooltipHtml(formatter(indicator, valueList));
+            tooltip.showTooltip();
+            tooltip.setPosition(position);
+            var areaPointsList = this.areaList.selectAll('.xc-radar-area-point');
+            for(var i=0;i<areaPointsList.length;i++) {
+                var areaPoints = areaPointsList[i];
+                d3.select(areaPoints[index]).style('stroke-width', 5);
+            }
+            this.lineList.classed('xc-radar-tooltip-line', false);
+            d3.select(this.lineList[0][index]).classed('xc-radar-tooltip-line', true);
+        }
+    });
+    function __correctConfig() {
+
+        // 合并默认值
+        this.radarConfig = utils.merage(defaultConfig(), this.radarConfig);
+
+        // 计算图的中心坐标
+        var center = this.radarConfig.center;
+        if(typeof center[0] === 'string') {
+            center[0] = parseFloat(center[0]) * 0.01 * this.width;
+        }
+        if(typeof center[1] === 'string') {
+            center[1] = parseFloat(center[1]) * 0.01 * this.height;
+        }
+        // 计算最大的多边形的半径
+        if(typeof this.radarConfig.radius === 'string') {
+            this.radarConfig.radius = parseFloat(this.radarConfig.radius) * 0.01 * this.width;
+        }
+        // 添加对雷达图大小的处理,如果半径太大,自动把半径保持在可控的最大值
+        var minLength = this.width < this.height ? this.width : this.height;
+        // 减20是考虑到还有文字标签占着位置
+        if(this.radarConfig.radius * 2 + 20 > minLength) {
+            this.radarConfig.radius = (minLength - 20)/2 ;
+        }
+    }
+    function __getPolygonWebs() {
+
+        // 计算网轴多边形的点
+        this.radarConfig.total = this.radarConfig.data[0].value.length;
+        var onePiece = 2 * Math.PI/this.radarConfig.total;
+        var polygonWebs = [];
+        for(var k=this.radarConfig.levels;k>0;k--) {
+            var web = '',
+                points = [];
+            var r = this.radarConfig.radius/this.radarConfig.levels * k;
+            for(var i=0;i<this.radarConfig.total;i++) {
+                var x = r * Math.sin(i * onePiece),
+                    y = r * Math.cos(i * onePiece);
+                web += x + ',' + y + ' ';
+                points.push({ x: x, y: y });
+            }
+            polygonWebs.push({
+                webString: web,
+                webPoints: points
+            });
+        }
+        return polygonWebs;
+    }
+    function __getAreas() {
+        // 计算雷达图形的点
+        var areas = [];
+        for(var i=0; i<this.radarConfig.data.length;i++) {
+            var d = this.radarConfig.data[i],
+                max = this.radarConfig.indicator[i].max,
+                min = this.radarConfig.indicator[i].min,
+                area = '',
+                points = [];
+            for(var k=0;k< d.value.length;k++) {
+                var x = this.polygonWebs[0].webPoints[k].x * d.value[k]/(max - min),
+                    y = this.polygonWebs[0].webPoints[k].y * d.value[k]/(max - min);
+                area += x + ',' + y + ' ';
+                points.push({
+                    x: x,
+                    y: y,
+                    // 增加一个属性存放原始属性,方便后面设置颜色
+                    originalData: d
+                });
+            }
+            areas.push({
+                areaString: area,
+                areaPoints: points,
+                originalData: d,
+                isShow: true
+            });
+        }
+        return areas;
+    }
+    function __getTextPoints() {
+        // 计算文字标签的点
+        // TODO 优化文字标签分布
+        var textPoints = [];
+        var textRadius = this.radarConfig.radius + 20;
+        for(var i=0;i<this.radarConfig.total;i++) {
+            textPoints.push({
+                x: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].x,
+                y: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].y + 8
+            });
+        }
+        return textPoints;
+    }
+    function __getCoverPolygons() {
+        // 计算覆盖整个多边形网轴的多边形的坐标
+        var webPoints = this.polygonWebs[0].webPoints;
+        var coverPolygons = [];
+        var length = webPoints.length;
+        for(var i=0;i<length;i++) {
+            var lastPoint = i==0 ? webPoints[length-1] : webPoints[i-1],
+                currentPoint = webPoints[i],
+                nextPoint = webPoints[(i+1)%length];
+            var pointsStr = '0,0',
+                points = [ {x:0, y:0} ];
+            pointsStr += ' ' + (lastPoint.x+currentPoint.x)/2 + ',' + (lastPoint.y+currentPoint.y)/2;
+            points.push({
+                x: (lastPoint.x+currentPoint.x)/2,
+                y: (lastPoint.y+currentPoint.y)/2
+            });
+            pointsStr += ' ' + currentPoint.x + ',' + currentPoint.y;
+            points.push({
+                x: currentPoint.x,
+                y: currentPoint.y
+            });
+            pointsStr += ' ' + (currentPoint.x+nextPoint.x)/2 + ',' + (currentPoint.y+nextPoint.y)/2;
+            points.push({
+                x: (currentPoint.x+nextPoint.x)/2,
+                y: (currentPoint.y+nextPoint.y)/2
+            });
+            coverPolygons.push({
+                pointsStr: pointsStr,
+                points: points,
+                index: i
+            });
+        }
+        return coverPolygons;
+    }
+    function __renderRadarWrapper() {
+        var radar = this.main
+            .selectAll('.xc-radar')
+            .data([1]);
+        radar.enter()
+            .append('g')
+            .classed('xc-radar', true);
+        radar.attr('transform', 'translate(' + this.radarConfig.center[0] + ',' + this.radarConfig.center[1] + ')');
+        return radar;
+    }
+    function __renderWebs() {
+        var webs = this.radar
+            .selectAll('.xc-radar-webs')
+            .data([1]);
+        webs.enter()
+            .append('g')
+            .classed('xc-radar-webs', true);
+        var webList = webs.selectAll('.xc-radar-web')
+            .data(this.polygonWebs);
+        webList.enter()
+            .append('polygon')
+            .classed('xc-radar-web', true);
+        webList.attr('points', function(d) { return d.webString; });
+        return webList;
+    }
+    function __renderLines() {
+        var lines = this.radar
+            .selectAll('.xc-radar-lines')
+            .data([1]);
+        lines.enter()
+            .append('g')
+            .classed('xc-radar-lines', true);
+        var lineList = lines.selectAll('.xc-radar-line')
+            .data(this.polygonWebs[0].webPoints);
+        lineList.enter()
+            .append('line')
+            .classed('xc-radar-line', true);
+        lineList.attr({
+            x1: 0,
+            y1: 0,
+            x2: function(d) {
+                return d.x;
+            },
+            y2: function(d) {
+                return d.y;
+            }
+        });
+        return lineList;
+    }
+    function __renderAreas(animationEase, animationTime) {
+        var _self = this;
+        var areas = this.radar
+            .selectAll('.xc-radar-areas')
+            .data([1]);
+        areas.enter()
+            .append('g')
+            .classed('xc-radar-areas', true);
+        var areaList = areas.selectAll('.xc-radar-area')
+            .data(this.areas);
+        areaList.enter()
+            .append('g')
+            .attr('class', function(d, i) {
+                return 'xc-radar-area xc-radar-area' + d.originalData.idx;
+            });
+        var polygonList = areaList.selectAll('polygon')
+            .data(function(d) {
+                return [d];
+            });
+        polygonList.enter()
+            .append('polygon')
+            .attr('points', function(d) {
+                return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
+                    return '0,0';
+                }).join(' ');
+            })
+            .style({
+                stroke: function(d) {
+                    if(!d.originalData.color) {
+                        d.originalData.color = _self.getColor(d.originalData.idx);
+                    }
+                    return d.originalData.color;
+                },
+                fill: !this.radarConfig.fill ? '' : function(d) {
+                    return d.originalData.color;
+                }
+            });
+        polygonList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('points', function(d) {
+                return d.areaString;
+            });
+        var pointsList = areaList.selectAll('.xc-radar-area-point')
+            .data(function(d) {
+                return d.areaPoints;
+            });
+        pointsList.enter()
+            .append('circle')
+            .classed('xc-radar-area-point', true)
+            .attr({
+                cx: 0,
+                cy: 0
+            })
+            .style('stroke', function(d){
+                return d.originalData.color;
+            });
+        pointsList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr({
+                cx: function(d) { return d.x; },
+                cy: function(d) { return d.y; }
+            });
+        return areaList;
+    }
+    function __renderText() {
+        var _self = this;
+        var texts = this.radar
+            .selectAll('.xc-radar-texts')
+            .data([1]);
+        texts.enter()
+            .append('g')
+            .classed('xc-radar-texts', true);
+        var textList = texts.selectAll('.xc-radar-text')
+            .data(this.textPoints);
+        textList.enter()
+            .append('text')
+            .classed('xc-radar-text', true)
+            .text(function(d, i) {
+                return _self.radarConfig.indicator[i].text;
+            })
+            .attr('text-anchor', 'middle');
+        textList.attr({
+            x: function(d) { return d.x; },
+            y: function(d) { return d.y; }
+        });
+        return textList;
+    }
+    function __renderCoverPolygons() {
+        var coverPolygons = this.radar
+            .selectAll('.xc-radar-coverPolygons')
+            .data([1]);
+        coverPolygons.enter()
+            .append('g')
+            .classed('xc-radar-coverPolygons', true);
+        var coverPolygonList = coverPolygons.selectAll('.xc-radar-coverPolygon')
+            .data(this.coverPolygons);
+        coverPolygonList.enter()
+            .append('polygon')
+            .classed('xc-radar-coverPolygon', true);
+        coverPolygonList.attr('points', function(d) {
+            return d.pointsStr;
+        });
+        return coverPolygonList;
+    }
+    function __legendReady() {
+        __legendMouseEnter.apply(this);
+        __legendMouseOut.apply(this);
+        __legendClick.apply(this);
+    }
+    function __legendMouseEnter() {
+        var _this = this;
+        var areas = this.areas;
+        this.on('legendMouseenter.radar', function (name) {
+            var areaData = {};
+            for(var i=0;i<areas.length;i++) {
+                if(name == areas[i].originalData.name) {
+                    areaData = areas[i];
+                    break;
+                }
+            }
+            for(var i=0;i<_this.areaList[0].length;i++) {
+                var areaEle = d3.select(_this.areaList[0][i]);
+                if(areaEle.datum() == areaData) {
+                    areaEle.selectAll('.xc-radar-area-point')
+                        .style('stroke-width', 5);
+                    break;
+                }
+            }
+        });
+    }
+    function __legendMouseOut() {
+        var _this = this;
+        var areas = this.areas;
+        this.on('legendMouseleave.radar', function(name) {
+            var areaData = {};
+            for(var i=0;i<areas.length;i++) {
+                if(name == areas[i].originalData.name) {
+                    areaData = areas[i];
+                    break;
+                }
+            }
+            for(var i=0;i<_this.areaList[0].length;i++) {
+                var areaEle = d3.select(_this.areaList[0][i]);
+                if(areaEle.datum() == areaData) {
+                    areaEle.selectAll('.xc-radar-area-point')
+                        .style('stroke-width', 3);
+                    break;
+                }
+            }
+        });
+    }
+    function __legendClick() {
+        var _this = this;
+        this.on('legendClick.radar', function(nameList) {
+            _this._reRenderAreas(nameList);
+        });
+    }
+    function __tooltipReady() {
+        __tooltipMouseMove.apply(this);
+        __tooltipMouseOut.apply(this);
+    }
+    function __tooltipMouseMove() {
+        var _this = this;
+        this.coverPolygonList.on('mousemove.radar', function () {
+            var index = d3.select(this).datum().index;
+            _this._showTooltip(index, this);
+        });
+    }
+    function __tooltipMouseOut() {
+        var _this = this;
+        this.coverPolygonList.on('mouseout.radar', function () {
+            var tooltip = _this.messageCenter.components.tooltip;
+            tooltip.hiddenTooltip();
+            var areaPointsList = _this.areaList.selectAll('.xc-radar-area-point');
+            areaPointsList.style('stroke-width', 3);
+            _this.lineList.classed('xc-radar-tooltip-line', false);
+        });
+    }
+
+    function defaultFormatter(indicator, valueList) {
+        var htmlStr = '';
+        htmlStr += "<h3>" + indicator + "</h3>";
+        for(var i=0;i<valueList.length;i++) {
+            htmlStr += "<div>" + valueList[i].name + "：" + valueList[i].value + "</div>";
+        }
+        return htmlStr;
+    }
+    function defaultConfig() {
+        /**
+         * @var radar
+         * @type Object
+         * @extends xCharts.series
+         * @description 雷达图配置项
+         */
+        var config = {
+            /**
+             * @var type
+             * @type String
+             * @description 指定图表类型
+             * @values 'radar'
+             * @extends xCharts.series.radar
+             */
+            type: 'radar',
+            /**
+             * @var levels
+             * @type Number
+             * @description 标记雷达图网轴有几层，取值必须为大于0的整数
+             * @default 4
+             * @extends xCharts.series.radar
+             */
+            levels: 4,
+            /**
+             * @var radius
+             * @type Number|String
+             * @description 定义雷达图的半径
+             * @default '15%'
+             * @extends xCharts.series.radar
+             */
+            radius: '15%',
+            /**
+             * @var fill
+             * @type Boolean
+             * @description 定义雷达图的区域是否填充，true为填充，false为不填充
+             * @default false
+             * @extends xCharts.series.radar
+             */
+            fill: false,
+            /**
+             * @var center
+             * @type Array
+             * @description 雷达图中心位置，可为百分比或数值。若为百分比则center[0]（中心x坐标）参照容器宽度，center[1]（中心y坐标）参照容器高度。
+             * @default ['50%','50%']
+             * @extends xCharts.series.radar
+             */
+            center: ['50%', '50%'],
+            /**
+             * @var indicator
+             * @type Array
+             * @description 雷达图各项指标
+             * @extends xCharts.series.radar
+             */
+            indicator: [
+                {
+                    /**
+                     * @var text
+                     * @type String
+                     * @description 指标名称
+                     * @extends xCharts.series.radar.indicator
+                     */
+                    // text: '',
+                    /**
+                     * @var max
+                     * @type Number
+                     * @description 指标取值范围的最大值
+                     * @extends xCharts.series.radar.indicator
+                     */
+                    max: 100,
+                    /**
+                     * @var min
+                     * @type Number
+                     * @description 指标取值范围的最大值
+                     * @extends xCharts.series.radar.indicator
+                     */
+                    min: 0
+                }
+            ],
+            /**
+             * @var data
+             * @type Array
+             * @description 雷达图数据
+             * @extends xCharts.series.radar
+             */
+            data: [
+                {
+                    /**
+                     * @var name
+                     * @type String
+                     * @description 数据项名称
+                     * @extends xCharts.series.radar.data
+                     */
+                    // name: '',
+                    /**
+                     * @var value
+                     * @type Array
+                     * @description 数据项对应所有指标的值的集合，其中的顺序必须和indicator中指标的顺序相对应。
+                     * @extends xCharts.series.radar.data
+                     */
+                    // value: []
+                }
+            ]
+        }
+        return config;
+    }
+}(xCharts, d3));
+/**
+ * @file 雷达图(移动端)
+ * @date 2016-05-30
+ * @author chenxuan.cx@gmail.com
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var charts = xCharts.charts;
+    var radar = charts.radar;
+
+    radar.prototype.extend({
+        mobileReady: function() {
+            if(this.config.legend && this.config.legend.show) {
+                __legendMobileReady.apply(this);
+            }
+            if(this.config.tooltip && this.config.tooltip.show) {
+                __tooltipMobileReady.apply(this);
+            }
+        }
+    });
+    function __legendMobileReady() {
+        __legendTouch.apply(this);
+    }
+    function __legendTouch() {
+        var _this = this;
+        this.on('legendClick.radar', function(nameList) {
+            _this._reRenderAreas(nameList);
+            _this.messageCenter.components.tooltip.hiddenTooltip();
+        });
+    }
+    function __tooltipMobileReady() {
+        __tooltipTouch.apply(this);
+    }
+    function __tooltipTouch() {
+        var _this = this;
+        this.coverPolygonList.on('touchstart.radar', function () {
+            var index = d3.select(this).datum().index;
+            _this.areaList.selectAll('.xc-radar-area-point').style('stroke-width', 3);
+            _this._showTooltip(index, this);
+        });
+    }
+}(xCharts, d3));
+
+/**
+ * @file 饼图
+ * @author chenwubai.cx@gmail.com
+ */
+// TODO 把代码里的魔数尽量提出来作为配置项
+(function(xCharts, d3) {
+    var utils = xCharts.utils;
+    var Chart = xCharts.charts.Chart;
+
+    // 创建pie构造函数
+    function pie(messageCenter, config) {
+        // 调用这一步的原因是为了继承属性
+        Chart.call(this, messageCenter, config, 'pie');
+    }
+
+    // 在xCharts中注册pie构造函数
+    xCharts.charts.extend({ pie: pie });
+    // 从父类Chart里继承一系列的方法
+    utils.inherits(pie, Chart);
+
+    pie.prototype.extend = xCharts.extend;
+    pie.prototype.extend({
+        // config是option的深拷贝的对象
+        // series是config里的series的引用,修改series后config内部也会相应修改
+        init: function(messageCenter, config, type, series) {
+            // 提取饼图配置项(目前不支持多图,直接忽略其他图表配置项)
+            for(var i=0, length=series.length;i<length;i++) {
+                if(series[i].type === 'pie') {
+                    this.pieConfig = utils.copy(series[i], true);
+                    break;
+                }
+            }
+            // 合并默认值, 转换百分比为数值等
+            __correctConfig.apply(this);
+            // 转化原始数据为画弧形需要的数据
+            this.pieData = __getPieData(this.pieConfig.data);
+            // 生成弧形路径计算函数
+            this.arcFunc = __getArcFunc(this.pieConfig.radius);
+            this.bigArcFunc = __getBigArcFunc(this.pieConfig.radius);
+            this.textArcFunc = __getTextArcFunc(this.pieConfig.radius);
+        },
+        render: function(animationEase, animationTime) {
+            // 添加饼图g容器
+            this.pieWrapper = __renderPieWrapper.apply(this);
+            // 添加弧形
+            this.arcList = __renderArcs.apply(this, [animationEase, animationTime]);
+            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+                // 添加文字标签
+                this.textList = __renderText.apply(this, [animationEase, animationTime]);
+                // 添加连接弧形和文字标签的线条
+                this.textLineList = __renderTextLine.apply(this, [animationEase, animationTime]);
+            }
+        },
+        ready: function() {
+            if(this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if(this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if(this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
+            }
+        },
+        _reRenderArcs: function(nameList) {
+            var animationConfig = this.config.animation;
+            if(!nameList.length) {
+                this.pieData.forEach(function(d) {
+                    d.startAngle = 0;
+                    d.endAngle = 0;
+                    d.data.isShow = false;
+                });
+            } else {
+                // 先把所有弧形的可见配置设为不可见
+                this.pieConfig.data.forEach(function(d) {
+                    d.isShow = false;
+                    d.value = 0;
+                });
+                for(var i=0;i<nameList.length;i++) {
+                    var name = nameList[i];
+                    for(var k=0;k<this.pieConfig.data.length;k++) {
+                        if(this.pieConfig.data[k].name == name) {
+                            this.pieConfig.data[k].isShow = true;
+                            this.pieConfig.data[k].value = this.pieConfig.data[k].initialValue;
+                            break;
+                        }
+                    }
+                }
+                this.pieData = __getPieData(this.pieConfig.data);
+            }
+            __renderArcs.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+                __renderText.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+                __renderTextLine.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+            }
+        },
+        _defaultTooltipFormatter: function (name, value) {
+            return "<div>" + name + '：' + value + "</div>";
+        }
+    });
+    
+    /**
+     * @description 合并默认值,转换百分比,并添加一些属性
+     */
+    function __correctConfig() {
+        // 合并默认值
+        this.pieConfig = utils.merage(defaultConfig(), this.pieConfig);
+        // 计算饼图原点
+        var center = this.pieConfig.center;
+        if(typeof center[0] === 'string') {
+            center[0] = parseInt(center[0]) * 0.01 * this.width;
+        }
+        if(typeof center[1] === 'string') {
+            center[1] = parseInt(center[1]) * 0.01 * this.height;
+        }
+        // 计算饼图半径
+        var radius = this.pieConfig.radius;
+        if(typeof radius.innerRadius === 'string') {
+            radius.innerRadius = parseInt(radius.innerRadius) * 0.01 * this.width;
+        }
+        if(typeof radius.outerRadius === 'string') {
+            radius.outerRadius = parseInt(radius.outerRadius) * 0.01 * this.width;
+        }
+        // 添加对饼图大小的处理,如果半径太大,自动把半径保持在可控的最大值
+        // 这里只考虑了原点在[50%, 50%]的位置,如果原点在其他位置该处理不能起到作用
+        var minLength = this.width<this.height ? this.width : this.height;
+        if(radius.outerRadius*2 > minLength) {
+            radius.outerRadius = minLength/2;
+        }
+        // 添加一些属性供后面render和ready使用
+        this.pieConfig.data.forEach(function(d) {
+            d.isShow = true;
+            d.initialValue = d.value;
+        });
+    }
+    function __getPieData(data) {
+        var pieFunc = d3.layout.pie()
+            .sort(null)
+            .value(function(d, i) {
+                return d.value;
+            }),
+            pieData = pieFunc(data);
+        return pieData;
+    }
+    function __getArcFunc(radius) {
+        var arcFunc = d3.svg.arc()
+            .innerRadius(radius.innerRadius)
+            .outerRadius(radius.outerRadius);
+        return arcFunc;
+    }
+    function __getBigArcFunc(radius) {
+        var distance = 10;
+        var bigArcFunc = d3.svg.arc()
+            .innerRadius(radius.innerRadius)
+            .outerRadius(radius.outerRadius + distance);
+        return bigArcFunc;
+    }
+    function __getTextArcFunc(radius) {
+        var mulriple = 1.1;
+        var textArcFunc = d3.svg.arc()
+            .innerRadius(radius.outerRadius * mulriple)
+            .outerRadius(radius.outerRadius * mulriple);
+        return textArcFunc;
+    }
+    function __renderPieWrapper() {
+        var pieWrapper = this.main
+            .selectAll('.xc-pie')
+            .data([1]);
+        pieWrapper.enter()
+            .append('g')
+            .classed('xc-pie', true);
+        pieWrapper.attr('transform', 'translate(' + this.pieConfig.center[0] + ',' + this.pieConfig.center[1] + ')');
+        return pieWrapper;
+    }
+    function __renderArcs(animationEase, animationTime) {
+        var _self = this;
+        // 这里selectAll和enter不要连续写
+        // arcs = var.selectAll.enter.append
+        // arcs = var.selectAll; arcs.enter.append
+        // 上面两种方式得到的arcs是不一样的
+        var arcs = this.pieWrapper
+            .selectAll('.xc-pie-arcs')
+            .data([1]);
+        arcs.enter()
+            .append('g')
+            .classed('xc-pie-arcs', true);
+        var arcList = arcs.selectAll('.xc-pie-arc')
+            .data(this.pieData);
+        // 如果不是初次加载,则enter这一步什么都不会做
+        arcList.enter()
+            .append('path')
+            .classed('xc-pie-arc', true)
+            .style('fill', function(d) {
+                if(!d.data.color) {
+                    d.data.color = _self.getColor(d.data.idx);
+                }
+                return d.data.color;
+            });
+        arcList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attrTween('d', function(d) {
+                this._current = this._current || {startAngle: 0, endAngle: 0};
+                var interpolate = d3.interpolate(this._current, d);
+                this._current = interpolate(1);
+                return function (t) {
+                    return _self.arcFunc(interpolate(t));
+                }
+            });
+        return arcList;
+    }
+    function __renderText(animationEase, animationTime) {
+        var _this = this;
+        var texts = this.pieWrapper
+            .selectAll('.xc-pie-texts')
+            .data([1]);
+        texts.enter()
+            .append('g')
+            .classed('xc-pie-texts', true);
+        var textList = texts.selectAll('.xc-pie-text')
+            .data(this.pieData);
+        textList.enter()
+            .append('text')
+            .classed('xc-pie-text', true)
+            // TODO 后面考虑是否把这个提成配置项
+            .attr('dy', '0.35em')
+            .attr('fill', function(d) {
+                return d.data.color;
+            })
+            .text(function(d) {
+                var formatter = _this.pieConfig.labels.formatter || defaultLabelFormatter;
+                return formatter(d.data.name, d.data.value);
+            });
+        textList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('transform', function(d) {
+                // 找出外弧形的中心点
+                var pos = _this.textArcFunc.centroid(d);
+                // 适当改变文字标签的x坐标
+                pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
+                return 'translate(' + pos + ')';
+            })
+            .style('display', function(d) {
+                return d.data.isShow ? null : 'none';
+            })
+            .style('text-anchor', function(d) {
+                return midAngel(d)<Math.PI ? 'start' : 'end';
+            });
+    }
+    function __renderTextLine(animationEase, animationTime) {
+        var _this = this;
+        var arcFunc = d3.svg.arc()
+            .innerRadius(this.pieConfig.radius.outerRadius * 1.05)
+            .outerRadius(this.pieConfig.radius.outerRadius * 1.05);
+        var textLines = this.pieWrapper
+            .selectAll('.xc-pie-textLines')
+            .data([1]);
+        textLines.enter()
+            .append('g')
+            .classed('xc-pie-textLines', true);
+        var textLineList = textLines.selectAll('.xc-pie-textLine')
+            .data(this.pieData);
+        textLineList.enter()
+            .append('polyline')
+            .classed('xc-pie-textLine', true)
+            .attr('points', function(d) {
+                return [arcFunc.centroid(d), arcFunc.centroid(d), arcFunc.centroid(d)];
+            });
+        textLineList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('points', function(d) {
+                // 找出外弧形的中心点
+                var pos = _this.textArcFunc.centroid(d);
+                // 适当改变文字标签的x坐标
+                pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
+                return [arcFunc.centroid(d), _this.textArcFunc.centroid(d), pos];
+            })
+            .style('display', function(d) {
+                return d.data.isShow ? null : 'none';
+            });
+    }
+    function __legendReady() {
+        // 绑定hover事件
+        __legendMouseEnter.apply(this);
+        __legendMouseLeave.apply(this);
+
+        // 绑定click事件
+        __legendClick.apply(this);
+    }
+    function __legendMouseEnter () {
+        var _this = this;
+        this.on('legendMouseenter.pie', function(name) {
+            for(var i=0;i<_this.arcList[0].length;i++) {
+                var arcEle = d3.select(_this.arcList[0][i]);
+                if(arcEle.datum().data.name == name) {
+                    arcEle.attr('d', function(d) {
+                        return _this.bigArcFunc(d);
+                    });
+                    break;
+                }
+            }
+        });
+    }
+    function __legendMouseLeave () {
+        var _this = this;
+        this.on('legendMouseleave.pie', function(name) {
+            for(var i=0;i<_this.arcList[0].length;i++) {
+                var arcEle = d3.select(_this.arcList[0][i]);
+                if(arcEle.datum().data.name == name) {
+                    arcEle.attr('d', function(d) {
+                        return _this.arcFunc(d);
+                    });
+                    break;
+                }
+            }
+        });
+    }
+    function __legendClick () {
+        var _this = this;
+        this.on('legendClick.pie', function(nameList) {
+            _this._reRenderArcs(nameList);
+        });
+    }
+    function __tooltipReady() {
+        __tooltipMouseMove.apply(this);
+        __tooltipMouseOut.apply(this);
+    }
+    function __tooltipMouseMove() {
+        var _this = this;
+        var tooltip = this.messageCenter.components.tooltip;
+        this.arcList.on('mousemove.pie', function() {
+            var bindData = d3.select(this).datum();
+            var position = d3.mouse(_this.svg.node());
+            position = [
+                position[0] + 40,
+                position[1] + 40
+            ];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter,
+                pieFormatter = _this.pieConfig.formatter;
+            var formatter = pieFormatter || tooltipFormatter || _this._defaultTooltipFormatter;
+            tooltip.setTooltipHtml(formatter(bindData.data.name, bindData.data.value));
+            tooltip.showTooltip();
+            tooltip.setPosition(position);
+
+            d3.select(this).attr('d', function(d) {
+                return _this.bigArcFunc(d);
+            });
+        });
+    }
+    function __tooltipMouseOut() {
+        var _this = this;
+        var tooltip = this.messageCenter.components.tooltip;
+        this.arcList.on('mouseout.pie', function() {
+            tooltip.hiddenTooltip();
+            d3.select(this).attr('d', function(d) {
+                return _this.arcFunc(d);
+            });
+        });
+    }
+    function defaultLabelFormatter(name) {
+        return name;
+    }
+    function midAngel(d) {
+        return d.startAngle + (d.endAngle - d.startAngle)/2;
+    }
+    function defaultConfig() {
+        /**
+         * @var pie
+         * @type Object
+         * @extends xCharts.series
+         * @description 饼图配置项
+         */
+        var config = {
+            /**
+             * 定义图表类型是饼图
+             * @var type
+             * @type String
+             * @description 指定图表类型
+             * @values 'pie'
+             * @extends xCharts.series.pie
+             */
+            type: 'pie',
+            /**
+             * @var center
+             * @type Array
+             * @description 饼图圆心位置，可为百分比或数值。若为百分比则center[0]（圆心x坐标）参照容器宽度，center[1]（圆心y坐标）参照容器高度。
+             * @default ['50%','50%']
+             * @extends xCharts.series.pie
+             */
+            center: ['50%', '50%'],
+            /**
+             * @var radius
+             * @type Object
+             * @description 定义饼图的内半径和外半径
+             * @extends xCharts.series.pie
+             */
+            radius: {
+                /**
+                 * @var outerRadius
+                 * @type String|Number
+                 * @description 定义饼图的外半径，可取百分比或数值，若为百分比则参照容器宽度进行计算。
+                 * @default '30%'
+                 * @extends xCharts.series.pie.radius
+                 */
+                outerRadius: '30%',
+                /**
+                 * @var innerRadius
+                 * @type String|Number
+                 * @description 定义饼图的内半径，可取百分比或数值，若为百分比，则参照容器宽度进行计算。
+                 * @default 0
+                 * @extends xCharts.series.pie.radius
+                 */
+                innerRadius: 0
+            },
+            /**
+             * @var labels
+             * @type Object
+             * @description 定义饼图弧形的文字标签
+             * @extends xCharts.series.pie
+             */
+            labels: {
+                /**
+                 * @var enable
+                 * @type Boolean
+                 * @description 定义是否绘制弧形的文字标签
+                 * @default false
+                 * @extends xCharts.series.pie.labels
+                 */
+                enable: false,
+                /**
+                 * @var formatter
+                 * @type Function
+                 * @description 定义弧形的文字标签的显示格式
+                 * @default 返回弧形的名称
+                 * @extends xCharts.series.pie.labels
+                 */
+                formatter: defaultLabelFormatter
+            },
+            /**
+             * @var data
+             * @type Array
+             * @description 饼图数据
+             * @extends xCharts.series.pie
+             */
+            data: [
+                {
+                    /**
+                     * @var name
+                     * @type String
+                     * @description 弧形名称
+                     * @extends xCharts.series.pie.data
+                     */
+                    // name: '',
+                    /**
+                     * @var value
+                     * @type Number
+                     * @description 弧形所代表的项的数据值
+                     * @extends xCharts.series.pie.data
+                     */
+                    // value: 0
+                }
+            ]
+        }
+        return config;
+    }
+}(xCharts, d3));
+/**
  * @file 饼图(移动端)
  * @date 2016-05-30
  * @author chenxuan.cx@gmail.com
@@ -6073,53 +6175,10 @@ var animationConfig = {
 }(xCharts, d3));
 
 /**
- * @file 雷达图(移动端)
- * @date 2016-05-30
- * @author chenxuan.cx@gmail.com
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var charts = xCharts.charts;
-    var radar = charts.radar;
-
-    radar.prototype.extend({
-        mobileReady: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendMobileReady.apply(this);
-            }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipMobileReady.apply(this);
-            }
-        }
-    });
-    function __legendMobileReady() {
-        __legendTouch.apply(this);
-    }
-    function __legendTouch() {
-        var _this = this;
-        this.on('legendClick.radar', function(nameList) {
-            _this._reRenderAreas(nameList);
-            _this.messageCenter.components.tooltip.hiddenTooltip();
-        });
-    }
-    function __tooltipMobileReady() {
-        __tooltipTouch.apply(this);
-    }
-    function __tooltipTouch() {
-        var _this = this;
-        this.coverPolygonList.on('touchstart.radar', function () {
-            var index = d3.select(this).datum().index;
-            _this.areaList.selectAll('.xc-radar-area-point').style('stroke-width', 3);
-            _this._showTooltip(index, this);
-        });
-    }
-}(xCharts, d3))
-
-/**
  *  scatter 散点图
  *  继承自 Chart
  */
-(function (xCharts,d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
     xCharts.charts.extend({scatter: scatter});
@@ -6144,7 +6203,7 @@ var animationConfig = {
             var _this = this;
 
             // 手机模式下动画卡
-            if(_this.mobileMode){
+            if (_this.mobileMode) {
                 animationTime = 0;
             }
 
@@ -6157,16 +6216,16 @@ var animationConfig = {
             var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
                 .data(_this.data);
 
-            var transitionStr = "r "+animationTime+"ms linear,cx "+animationTime+"ms linear,cy "+animationTime+"ms linear";
+            var transitionStr = "r " + animationTime + "ms linear,cx " + animationTime + "ms linear,cy " + animationTime + "ms linear";
 
             scatterItem.enter().append('circle');
             scatterItem.exit().remove();
 
-            scatterItem.style("transition",transitionStr)
-                .attr('cx',function(d){
+            scatterItem.style("transition", transitionStr)
+                .attr('cx', function (d) {
                     return d._serie.xScale(d.data[0]);
                 })
-                .attr('cy',function(d){
+                .attr('cy', function (d) {
                     return d._serie.yScale(d.data[1]);
                 })
                 .attr('r', function (d) {
@@ -6212,6 +6271,35 @@ var animationConfig = {
             //     })
 
             _this.scatterItem = scatterItem;//暴露出去，为了tooltip事件
+
+            // 画辅助线
+            this.renderAssistLine();
+        },
+        renderAssistLine: function () {
+            var xLine = this.svg.selectAll('line.xc-scatter-line-x').data([this]);
+            xLine.enter().append('line').attr('class', 'xc-scatter-line-x').style('pointer-events', 'none');
+            var yLine = this.svg.selectAll('line.xc-scatter-line-y').data([this])
+            yLine.enter().append('line').attr('class', 'xc-scatter-line-y').style('pointer-events', 'none');
+            var x1 = this.margin.left;
+            var x2 = this.margin.left + this.width;
+            var y1 = this.margin.top;
+            var y2 = this.height + y1;
+            xLine.attr('x1', x1)
+                .attr('x2', x1)
+                .attr('y1', y1)
+                .attr('y2', y2)
+                .style('display','none')
+
+            yLine.attr('x1', x1)
+                .attr('x2', x2)
+                .attr('y1', y1)
+                .attr('y2', y1)
+                .style('display','none')
+
+            this.xLine = xLine;
+            this.yLine = yLine;
+
+
         },
         ready: function () {
             this.__legendReady();
@@ -6242,26 +6330,112 @@ var animationConfig = {
             var _this = this;
             var tooltip = _this.messageCenter.components['tooltip'];
             var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            _this.scatterItem.on('mouseenter.scatter', function (data) {
 
-                d3.select(this).attr('opacity', 1);
-                //设置tooltip
-                var event = d3.event;
-                var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-                tooltip.showTooltip();
-                tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
-                tooltip.setPosition([x, y]);
-            })
 
-            _this.scatterItem.on('mouseleave.scatter', function (data) {
-                d3.select(this).attr('opacity', function (d) {
-                    return d._serie.opacity;
+            // TODO 这里修改为轴触发方式和点击共存
+            // 移动端就不需要点击了
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                _this.div.on('mousemove.scatter', assitLineTrigger(_this));
+
+                _this.scatterItem.on('mouseenter.scatter', function (data) {
+
+                    d3.select(this).attr('opacity', 1);
+                    //设置tooltip
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+                    tooltip.showTooltip();
+                    tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
+                    tooltip.setPosition([x, y]);
+                })
+
+                _this.scatterItem.on('mouseleave.scatter', function (data) {
+                    d3.select(this).attr('opacity', function (d) {
+                        return d._serie.opacity;
+                    });
+                    tooltip.hiddenTooltip();
                 });
-                tooltip.hiddenTooltip();
-            })
+            }
+
+
         }
-    })
+    });
+
+    scatter.assitLineTrigger = assitLineTrigger;
+
+    function assitLineTrigger(ctx) {
+        var textBox = ctx.svg.selectAll('text.xc-scatter-assitline')
+            .data([ctx])
+            .enter()
+            .append('text')
+            .attr('class', 'xc-scatter-assitline')
+            .attr('text-anchor', 'left');
+
+        var textSpan = textBox.selectAll('tspan.xc-span').data([ctx]).enter().append('tspan').attr('class', 'xc-span');
+        var margin = ctx.margin;
+        var yScale = ctx.messageCenter.yAxisScale[0];
+        var xScale = ctx.messageCenter.xAxisScale[0];
+        var xLine = ctx.xLine;
+        var yLine = ctx.yLine;
+        return function () {
+
+            var position = d3.mouse(ctx.svg.node());
+            if(!judgeOutBoundary(ctx,position)){
+                xLine.style('display','none');
+                yLine.style('display','none');
+                textBox.style('display','none');
+                return false;
+            }
+            var x = position[0] - margin.left;
+            var y = position[1] - margin.top;
+
+            var xValue = xScale.invert(x).toFixed(2);
+            var yValue = yScale.invert(y).toFixed(2);
+
+            textBox.style('display','block');
+            textSpan.text(xValue + ',' + yValue);
+
+            xLine.attr('x1', position[0])
+                .attr('x2', position[0])
+                .style('display','block');
+            yLine.attr('y1', position[1])
+                .attr('y2', position[1])
+                .style('display','block');
+
+            // 文字向上偏移
+            position[1] -= 10;
+            position[0] += 10;
+            textBox.attr('transform', 'translate(' + position.join(',') + ')');
+        }
+    }
+
+    /**
+     * 判断超出边界,边界以坐标轴为准
+     * @param ctx 上下文this
+     * @param position 当前鼠标坐标
+     * @return {boolean} true:未超出边界,false超出边界
+     */
+    function judgeOutBoundary(ctx,position){
+        var x1 = ctx.margin.left;
+        var x2 = ctx.margin.left + ctx.width;
+        if(position[0] <= x1 || position[0] >= x2){
+            return false;
+        }
+
+        var y1 = ctx.margin.top;
+        var y2 = ctx.margin.top+ctx.height;
+
+        if(position[1] <= y1 || position[1] >= y2){
+            return false;
+        }
+
+        return true;
+    }
+
+    // function
+
     /**
      * 通过name找到对应的serie
      * @param series
@@ -6428,7 +6602,7 @@ var animationConfig = {
         return scatter;
     }
 
-}(xCharts,d3));
+}(xCharts, d3));
 /**
  * Author liuyang46@meituan.com
  * Date 16/5/27
@@ -6441,7 +6615,11 @@ var animationConfig = {
     var scatter = charts.scatter;
 
     scatter.prototype.extend({
-       
+        mobileReady:function(){
+            var moveEvent = scatter.assitLineTrigger(this);
+            this.div.on('touchmove.scatter',moveEvent);
+            this.div.on('touchstart.scatter',moveEvent);
+        }
     });
 }(xCharts, d3));
 

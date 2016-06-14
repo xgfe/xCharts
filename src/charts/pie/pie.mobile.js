@@ -9,6 +9,11 @@
     var pie = charts.pie;
 
     pie.prototype.extend({
+        mobileRender: function (animationEase, animationTime) {
+            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+                this.textList = this.__renderMobileText(animationEase, animationTime);
+            }
+        },
         mobileReady: function() {
             if(this.config.legend && this.config.legend.show) {
                 __legendMobileReady.apply(this);
@@ -16,8 +21,46 @@
             if(this.config.tooltip && this.config.tooltip.show) {
                 __tooltipMobileReady.apply(this);
             }
+        },
+        __renderMobileText: function(animationEase, animationTime) {
+            var _this = this;
+            var texts = this.pieWrapper
+                .selectAll('.xc-pie-m-texts')
+                .data([1]);
+            texts.enter()
+                .append('g')
+                .classed('xc-pie-m-texts', true);
+            var textList = texts.selectAll('.xc-pie-m-text')
+                .data(this.pieData);
+            textList.enter()
+                .append('text')
+                .classed('xc-pie-m-text', true)
+                .attr('dy', '.35em')
+                .attr('fill', function (d) {
+                    return '#fff';
+                })
+                .text(function (d) {
+                    return _this.pieConfig.labels.mobileFormatter(d.data.name);
+                });
+            textList.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attr('transform', function(d) {
+                    // 找出外弧形的中心点
+                    var pos = _this.arcFunc.centroid(d);
+                    // 适当改变文字标签的x坐标
+                    // pos[0] = _this.pieConfig.radius.outerRadius * (midAngel(d)<Math.PI ? 1.2 : -1.2);
+                    return 'translate(' + pos + ')';
+                })
+                .style('display', function(d) {
+                    return d.data.isShow ? null : 'none';
+                })
+                .style('text-anchor', function(d) {
+                    return 'middle';
+                });
         }
     });
+
     function __legendMobileReady() {
         __legendTouch.apply(this);
     }
@@ -56,8 +99,8 @@
 
                 var position = d3.mouse(_this.svg.node());
                 position = [
-                    position[0] + 40,
-                    position[1] + 40
+                    position[0] + 10,
+                    position[1] + 10
                 ];
                 var tooltipFormatter = tooltip.tooltipConfig.formatter;
                 var pieFormatter = _this.pieConfig.formatter;

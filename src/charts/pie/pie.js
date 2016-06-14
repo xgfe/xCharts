@@ -44,7 +44,9 @@
             this.pieWrapper = __renderPieWrapper.apply(this);
             // 添加弧形
             this.arcList = __renderArcs.apply(this, [animationEase, animationTime]);
-            if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+            if(this.mobileMode) {
+                this.mobileRender(animationEase, animationTime);
+            } else if(this.pieConfig.labels && this.pieConfig.labels.enable) {
                 // 添加文字标签
                 this.textList = __renderText.apply(this, [animationEase, animationTime]);
                 // 添加连接弧形和文字标签的线条
@@ -91,6 +93,10 @@
             }
             __renderArcs.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
             if(this.pieConfig.labels && this.pieConfig.labels.enable) {
+                if(this.mobileMode) {
+                    this.__renderMobileText(animationConfig.animationEase, animationConfig.animationTime);
+                    return;
+                }
                 __renderText.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
                 __renderTextLine.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
             }
@@ -115,13 +121,19 @@
             center[1] = parseInt(center[1]) * 0.01 * this.height;
         }
         // 计算饼图半径
-        var radius = this.pieConfig.radius;
+        var radius;
+        if(this.mobileMode && this.pieConfig.mRadius.outerRadius) {
+            radius = this.pieConfig.mRadius;
+        } else {
+            radius = this.pieConfig.radius;
+        }
         if(typeof radius.innerRadius === 'string') {
             radius.innerRadius = parseInt(radius.innerRadius) * 0.01 * this.width;
         }
         if(typeof radius.outerRadius === 'string') {
             radius.outerRadius = parseInt(radius.outerRadius) * 0.01 * this.width;
         }
+        this.pieConfig.radius = radius;
         // 添加对饼图大小的处理,如果半径太大,自动把半径保持在可控的最大值
         // 这里只考虑了原点在[50%, 50%]的位置,如果原点在其他位置该处理不能起到作用
         var minLength = this.width<this.height ? this.width : this.height;
@@ -335,8 +347,8 @@
             var bindData = d3.select(this).datum();
             var position = d3.mouse(_this.svg.node());
             position = [
-                position[0] + 40,
-                position[1] + 40
+                position[0] + 10,
+                position[1] + 10
             ];
             var tooltipFormatter = tooltip.tooltipConfig.formatter,
                 pieFormatter = _this.pieConfig.formatter;
@@ -415,6 +427,9 @@
                  */
                 innerRadius: 0
             },
+            mRadius: {
+                innerRadius: 0
+            },
             /**
              * @var labels
              * @type Object
@@ -437,7 +452,10 @@
                  * @default 返回弧形的名称
                  * @extends xCharts.series.pie.labels
                  */
-                formatter: defaultLabelFormatter
+                formatter: defaultLabelFormatter,
+                mobileFormatter: function (name, value, percentage) {
+                    return name;
+                }
             },
             /**
              * @var data
