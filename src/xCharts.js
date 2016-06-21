@@ -81,7 +81,7 @@ xCharts.prototype.extend({
     firstDrawing: function (config) {
 
         //可以使用的组件列表,需要修改margin的组件请放在'xAxis','yAxis'前面
-        var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'resize'];
+        var componentsList = ['title', 'tooltip', 'legend', 'yAxis', 'xAxis', 'guides','resize'];
         var component, i = 0;
         this.components = {};
         this.charts = {};
