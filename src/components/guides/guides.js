@@ -125,7 +125,12 @@
         var xFormat = ctx.guidesConfig.textStyle.xFormat;
         var yFormat = ctx.guidesConfig.textStyle.yFormat;
         return function () {
-
+            
+            if(xScale.scaleType !== 'value' || yScale.scaleType !== 'value'){
+                // 辅助线必须在坐标轴都是value的情况下生效
+                return;
+            }
+            
             var position = d3.mouse(ctx.svg.node());
             if (!judgeOutBoundary(ctx, position)) {
                 xLine.style('display', 'none');
