@@ -33,6 +33,7 @@
             this.__renderArea(animationEase, animationTime);
             this.__renderLine(animationEase, animationTime);
             if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
+            if (this.timeModel) this._brushRender();
         },
         __renderLine: function (animationEase, animationTime) {
             var id = this.id, _this = this;
@@ -325,9 +326,13 @@
             _this.circle = circle;
             _this.circleGroup = circleGroup;
         },
+        _brushRender: function () {
+            this.lineGroup.attr('clip-path','url(#xc-clip-main-path)');
+        },
         ready: function () {
             this.__legendReady();
             this.__tooltipReady();
+            this._brushReady();
         },
         __legendReady: function () {
             var lineUse, areaUse, circleUse, _this = this, id = _this.id;
@@ -391,7 +396,7 @@
 
             if (!this.config.tooltip || this.config.tooltip.show === false) return;//未开启tooltip
 
-            if (this.config.tooltip.trigger == 'axis') {
+            if (this.config.tooltip.trigger !== 'axis') {
 
                 this.on('tooltipSectionChange.line', function (sectionNumber, callback, format) {
 
@@ -412,7 +417,7 @@
                                     return d._serie.xScale(d.x);
                                 })
                                 .attr('cy', function (d) {
-                                    return d.yScale(d.y);
+                                    return d._serie.yScale(d.y);
                                 })
                                 .attr('fill', function (d) {
                                     return d._serie.color;
@@ -486,6 +491,12 @@
 
             }
 
+        },
+        _brushReady:function () {
+            this.on('brushChange.line',function (domain) {
+                // scale.domain(domain);
+                this.render('linear', 0);
+            }.bind(this));
         }
 
     });
