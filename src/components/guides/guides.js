@@ -276,4 +276,4 @@
         }
     }
 
-}(xCharts, d3))
+}(xCharts, d3));
