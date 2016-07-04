@@ -80,7 +80,9 @@
         },
         render: function (animationEase, animationTime) {
             if (this.isXAxis) {
-                return this.__drawAxis(animationEase, animationTime);
+                this.__drawAxis(animationEase, animationTime);
+                this.fire("xAxisReady");
+                return true;
             }
 
             // Y轴等待X轴画完,因为网格线不等待X轴计算margin完毕的话,可能会出现超出边界的情况
@@ -102,9 +104,12 @@
                 var axis = d3.svg.axis()
                     .scale(scale)
                     .outerTickSize(0)
-                    .ticks(config.ticks)
                     .orient(config.position)
                     .tickFormat(config.tickFormat);
+
+                if (scale.scaleType !== 'time') {
+                    axis.ticks(config.ticks)
+                }
 
                 // 画网格
                 // i===0 表示只画一个,不然多Y轴情况会很难看
@@ -159,14 +164,13 @@
                     });
             }
 
-            if (this.isXAxis) {
-                this.fire("xAxisReady");
-            }
         },
         ready: function () {
 
             this._tooltipReady();
             this._lengendReady();
+            this.isXAxis && this._brushReady();
+
         },
         _tooltipReady: function () {
 
@@ -205,6 +209,14 @@
                 _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
                 _this.legendRefresh = false;
             });
+        },
+        _brushReady:function () {
+            this.on('brushChange.axis',function (domain) {
+                // console.log(domain)
+                var scale = this.scales[0];
+                scale.domain(domain);
+                this.__drawAxis('linear', 0);
+            }.bind(this));
         },
         // 给散点图格式化值用
         tickFormat: function (value, i) {

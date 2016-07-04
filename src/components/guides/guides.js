@@ -263,9 +263,7 @@
                  * @default Loop
                  * @description x轴文字格式化
                  */
-                xFormat: function (value) {
-                    return value;
-                },
+                xFormat: utils.loop,
                 /**
                  * @var yFormat
                  * @type Function
@@ -273,9 +271,7 @@
                  * @default Loop
                  * @description y轴文字格式化
                  */
-                yFormat: function (value) {
-                    return value;
-                }
+                yFormat:  utils.loop,
             }
         }
     }
