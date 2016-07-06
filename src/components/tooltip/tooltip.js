@@ -88,6 +88,9 @@
                 });
             }
 
+            this.on('brushChange.tooltip',function(domain){
+               _this.brushDomain = domain;
+            });
 
         },
         refresh: function () {
@@ -259,7 +262,9 @@
                 width = _this.originalWidth - _this.margin.left - _this.margin.right,
                 height = _this.originalHeight - _this.margin.top - _this.margin.bottom;
 
-            var sectionLength = xAxisData.length - 1;
+            var sectionObj = getSectionLength.call(_this,xAxisData);
+
+            var sectionLength = sectionObj.length - 1;
 
             if (_this.messageCenter.xAxisScale[0].scaleType === 'barCategory') {
                 sectionLength++;
@@ -273,6 +278,7 @@
                 sectionNumber = Math.round((mouseX - _this.margin.left) / sectionWidth);
             }
 
+            sectionNumber+=sectionObj.offset;
 
             if (sectionNumber !== oldSectionNumber) {
                 //触发tooltipSectionChange事件，获取文本
@@ -298,6 +304,26 @@
 
             _this.setPosition([tooltipX, mouseY]);
         }
+    }
+
+    function getSectionLength(data){
+        var domain = this.brushDomain || [data[0],data[data.length-1]];
+        var length = 0,offset;
+        for(var i=0;i<data.length;i++){
+            if(data[i] <= domain[1] && data[i] >= domain[0]){
+                length++;
+
+                if(offset === undefined){
+                    offset = i;
+                }
+            }
+
+        }
+
+        return {
+            length:length,
+            offset:offset
+        };
     }
 
     function defaultConfig() {

@@ -55,10 +55,10 @@
             linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none');
             linePath.exit().remove();
             linePath.attr('stroke', function (d) {
-                    if (d.lineStyle.color != 'auto')
-                        return d.lineStyle.color;
-                    return _this.getColor(d.idx);
-                })
+                if (d.lineStyle.color != 'auto')
+                    return d.lineStyle.color;
+                return _this.getColor(d.idx);
+            })
                 .attr('stroke-width', function (d) {
                     return d.lineStyle.width;
                 })
@@ -133,16 +133,16 @@
             areaPath.enter().append('path').attr('class', 'xc-line-area-path').attr('stroke', 'none');
             areaPath.exit().remove();
             areaPath.attr('fill', function (d) {
-                    if (d.areaStyle.color == 'auto') {
-                        //当面积的颜色为auto时，和折线保持一致
-                        if (d.lineStyle.color == 'auto')
-                            return _this.getColor(d.idx);
-                        else
-                            return d.lineStyle.color
-                    }
+                if (d.areaStyle.color == 'auto') {
+                    //当面积的颜色为auto时，和折线保持一致
+                    if (d.lineStyle.color == 'auto')
+                        return _this.getColor(d.idx);
                     else
-                        return d.areaStyle.color;
-                })
+                        return d.lineStyle.color
+                }
+                else
+                    return d.areaStyle.color;
+            })
                 .attr('id', function (d) {
                     return 'xc-line-area-path-id' + id + "-" + d.idx;
                 })
@@ -221,8 +221,8 @@
             circleGroup.exit().remove();
 
             circleGroup.attr('id', function (d) {
-                    return 'xc-circle-group-id' + id + '-' + d.idx;
-                })
+                return 'xc-circle-group-id' + id + '-' + d.idx;
+            })
                 .attr('fill', function (serie) {
                     if (serie.lineStyle.color != 'auto')
                         return serie.lineStyle.color;
@@ -327,7 +327,7 @@
             _this.circleGroup = circleGroup;
         },
         _brushRender: function () {
-            this.lineGroup.attr('clip-path','url(#xc-clip-main-path)');
+            this.lineGroup.attr('clip-path', 'url(#xc-clip-main-path)');
         },
         ready: function () {
             this.__legendReady();
@@ -427,10 +427,10 @@
                     } else {
                         // 首先将不显示的圆点全部隐藏
                         _this.circle.style('display', function () {
-                                if (!this.circleDisplay) {
-                                    return 'none';
-                                }
-                            })
+                            if (!this.circleDisplay) {
+                                return 'none';
+                            }
+                        })
                             .classed('xc-tooltip-circle', false);
 
                         // 将其他circle都变小
@@ -441,10 +441,10 @@
                         // 判断如果是 display:none; 显示为display:block;
                         var circle = _this.circleGroup.selectAll('circle:nth-child(' + (sectionNumber + 1) + ')');
                         circle.style('display', function () {
-                                if (!this.circleDisplay) {
-                                    return 'block';
-                                }
-                            })
+                            if (!this.circleDisplay) {
+                                return 'block';
+                            }
+                        })
                             .classed('xc-tooltip-circle', true)
                             .attr('r', function () {
                                 return this.circleRadius * 1.2;
@@ -468,10 +468,10 @@
                         _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
                     } else {
                         _this.circle.style('display', function () {
-                                if (!this.circleDisplay) {
-                                    return 'none';
-                                }
-                            })
+                            if (!this.circleDisplay) {
+                                return 'none';
+                            }
+                        })
                             .classed('xc-tooltip-circle', false);
                     }
                 })
@@ -492,8 +492,8 @@
             }
 
         },
-        _brushReady:function () {
-            this.on('brushChange.line',function (domain) {
+        _brushReady: function () {
+            this.on('brushChange.line', function (domain) {
                 // scale.domain(domain);
                 this.render('linear', 0);
             }.bind(this));
