@@ -81,7 +81,6 @@
         render: function (animationEase, animationTime) {
             if (this.isXAxis) {
                 this.__drawAxis(animationEase, animationTime);
-                this.fire("xAxisReady");
                 return true;
             }
 
@@ -170,6 +169,7 @@
             this._tooltipReady();
             this._lengendReady();
             this.isXAxis && this._brushReady();
+            this.isXAxis && this.fire("xAxisReady");
 
         },
         _tooltipReady: function () {

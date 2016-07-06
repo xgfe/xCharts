@@ -38,16 +38,21 @@
         },
         init: function (messageCenter, config) {
             // 先占位,等坐标轴完成后再绘制时间刷
-            var brushHeight = 30;
 
-            this.margin.bottom += brushHeight + 10;
+            this.brushConfig = utils.merage(defaultConfig(),config.brush);
+
+            this.margin.bottom += this.brushConfig.brushHeight + 10;
 
         },
         render: function () {
+
             var xScale = this.messageCenter.xAxisScale[0];
             xScale = xScale.copy();
             var brush = d3.svg.brush()
                 .x(xScale);
+
+            brush.extent(initExtent(this,xScale.domain()));
+
             var translateX = 0;
             var translateY = this.messageCenter.originalHeight - this.margin.bottom;
             var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
@@ -91,105 +96,71 @@
 
         },
         ready: function () {
-            var _this = this;
             var brush = this.brush;
-            this.brush.on('brush',function(){
-                var domain = brush.extent();
-                _this.fire('brushChange',domain);
-            });
+            brushChange = brushChange.bind(this,brush);
+            this.brush.on('brush',brushChange);
+            // 手动通知别人刷新一次
+            brushChange();
         }
     });
+
+    function brushChange(brush){
+        var domain = brush.extent();
+        this.fire('brushChange',domain);
+    }
+
+    // 设置时间刷初始值
+    function initExtent(ctx,domain) {
+        var length = domain[1]-domain[0];
+        var minDomain = parseFloat(ctx.brushConfig.domain[0]);
+        var maxDomain = parseFloat(ctx.brushConfig.domain[1]);
+
+        var minTime = domain[0].valueOf() + minDomain/100*length;
+        var maxTime = domain[0].valueOf() + maxDomain/100*length;
+        console.log([
+            new Date(minTime),
+            new Date(maxTime)
+        ])
+        return [
+            new Date(minTime),
+            new Date(maxTime)
+        ]
+    }
 
     function defaultConfig() {
 
         /**
-         * guides配置项
-         * @var guides
+         * brush配置项
+         * @var brush
          * @type Object
          * @extends xCharts
-         * @description 辅助线配置项,注意只有在坐标系存在的情况下才存在
+         * @description 时间轴特有的时间刷
          */
         return {
             /**
              * @var show
              * @type Boolean
-             * @extends xCharts.guides
+             * @extends xCharts.brush
              * @default true
-             * @description 控制辅助线是否显示
+             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
              */
             show: true,
             /**
-             * @var lineStyle
-             * @type Object
-             * @extends xCharts.guides
-             * @description 两条直线样式控制
+             * @var domain
+             * @type Array
+             * @extends xCharts.brush
+             * @default ['90%','100%']
+             * @description 设置时间刷的初始值,只支持百分比的形式
              */
-            lineStyle: {
-                /**
-                 * @var color
-                 * @type String
-                 * @extends xCharts.guides.lineStyle
-                 * @default '#a2a2a2'
-                 * @description 辅助线颜色
-                 */
-                color: '#a2a2a2',
-                /**
-                 * @var width
-                 * @type Number
-                 * @extends xCharts.guides.lineStyle
-                 * @default '#a2a2a2'
-                 * @description 辅助线宽度
-                 */
-                width: 1,
-                /**
-                 * @var dasharray
-                 * @type Number
-                 * @extends xCharts.guides.lineStyle
-                 * @default 5
-                 * @description 数字越大,虚线越长
-                 */
-                dasharray: 5
-            },
+            domain:['90%','100%'],
             /**
-             * @var textStyle
-             * @type Object
-             * @extends xCharts.guides
-             * @description 文字样式控制
+             * @var brushHeight
+             * @type Number
+             * @extends xCharts.brush
+             * @default 30
+             * @description 设置时间刷的高
              */
-            textStyle: {
-                /**
-                 * @var color
-                 * @type String
-                 * @extends xCharts.guides.textStyle
-                 * @default '#a2a2a2'
-                 * @description 文字颜色
-                 */
-                color: '#a2a2a2',
-                /**
-                 * @var fontSize
-                 * @type Number
-                 * @extends xCharts.guides.textStyle
-                 * @default 14
-                 * @description 文字大小
-                 */
-                fontSize: 14,
-                /**
-                 * @var xFormat
-                 * @type Function
-                 * @extends xCharts.guides.textStyle
-                 * @default Loop
-                 * @description x轴文字格式化
-                 */
-                xFormat: utils.loop,
-                /**
-                 * @var yFormat
-                 * @type Function
-                 * @extends xCharts.guides.textStyle
-                 * @default Loop
-                 * @description y轴文字格式化
-                 */
-                yFormat: utils.loop,
-            }
+            brushHeight: 30
         }
     }
 
