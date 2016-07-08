@@ -81,11 +81,12 @@
         render: function (animationEase, animationTime) {
             if (this.isXAxis) {
                 this.__drawAxis(animationEase, animationTime);
+                this.fire("xAxisRender");
                 return true;
             }
 
             // Y轴等待X轴画完,因为网格线不等待X轴计算margin完毕的话,可能会出现超出边界的情况
-            this.on("xAxisReady.yAxis", function () {
+            this.on("xAxisRender.yAxis", function () {
                 this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right; //计算剩余容器宽
                 this.__drawAxis(animationEase, animationTime);
             }.bind(this));
@@ -99,11 +100,25 @@
                 if (!config.show) break; //不显示坐标
 
                 var scale = scales[i];
+
+                var axis;
+
+                switch (config.position){
+                    case 'left':
+                        axis = d3.axisLeft(scale);
+                        break;
+                    case 'right':
+                        axis = d3.axisRight(scale);
+                        break;
+                    case 'bottom':
+                        axis = d3.axisBottom(scale);
+                        break;
+                    default :
+                        axis = d3.axisTop(scale);
+                }
+
                 // d3内置函数,生成axis
-                var axis = d3.svg.axis()
-                    .scale(scale)
-                    .outerTickSize(0)
-                    .orient(config.position)
+                axis.tickSizeOuter(0)
                     .tickFormat(config.tickFormat);
 
                 if (scale.scaleType !== 'time') {
@@ -115,25 +130,26 @@
                 var innerTickWidth = 0;
                 if (!this.isXAxis && i === 0) {
                     innerTickWidth = config.grid.show ? -this.width : 0;
-                    axis.innerTickSize(innerTickWidth);
+                    axis.tickSizeInner(innerTickWidth);
                 } else if (i === 0) {
                     innerTickWidth = config.grid.show ? -this.height : 0;
-                    axis.innerTickSize(innerTickWidth);
+                    axis.tickSizeInner(innerTickWidth);
                     axis.tickPadding(10);
                     axis.tickValues(this.showDomainList[i]);
                 } else {
                     // 第二个根Y轴
-                    axis.innerTickSize(0);
+                    axis.tickSizeInner(0);
                 }
 
                 //添加<g>
                 var axisGroup = this.main.selectAll(".xc-axis." + type + '-' + i).data([config]);
 
 
-                axisGroup.enter().append('g')
+                axisGroup = axisGroup.enter().append('g')
                     .attr('class', 'xc-axis ' + type + ' ' + type + '-' + i)
                     .attr('fill', 'none')
-                    .attr('stroke', '#000');
+                    .attr('stroke', '#000')
+                    .merge(axisGroup);
 
                 // 柱状图的网格要特殊处理
                 if (scale.scaleType === "barCategory") {
@@ -206,7 +222,8 @@
                 // 给个标识，这样就不用去计算margin的值
                 _this.legendRefresh = true;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
+                // _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
+                _this.render(d3.easeLinear, _this.config.animation.animationTime);
                 _this.legendRefresh = false;
             });
         },
@@ -234,7 +251,7 @@
         scales.forEach(function (scale) {
             if (scale.scaleType === "value" || scale.scaleType === "time") scale.range(range);
             else if (scale.scaleType === "barCategory") scale.rangeRoundBands(range, 0, 0.1);
-            else if (scale.scaleType === "category")  scale.rangePoints(range);
+            else if (scale.scaleType === "category")  scale.range(range);
 
         });
     }
@@ -333,14 +350,14 @@
         }
 
         if (isBar(this.config.series)) {
-            var scale = d3.scale.ordinal()
+            var scale = d3.scaleBand ()
                 .domain(singleConfig.data);
 
 
             scale.scaleType = "barCategory";
 
         } else {
-            var scale = d3.scale.ordinal()
+            var scale = d3.scalePoint ()
                 .domain(singleConfig.data);
 
 
@@ -406,7 +423,7 @@
         }
 
 
-        var scale = d3.scale.linear()
+        var scale = d3.scaleLinear()
             .domain(domain);
         scale.scaleType = "value";
 
@@ -448,7 +465,7 @@
      */
     function timeAxis(singleConfig, idx) {
 
-        var scale = d3.time.scale()
+        var scale = d3.scaleTime()
             .domain(d3.extent(singleConfig.data, function (d) {
                 return +new Date(d);
             }));

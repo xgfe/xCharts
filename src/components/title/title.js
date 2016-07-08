@@ -63,15 +63,17 @@
             var title = _this.svg.selectAll('.xc-title')
                 .data([_this.titleConfig]);
 
-            title.enter().append('text')
-                .attr('class', 'xc-title');
+            title = title.enter().append('text')
+                .attr('class', 'xc-title')
+                .merge(title);
 
             //添加主标题
             var titleText = title.selectAll('.xc-title-text')
                 .data([_this.titleConfig]);
 
-            titleText.enter().append('tspan')
-                .attr('class', 'xc-title-text');
+            titleText = titleText.enter().append('tspan')
+                .attr('class', 'xc-title-text')
+                .merge(titleText)
 
             titleText.text(function (config) {
 
@@ -91,8 +93,9 @@
             var subtitleText = title.selectAll('.xc-title-subtext')
                 .data([_this.titleConfig]);
 
-            subtitleText.enter().append('tspan')
-                .attr('class', 'xc-title-subtext');
+            subtitleText = subtitleText.enter().append('tspan')
+                .attr('class', 'xc-title-subtext')
+                .merge(subtitleText);
 
             subtitleText.text(function (config) {
 

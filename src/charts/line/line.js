@@ -41,10 +41,12 @@
             var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
 
             var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
-            lineGroup.enter().append('g').attr('class', 'xc-line-group')
-            lineGroup.exit().remove();
+            lineGroup = lineGroup.enter().append('g').attr('class', 'xc-line-group')
+                .merge(lineGroup)
 
-            var lineScale = d3.svg.line()
+                // .exit().remove().merage(lineGroup);
+
+            var lineScale = d3.line()
                 .x(function (d) {
                     return d.x;
                 })
@@ -52,7 +54,7 @@
                     return d.y;
                 });
             var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series)
-            linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none');
+            linePath = linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none').merge(linePath);
             linePath.exit().remove();
             linePath.attr('stroke', function (d) {
                 if (d.lineStyle.color != 'auto')
@@ -108,7 +110,7 @@
 
                     return function (t) {
                         var interpolateData = interpolate(t);
-                        lineScale.interpolate(serie.interpolate);
+                        lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
                         var path = lineScale(interpolateData);
                         if (t == 1) {
                             ctx.linePath = path;
@@ -127,10 +129,10 @@
             var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
 
             var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
-            areaGroup.enter().append('g').attr('class', 'xc-area-group');
+            areaGroup = areaGroup.enter().append('g').attr('class', 'xc-area-group').merge(areaGroup);
             areaGroup.exit().remove();
             var areaPath = areaGroup.selectAll('.xc-line-area-path').data(_this.series);
-            areaPath.enter().append('path').attr('class', 'xc-line-area-path').attr('stroke', 'none');
+            areaPath = areaPath.enter().append('path').attr('class', 'xc-line-area-path').attr('stroke', 'none').merge(areaPath);
             areaPath.exit().remove();
             areaPath.attr('fill', function (d) {
                 if (d.areaStyle.color == 'auto') {
@@ -215,9 +217,9 @@
             var showDataList = _this.messageCenter.showDomainList[0];
             var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
             var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
-            circleGroup.enter().append('g').attr('class', function (serie) {
+            circleGroup = circleGroup.enter().append('g').attr('class', function (serie) {
                 return 'xc-circle-group';
-            });
+            }).merge(circleGroup);
             circleGroup.exit().remove();
 
             circleGroup.attr('id', function (d) {
@@ -233,10 +235,14 @@
             var circle = circleGroup.selectAll('circle').data(function (d) {
                 return d.data;
             });
-            circle.enter().append('circle').attr('class', function (d, i) {
+            circle = circle.enter().append('circle').attr('class', function (d, i) {
                 return 'xc-point xc-point-' + i;
-            });
+            }).merge(circle);
             circle.exit().remove();
+
+            // circle.exit().remove();
+
+
             circle.style("transition", transitionStr)
                 .style("opacity", function (d) {
                     if (typeof d !== 'object') {
@@ -388,7 +394,8 @@
                 var series = _this.config.series;
                 var animationConfig = _this.config.animation;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+                // _this.render(animationConfig.animationEase, animationConfig.animationTime);
+                _this.render(d3.easeLinear, animationConfig.animationTime);
             });
         },
         __tooltipReady: function () {
@@ -396,7 +403,7 @@
 
             if (!this.config.tooltip || this.config.tooltip.show === false) return;//未开启tooltip
 
-            if (this.config.tooltip.trigger !== 'axis') {
+            if (this.config.tooltip.trigger === 'axis' || this.config.tooltip.trigger === undefined) {
 
                 this.on('tooltipSectionChange.line', function (sectionNumber, callback, format) {
 
@@ -669,14 +676,14 @@
      * @param data
      */
     function area(data, serie) {
-        var lineScale = d3.svg.line()
+        var lineScale = d3.line()
             .x(function (d) {
                 return d.x;
             })
             .y(function (d) {
                 return d.y;
             });
-        var line0Scale = d3.svg.line()
+        var line0Scale = d3.line()
             .x(function (d) {
                 return d.x;
             })
@@ -685,9 +692,10 @@
             });
 
 
-        lineScale.interpolate(serie.interpolate);
+        lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
         var path = lineScale(data);
-        line0Scale.interpolate(serie.y0Interpolate);
+        // line0Scale.interpolate(serie.line0Scale);
+        line0Scale.curve(serie.y0Interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
         var path0 = line0Scale(data.reverse());
         data.reverse()//再次翻转，恢复原状
         //serie.areaPath = joinPath(serie);
