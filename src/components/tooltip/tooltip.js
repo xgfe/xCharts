@@ -62,7 +62,7 @@
              */
 
             this.tooltip = this.div.append('div')
-                .attr('class', 'xc-tooltip');
+                .attr('class', 'xc-tooltip')
         },
         ready: function () {
             var _this = this;
@@ -108,7 +108,7 @@
         showTooltip: function () {
             var _this = this;
             _this.tooltipShow = true;
-            _this.tooltip.style({visibility: 'visible'});
+            _this.tooltip.style('visibility', 'visible');
             // 显示线条
             if (this.tooltipConfig.trigger === 'axis') _this.axisLine.attr('opacity', 1);
 
@@ -119,7 +119,7 @@
             _this.tooltipShow = false;
 
             // 隐藏方框
-            _this.tooltip.style({visibility: 'hidden'});
+            _this.tooltip.style('visibility', 'hidden');
 
             // 隐藏线条
             if (this.tooltipConfig.trigger === 'axis' && _this.axisLine) _this.axisLine.attr('opacity', 0);
@@ -159,7 +159,7 @@
                 tooltipY += offsetY;
             }
 
-            _this.tooltip.style({transform: "translate(" + tooltipX + "px," + tooltipY + "px)"})
+            _this.tooltip.style('transform',"translate(" + tooltipX + "px," + tooltipY + "px)")
 
         },
         setTooltipHtml: function (html) {
@@ -193,11 +193,12 @@
         // 添加一根竖线
         var axisLine = this.main.selectAll('.xc-tooltip-line')
             .data([this]);
-        axisLine.enter().append('line')
+        axisLine = axisLine.enter().append('line')
             .attr('class', 'xc-tooltip-line')
             .attr('stroke', this.tooltipConfig.lineColor)
             .attr('stroke-width', this.tooltipConfig.lineWidth)
-            .attr('opacity', 0);
+            .attr('opacity', 0)
+            .merge(axisLine);
 
         return axisLine;
     }

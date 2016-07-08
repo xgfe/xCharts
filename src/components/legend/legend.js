@@ -51,8 +51,9 @@
             // 添加g.xc-legend-group
             var legendGroup = _this.svg.selectAll('.xc-legend-group')
                 .data([_this]);
-            legendGroup.enter().append('g')
-                .attr('class', 'xc-legend-group');
+            legendGroup = legendGroup.enter().append('g')
+                .attr('class', 'xc-legend-group')
+                .merge(legendGroup);
 
             // 设置group的偏移值
             legendGroup.attr('transform', "translate(" + groupPosition + ")");
@@ -61,11 +62,13 @@
             var itemList = legendGroup.selectAll('.xc-legend-item')
                 .data(_this.legendSeries);
 
-            itemList.enter().append('g')
-                .attr("class", "xc-legend-item");
+            itemList = itemList.enter().append('g')
+                .attr("class", "xc-legend-item")
+                .merge(itemList);
 
             // 如果动态更新数据时可能会出现item减少的情况，这里去掉多余的
-            itemList.exit().remove();
+            itemList = itemList.exit().remove()
+                .merge(itemList);
 
             itemList.attr('transform', function (serie) {
 
