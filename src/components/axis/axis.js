@@ -228,11 +228,16 @@
             });
         },
         _brushReady:function () {
-            this.on('brushChange.axis',function (domain) {
-                // console.log(domain)
-                var scale = this.scales[0];
-                scale.domain(domain);
-                this.__drawAxis('linear', 0);
+
+            var scale = this.scales[0].copy();
+            scale.range([0,1]);
+            this.on('brushChange.axis',function (selection) {
+                var domain = [scale.invert(selection[0]),scale.invert(selection[1])];
+
+                this.scales[0].domain(domain);
+
+                // scale.domain(domain);
+                this.__drawAxis(d3.easeLinear, 0);
             }.bind(this));
         },
         // 给散点图格式化值用
