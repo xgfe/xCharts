@@ -168,7 +168,8 @@ xCharts.prototype.extend({
         this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
 
         var animationTime = this.refreshAnimationTime;
-        var animationEase = this.refreshAnimationEase;
+        // var animationEase = this.refreshAnimationEase;
+        var animationEase = d3.easeLinear;
 
         //第二步 通知已有组件刷新
         var components = this.components, charts = this.charts;
