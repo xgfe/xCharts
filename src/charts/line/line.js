@@ -500,9 +500,10 @@
 
         },
         _brushReady: function () {
+
             this.on('brushChange.line', function (domain) {
                 // scale.domain(domain);
-                this.render('linear', 0);
+                this.render(d3.easeLinear, 0);
             }.bind(this));
         }
 
@@ -614,10 +615,9 @@
                             data.idx = serieIdx;
                             data._serie = serie;
                             return data;
-                        })
+                        });
                         oldData = serie.data;
                     }
-                    ;
                     stackSeries.push(serie);
                 });
 

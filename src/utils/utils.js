@@ -35,6 +35,7 @@
     utils['calcTextWidth'] = calcTextWidth;
     utils['throttle'] = throttle;
     utils['debounce'] = debounce;
+    utils['toFixed'] = toFixed;
 
     /**
      * 复制函数
@@ -245,10 +246,10 @@
 
     function debounce(fn, delay, immediate) {
         return throttle(fn, delay, immediate, true);
-    };
+    }
 
-    function getMousePoint(event){
-
+    function toFixed(number,digit){
+        return Math.round(number * Math.pow(10, digit)) / Math.pow(10, digit);
     }
 
 }(xCharts));

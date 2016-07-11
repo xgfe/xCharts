@@ -308,10 +308,17 @@
     }
 
     function getSectionLength(data){
-        var domain = this.brushDomain || [data[0],data[data.length-1]];
+        var domain = this.brushDomain || [0,1];
+        var minData = data[0];
+        var maxData = data[data.length-1];
+
+        var extent = [
+            (maxData-minData)*domain[0] + minData,
+            (maxData-minData)*domain[1] + minData
+        ];
         var length = 0,offset;
         for(var i=0;i<data.length;i++){
-            if(data[i] <= domain[1] && data[i] >= domain[0]){
+            if(data[i] <= extent[1] && data[i] >= extent[0]){
                 length++;
 
                 if(offset === undefined){

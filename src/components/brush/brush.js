@@ -28,30 +28,23 @@
     brush.prototype.extend = utils.extend;
 
     brush.prototype.extend({
-        start: function () {
-            var _this = this;
-            this.init(this.messageCenter, this.config, this.type);
-            this.on('xAxisReady.brush', function () {
-                _this.render();
-                _this.ready();
-            });
-        },
         init: function (messageCenter, config) {
             // 先占位,等坐标轴完成后再绘制时间刷
 
-            this.brushConfig = utils.merage(defaultConfig(),config.brush);
+            this.brushConfig = utils.merage(defaultConfig(), config.brush);
 
-            this.margin.bottom += this.brushConfig.brushHeight + 10;
+            this.margin.bottom += this.brushConfig.brushHeight + 20;
 
+            var messageCenter = this.messageCenter;
+            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
         },
         render: function () {
 
-            var xScale = this.messageCenter.xAxisScale[0];
-            xScale = xScale.copy();
-            var brush = d3.svg.brush()
-                .x(xScale);
+            var brush = d3.brushX();
 
-            brush.extent(initExtent(this,xScale.domain()));
+            brush.extent(initExtent(this));
+
+            // brush.handleSize(50)
 
             var translateX = 0;
             var translateY = this.messageCenter.originalHeight - this.margin.bottom;
@@ -59,72 +52,106 @@
             var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
 
             var group = this.main.selectAll('g.xc-brush').data([this]);
-            group.enter().append('g')
-                .attr('class', 'xc-brush');
+            group = group.enter().append('g')
+                .attr('class', 'xc-brush')
+                .merge(group);
 
             group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
-                .call(brush)
+                .call(brush);
 
-            group.selectAll('rect.background')
-                .style('visibility', 'visible')
+
+            brush.move(group, initMove(this));
+            // group.selectAll('rect.background')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#e0e0e0')
+            //     .attr('opacity', 0.5)
+            //
+            // group.selectAll('rect')
+            //     .attr('height', 25)
+            //     .attr('fill', '#e0e0e0');
+            //
+            // group.selectAll('.resize rect')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#a2a2a2')
+            //     .attr('width', 10);
+
+            group.selectAll('rect.overlay')
                 .attr('fill', '#e0e0e0')
-                .attr('opacity', 0.5)
+                .attr('opacity', 0.5);
 
-            group.selectAll('rect')
-                .attr('height', 25)
-                .attr('fill', '#e0e0e0');
-
-            group.selectAll('.resize rect')
-                .style('visibility', 'visible')
-                .attr('fill', '#a2a2a2')
-                .attr('width', 10);
+            group.selectAll('rect.handle')
+                .attr('fill', '#777');
 
             this.brush = brush;
-            this.xScale = xScale;
 
             //添加clipath路径
             var defGroup = this.svg.selectAll('defs').data([this]);
-            defGroup.enter().append('defs');
+            defGroup = defGroup.enter().append('defs').merge(defGroup);
 
             var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
-            clip.enter().append("clipPath").attr('id','xc-clip-main-path');
+            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
 
             var rect = clip.selectAll('rect').data([this]);
-            rect.enter().append('rect');
-            rect.attr('width',width)
-                .attr('height',height);
+            rect = rect.enter().append('rect').merge(rect);
+            rect.attr('width', width)
+                .attr('height', height);
 
         },
         ready: function () {
             var brush = this.brush;
-            brushChange = brushChange.bind(this,brush);
-            this.brush.on('brush',brushChange);
-            // 手动通知别人刷新一次
-            brushChange();
+            brushChange = brushChange(this);
+            this.brush.on('brush', brushChange);
+
+            this.on('xAxisReady.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
         }
     });
 
-    function brushChange(brush){
-        var domain = brush.extent();
-        this.fire('brushChange',domain);
+    function initMove(ctx) {
+        var min = parseFloat(ctx.brushConfig.domain[0]);
+        var max = parseFloat(ctx.brushConfig.domain[1]);
+
+        if (isNaN(min) || isNaN(max)) {
+            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
+            return [0, 0];
+        }
+
+        var width = ctx.width;
+
+        var initMove = [
+            width * min / 100,
+            width * max / 100
+        ];
+
+        ctx.initBrushSelection = [
+            utils.toFixed(initMove[0] / width, 3),
+            utils.toFixed(initMove[1] / width, 3)
+        ];
+
+        return initMove;
     }
 
-    // 设置时间刷初始值
-    function initExtent(ctx,domain) {
-        var length = domain[1]-domain[0];
-        var minDomain = parseFloat(ctx.brushConfig.domain[0]);
-        var maxDomain = parseFloat(ctx.brushConfig.domain[1]);
+    function brushChange(ctx) {
+        var width = ctx.width;
+        return function () {
+            var domain = d3.event.selection;
+            var min = utils.toFixed(domain[0] / width, 3);
+            var max = utils.toFixed(domain[1] / width, 3);
 
-        var minTime = domain[0].valueOf() + minDomain/100*length;
-        var maxTime = domain[0].valueOf() + maxDomain/100*length;
-        console.log([
-            new Date(minTime),
-            new Date(maxTime)
-        ])
-        return [
-            new Date(minTime),
-            new Date(maxTime)
-        ]
+            ctx.fire('brushChange', [min, max]);
+        };
+
+        // console.log(domain)
+
+        // this.fire('brushChange',domain);
+    }
+
+
+    // 设置时间刷初始值
+    function initExtent(ctx) {
+        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
     }
 
     function defaultConfig() {
@@ -152,7 +179,7 @@
              * @default ['90%','100%']
              * @description 设置时间刷的初始值,只支持百分比的形式
              */
-            domain:['90%','100%'],
+            domain: ['90%', '100%'],
             /**
              * @var brushHeight
              * @type Number
