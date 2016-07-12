@@ -34,15 +34,16 @@
             var scatterGroup = _this.main.selectAll('.xc-scatter-group')
                 .data([1]);
 
-            scatterGroup.enter().append('g')
-                .attr('class', 'xc-scatter-group');
+            scatterGroup = scatterGroup.enter().append('g')
+                .attr('class', 'xc-scatter-group')
+                .merge(scatterGroup);
 
             var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
                 .data(_this.data);
 
             var transitionStr = "r " + animationTime + "ms linear,cx " + animationTime + "ms linear,cy " + animationTime + "ms linear";
 
-            scatterItem.enter().append('circle');
+            scatterItem = scatterItem.enter().append('circle').merge(scatterItem);
             scatterItem.exit().remove();
 
             scatterItem.style("transition", transitionStr)

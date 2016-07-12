@@ -25,8 +25,10 @@
             var funnelGroup = _this.main.selectAll('.xc-funnel-group')
                 .data(_this.series);
 
-            funnelGroup.enter().append('g')
-                .attr('class', 'xc-funnel-group');
+            funnelGroup = funnelGroup.enter().append('g')
+                .attr('class', 'xc-funnel-group')
+                .merge(funnelGroup);
+
             funnelGroup.exit().remove();//updateSeries时，删除多余的组
 
             funnelGroup.attr('transform', function (serie) {
@@ -36,8 +38,9 @@
             var funnelSection = funnelGroup.selectAll('.xc-funnel-section').data(function (serie) {
                 return serie.data;
             });
-            funnelSection.enter().append('path')
-                .attr('class', 'xc-funnel-section');
+            funnelSection = funnelSection.enter().append('path')
+                .attr('class', 'xc-funnel-section')
+                .merge(funnelSection)
 
             funnelSection.attr('fill', function (d) {
                     return _this.getColor(d.idx);
@@ -70,9 +73,10 @@
 
             var transitionStr = "opacity " + animationConfig.animationTime + "ms linear";
 
-            funnelLabel.enter().append('g')
+            funnelLabel = funnelLabel.enter().append('g')
                 .attr('class', 'xc-funnel-label')
-                .style("transition", transitionStr);
+                .style("transition", transitionStr)
+                .merge(funnelLabel);
 
             funnelLabel.exit().remove();
             funnelLabel.attr('opacity', function (d) {
@@ -107,8 +111,10 @@
                         return [];
                 });
 
-            labelLine.enter().append('path')
-                .attr('class', 'xc-funnel-label-line');
+            labelLine = labelLine.enter().append('path')
+                .attr('class', 'xc-funnel-label-line')
+                .merge(labelLine);
+
             labelLine.attr('d', function (d) {
                     return 'M0,0 L' + d.labelWidth + ',0';
                 })
@@ -124,8 +130,9 @@
                         return [];
                 });
 
-            labelText.enter().append('text')
-                .attr('class', 'xc-funnel-label-text');
+            labelText = labelText.enter().append('text')
+                .attr('class', 'xc-funnel-label-text')
+                .merge(labelText);
             labelText.text(function (d) {
                     return d.name
                 })
@@ -157,7 +164,8 @@
                 var series = legendClickSeries(_this.config.series, nameList);
                 var animationConfig = _this.config.animation;
                 _this.init(_this.series, _this.config, _this.type, series);
-                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+                // _this.render(animationConfig.animationEase, animationConfig.animationTime);
+                _this.render(d3.easeLinear, animationConfig.animationTime);
             });
         },
         __tooltipReady: function () {

@@ -52,20 +52,22 @@
     function __renderLine() {
         var guidesConfig = this.guidesConfig;
         var xLine = this.svg.selectAll('line.xc-scatter-line-x').data([this]);
-        xLine.enter().append('line')
+        xLine = xLine.enter().append('line')
             .attr('class', 'xc-scatter-line-x')
             .style('pointer-events', 'none')
             .attr('stroke-width',guidesConfig.lineStyle.width)
             .attr('stroke',guidesConfig.lineStyle.color)
-            .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray);
+            .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray)
+            .merge(xLine);
 
         var yLine = this.svg.selectAll('line.xc-scatter-line-y').data([this])
-        yLine.enter().append('line')
+        yLine = yLine.enter().append('line')
             .attr('class', 'xc-scatter-line-y')
             .style('pointer-events', 'none')
             .attr('stroke-width',guidesConfig.lineStyle.width)
             .attr('stroke',guidesConfig.lineStyle.color)
             .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray)
+            .merge(yLine)
 
 
         this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
