@@ -2,10 +2,6 @@
  * Created by liuyang on 15/10/23.
  * TODO 当出现不支持的参数时，忽略还是报错关闭绘制
  */
-
-
-
-var d3 = window.d3;
 var id = 1;
 var mobileMode = isMobile();
 

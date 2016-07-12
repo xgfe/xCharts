@@ -40,6 +40,16 @@ gulp.task('build-js', function () {
         ])
         .pipe(concat('./xCharts.js'))
         .pipe(umd({
+            dependencies:function(){
+              return [
+                  {
+                      amd:"d3",
+                      param:'d3',
+                      global:'d3',
+                      cjs:'d3'
+                  }
+              ]
+            },
             exports: function () {
                 return 'xCharts';
             },
