@@ -5,10 +5,11 @@
         });
     } else if (typeof exports === 'object') {
         module.exports = factory(<%= cjs %>);
+    } else {
+        root.<%= namespace %> = factory(<%= global %>);
     }
-    root.<%= namespace %> = factory(<%= global %>);
 
 }(this, function(<%= param %>) {
-<%= contents %>
+    <%= contents %>
     return <%= exports %>;
 }));
