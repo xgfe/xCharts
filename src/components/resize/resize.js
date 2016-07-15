@@ -44,6 +44,9 @@
     resize.prototype.extend({
         init:function(messageCenter, config, type, series){
             this.config = utils.merage(defaultConfig,config[type]);
+
+            this.config.animationEase = utils.stringToD3Ease(this.config.animationEase);
+
             messageCenter.refreshAnimationEase = this.config.animationEase;
             messageCenter.refreshAnimationTime = this.config.animationTime;
         },
@@ -101,9 +104,9 @@
          * @type String
          * @description 当容器改变时，刷新动画
          * @extends xCharts.resize
-         * @default 'linear'
+         * @default 'easeLinear'
          */
-        animationEase:'linear',
+        animationEase:'easeLinear',
         /**
          * @var animationEase
          * @type Number

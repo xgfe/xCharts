@@ -394,8 +394,8 @@
                 var series = _this.config.series;
                 var animationConfig = _this.config.animation;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                // _this.render(animationConfig.animationEase, animationConfig.animationTime);
-                _this.render(d3.easeLinear, animationConfig.animationTime);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+                // _this.render(d3.easeLinear, animationConfig.animationTime);
             });
         },
         __tooltipReady: function () {

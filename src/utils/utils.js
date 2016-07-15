@@ -36,6 +36,7 @@
     utils['throttle'] = throttle;
     utils['debounce'] = debounce;
     utils['toFixed'] = toFixed;
+    utils['stringToD3Ease'] = stringToD3Ease;
 
     /**
      * 复制函数
@@ -250,6 +251,21 @@
 
     function toFixed(number,digit){
         return Math.round(number * Math.pow(10, digit)) / Math.pow(10, digit);
+    }
+
+
+    /**
+     * 将字符串转化为d3 的缓存函数
+     * @param ease
+     * @returns {*}
+     */
+    function stringToD3Ease(ease){
+        var d3Ease = d3[ease];
+        if(d3Ease === undefined){
+            console.warn('animation.animationEase='+ease+' is not defined');
+            d3Ease = d3.easeLinear;
+        }
+        return d3Ease;
     }
 
 }(xCharts));
