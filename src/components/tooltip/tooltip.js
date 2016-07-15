@@ -308,6 +308,14 @@
     }
 
     function getSectionLength(data){
+
+        if(this.messageCenter.brush !== true){
+            return {
+                length:data.length,
+                offset:0
+            }
+        }
+
         var domain = this.brushDomain || [0,1];
         var minData = data[0];
         var maxData = data[data.length-1];
@@ -316,7 +324,7 @@
             (maxData-minData)*domain[0] + minData,
             (maxData-minData)*domain[1] + minData
         ];
-        var length = 0,offset;
+        var length = 0,offset=0;
         for(var i=0;i<data.length;i++){
             if(data[i] <= extent[1] && data[i] >= extent[0]){
                 length++;

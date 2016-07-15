@@ -445,7 +445,7 @@ var animationConfig = {
     /**
      * @var animationEase
      * @type String
-     * @description 动画类型
+     * @description 动画类型,注意:暂时不支持配置
      * @extends xCharts.animation
      * @default linear
      */

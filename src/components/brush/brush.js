@@ -31,6 +31,8 @@
         init: function (messageCenter, config) {
             // 先占位,等坐标轴完成后再绘制时间刷
 
+            this.messageCenter.brush = true;
+
             this.brushConfig = utils.merage(defaultConfig(), config.brush);
 
             this.margin.bottom += this.brushConfig.brushHeight + 20;

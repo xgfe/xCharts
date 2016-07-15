@@ -346,9 +346,9 @@
                 lineUse = _this.main.selectAll('.xc-line-use').data([_this]);
                 areaUse = _this.main.selectAll('.xc-line-area-use').data([_this]);
                 circleUse = _this.main.selectAll('.xc-circle-use').data([_this]);
-                lineUse.enter().append('use').attr('class', "xc-line-use");
-                areaUse.enter().append('use').attr('class', "xc-line-area-use");
-                circleUse.enter().append('use').attr('class', "xc-circle-use");
+                lineUse.enter().append('use').attr('class', "xc-line-use").attr('clip-path', 'url(#xc-clip-main-path)');
+                areaUse.enter().append('use').attr('class', "xc-line-area-use").attr('clip-path', 'url(#xc-clip-main-path)');
+                circleUse.enter().append('use').attr('class', "xc-circle-use").attr('clip-path', 'url(#xc-clip-main-path)');
 
                 var serie = getSeries(name);
                 if (!serie) return;
@@ -500,7 +500,6 @@
 
         },
         _brushReady: function () {
-
             this.on('brushChange.line', function (domain) {
                 // scale.domain(domain);
                 this.render(d3.easeLinear, 0);
