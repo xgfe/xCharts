@@ -324,7 +324,7 @@
             (maxData-minData)*domain[0] + minData,
             (maxData-minData)*domain[1] + minData
         ];
-        var length = 0,offset=0;
+        var length = 0,offset;
         for(var i=0;i<data.length;i++){
             if(data[i] <= extent[1] && data[i] >= extent[0]){
                 length++;
