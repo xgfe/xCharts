@@ -164,8 +164,7 @@
                 var series = legendClickSeries(_this.config.series, nameList);
                 var animationConfig = _this.config.animation;
                 _this.init(_this.series, _this.config, _this.type, series);
-                // _this.render(animationConfig.animationEase, animationConfig.animationTime);
-                _this.render(d3.easeLinear, animationConfig.animationTime);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
             });
         },
         __tooltipReady: function () {

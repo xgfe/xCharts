@@ -164,8 +164,8 @@ xCharts.prototype.extend({
         this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
 
         var animationTime = this.refreshAnimationTime;
-        // var animationEase = this.refreshAnimationEase;
-        var animationEase = d3.easeLinear;
+        var animationEase = this.refreshAnimationEase;
+        // var animationEase = d3.easeLinear;
 
         //第二步 通知已有组件刷新
         var components = this.components, charts = this.charts;
@@ -385,7 +385,9 @@ function defaultConfigMerage(config) {
     } else {
         this.config.animation = utils.merage(utils.copy(animationConfig), this.config.animation);
     }
+    this.config.animation.animationEase = utils.stringToD3Ease(this.config.animation.animationEase);
 }
+
 
 /**
  * 解除上一个图表的绑定事件
@@ -447,7 +449,7 @@ var animationConfig = {
      * @type String
      * @description 动画类型,注意:暂时不支持配置
      * @extends xCharts.animation
-     * @default linear
+     * @default easeLinear
      */
-    animationEase: 'linear'
+    animationEase: 'easeLinear'
 };

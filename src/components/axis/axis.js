@@ -222,8 +222,7 @@
                 // 给个标识，这样就不用去计算margin的值
                 _this.legendRefresh = true;
                 _this.init(_this.messageCenter, _this.config, _this.type, series);
-                // _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
-                _this.render(d3.easeLinear, _this.config.animation.animationTime);
+                _this.render(_this.config.animation.animationEase, _this.config.animation.animationTime);
                 _this.legendRefresh = false;
             });
         },
