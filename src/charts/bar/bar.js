@@ -45,7 +45,7 @@
             // TODO 这里暂时只考虑柱状图都在一个x轴和y轴上进行绘制，且x轴在下方
             for(var i=0;i<this.xAxisScale.length;i++) {
                 // TODO 这个判断条件是否靠谱待调研
-                if(typeof this.xAxisScale[i].rangeBand == 'function') {
+                if(this.xAxisScale[i].scaleType === 'barCategory') {
                     this.barXScale = this.xAxisScale[i];
                     break;
                 };
@@ -83,9 +83,9 @@
             }
         },
         getTooltipPosition: function (tickIndex) {
-            var rangeBand = this.barXScale.rangeBand(),
+            var rangeBand = this.barXScale.bandwidth(),
                 rangeBandNum = this.barXScale.domain().length,
-                xRange = this.barXScale.rangeExtent();
+                xRange = this.barXScale.range();
             var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
             return xRange[0] + outPadding + tickIndex*rangeBand + rangeBand/2;
         },
@@ -131,9 +131,9 @@
         });
     }
     function __getDefaultData() {
-        var rangeBand = this.barXScale.rangeBand(),
+        var rangeBand = this.barXScale.bandwidth(),
             rangeBandNum = this.barXScale.domain().length,
-            xRange = this.barXScale.rangeExtent(),
+            xRange = this.barXScale.range(),
             yRange = this.barYScale.range();
 
         this.xRange = xRange[1] - xRange[0];
@@ -174,7 +174,7 @@
         return rectGroupData;
     }
     function __changeRectsData() {
-        var rangeBand = this.barXScale.rangeBand();
+        var rangeBand = this.barXScale.bandwidth();
         // 定义同组矩形之间的间距
         var rectMargin = 10;
 
@@ -210,17 +210,19 @@
         var bar = this.main
             .selectAll('.xc-bar')
             .data([1]);
-        bar.enter()
+        bar = bar.enter()
             .append('g')
-            .classed('xc-bar', true);
+            .classed('xc-bar', true)
+            .merge(bar);
         return bar;
     }
     function __renderRectWrapper() {
         var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
             .data(this.rectsData);
-        rectWrapperList.enter()
+        rectWrapperList = rectWrapperList.enter()
             .append('g')
-            .classed('xc-bar-rectWrapper', true);
+            .classed('xc-bar-rectWrapper', true)
+            .merge(rectWrapperList);
         rectWrapperList.attr('transform', function(d) {
             return 'translate(' + d.x + ',' + d.y + ')';
         });
@@ -232,7 +234,7 @@
             .data(function(d) {
                 return d.rectsData;
             });
-        rectList.enter()
+        rectList = rectList.enter()
             .append('rect')
             .classed('xc-bar-rect', true)
             .attr('x', function(d) {
@@ -248,7 +250,8 @@
             })
             // 通过js设置rx和ry是因为
             .attr('rx', 5)
-            .attr('ry', 5);
+            .attr('ry', 5)
+            .merge(rectList);
         rectList.transition()
             .duration(animationTime)
             .ease(animationEase)
@@ -283,7 +286,7 @@
                 }
             }
             // 把对应的矩形透明度设成0.5
-            _this.rectList.forEach(function(rectArr) {
+            _this.rectList._groups.forEach(function(rectArr) {
                 d3.select(rectArr[idx])
                     .attr('fill-opacity', 0.5);
             });
@@ -301,7 +304,7 @@
                 }
             }
             // 把对应的矩形透明度的属性去掉
-            _this.rectList.forEach(function(rectArr) {
+            _this.rectList._groups.forEach(function(rectArr) {
                 d3.select(rectArr[idx])
                     .attr('fill-opacity', null);
             });
