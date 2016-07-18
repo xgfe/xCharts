@@ -147,7 +147,7 @@
         });
     }
     function __getPieData(data) {
-        var pieFunc = d3.layout.pie()
+        var pieFunc = d3.pie()
             .sort(null)
             .value(function(d, i) {
                 return d.value;
@@ -156,21 +156,21 @@
         return pieData;
     }
     function __getArcFunc(radius) {
-        var arcFunc = d3.svg.arc()
+        var arcFunc = d3.arc()
             .innerRadius(radius.innerRadius)
             .outerRadius(radius.outerRadius);
         return arcFunc;
     }
     function __getBigArcFunc(radius) {
         var distance = 10;
-        var bigArcFunc = d3.svg.arc()
+        var bigArcFunc = d3.arc()
             .innerRadius(radius.innerRadius)
             .outerRadius(radius.outerRadius + distance);
         return bigArcFunc;
     }
     function __getTextArcFunc(radius) {
         var mulriple = 1.1;
-        var textArcFunc = d3.svg.arc()
+        var textArcFunc = d3.arc()
             .innerRadius(radius.outerRadius * mulriple)
             .outerRadius(radius.outerRadius * mulriple);
         return textArcFunc;
@@ -179,9 +179,10 @@
         var pieWrapper = this.main
             .selectAll('.xc-pie')
             .data([1]);
-        pieWrapper.enter()
+        pieWrapper = pieWrapper.enter()
             .append('g')
-            .classed('xc-pie', true);
+            .classed('xc-pie', true)
+            .merge(pieWrapper);
         pieWrapper.attr('transform', 'translate(' + this.pieConfig.center[0] + ',' + this.pieConfig.center[1] + ')');
         return pieWrapper;
     }
@@ -194,13 +195,14 @@
         var arcs = this.pieWrapper
             .selectAll('.xc-pie-arcs')
             .data([1]);
-        arcs.enter()
+        arcs = arcs.enter()
             .append('g')
-            .classed('xc-pie-arcs', true);
+            .classed('xc-pie-arcs', true)
+            .merge(arcs);
         var arcList = arcs.selectAll('.xc-pie-arc')
             .data(this.pieData);
         // 如果不是初次加载,则enter这一步什么都不会做
-        arcList.enter()
+        arcList = arcList.enter()
             .append('path')
             .classed('xc-pie-arc', true)
             .style('fill', function(d) {
@@ -208,7 +210,8 @@
                     d.data.color = _self.getColor(d.data.idx);
                 }
                 return d.data.color;
-            });
+            })
+            .merge(arcList);
         arcList.transition()
             .duration(animationTime)
             .ease(animationEase)
@@ -227,12 +230,13 @@
         var texts = this.pieWrapper
             .selectAll('.xc-pie-texts')
             .data([1]);
-        texts.enter()
+        texts = texts.enter()
             .append('g')
-            .classed('xc-pie-texts', true);
+            .classed('xc-pie-texts', true)
+            .merge(texts);
         var textList = texts.selectAll('.xc-pie-text')
             .data(this.pieData);
-        textList.enter()
+        textList = textList.enter()
             .append('text')
             .classed('xc-pie-text', true)
             // TODO 后面考虑是否把这个提成配置项
@@ -243,7 +247,8 @@
             .text(function(d) {
                 var formatter = _this.pieConfig.labels.formatter || defaultLabelFormatter;
                 return formatter(d.data.name, d.data.value);
-            });
+            })
+            .merge(textList);
         textList.transition()
             .duration(animationTime)
             .ease(animationEase)
@@ -263,23 +268,25 @@
     }
     function __renderTextLine(animationEase, animationTime) {
         var _this = this;
-        var arcFunc = d3.svg.arc()
+        var arcFunc = d3.arc()
             .innerRadius(this.pieConfig.radius.outerRadius * 1.05)
             .outerRadius(this.pieConfig.radius.outerRadius * 1.05);
         var textLines = this.pieWrapper
             .selectAll('.xc-pie-textLines')
             .data([1]);
-        textLines.enter()
+        textLines = textLines.enter()
             .append('g')
-            .classed('xc-pie-textLines', true);
+            .classed('xc-pie-textLines', true)
+            .merge(textLines);
         var textLineList = textLines.selectAll('.xc-pie-textLine')
             .data(this.pieData);
-        textLineList.enter()
+        textLineList = textLineList.enter()
             .append('polyline')
             .classed('xc-pie-textLine', true)
             .attr('points', function(d) {
                 return [arcFunc.centroid(d), arcFunc.centroid(d), arcFunc.centroid(d)];
-            });
+            })
+            .merge(textLineList);
         textLineList.transition()
             .duration(animationTime)
             .ease(animationEase)
@@ -305,8 +312,8 @@
     function __legendMouseEnter () {
         var _this = this;
         this.on('legendMouseenter.pie', function(name) {
-            for(var i=0;i<_this.arcList[0].length;i++) {
-                var arcEle = d3.select(_this.arcList[0][i]);
+            for(var i=0;i<_this.arcList._groups[0].length;i++) {
+                var arcEle = d3.select(_this.arcList._groups[0][i]);
                 if(arcEle.datum().data.name == name) {
                     arcEle.attr('d', function(d) {
                         return _this.bigArcFunc(d);
@@ -319,8 +326,8 @@
     function __legendMouseLeave () {
         var _this = this;
         this.on('legendMouseleave.pie', function(name) {
-            for(var i=0;i<_this.arcList[0].length;i++) {
-                var arcEle = d3.select(_this.arcList[0][i]);
+            for(var i=0;i<_this.arcList._groups[0].length;i++) {
+                var arcEle = d3.select(_this.arcList._groups[0][i]);
                 if(arcEle.datum().data.name == name) {
                     arcEle.attr('d', function(d) {
                         return _this.arcFunc(d);

@@ -27,12 +27,13 @@
             var texts = this.pieWrapper
                 .selectAll('.xc-pie-m-texts')
                 .data([1]);
-            texts.enter()
+            texts = texts.enter()
                 .append('g')
-                .classed('xc-pie-m-texts', true);
+                .classed('xc-pie-m-texts', true)
+                .merge(texts);
             var textList = texts.selectAll('.xc-pie-m-text')
                 .data(this.pieData);
-            textList.enter()
+            textList = textList.enter()
                 .append('text')
                 .classed('xc-pie-m-text', true)
                 .attr('dy', '.35em')
@@ -41,7 +42,8 @@
                 })
                 .text(function (d) {
                     return _this.pieConfig.labels.mobileFormatter(d.data.name);
-                });
+                })
+                .merge(textList);
             textList.transition()
                 .duration(animationTime)
                 .ease(animationEase)

@@ -79,7 +79,7 @@
                 }
             }
             for(var i=0;i<this.areas.length;i++) {
-                d3.select(this.areaList[0][i]).classed('hidden', !this.areas[i].isShow);
+                d3.select(this.areaList._groups[0][i]).classed('hidden', !this.areas[i].isShow);
             }
         },
         _showTooltip: function(index, ele) {
@@ -111,7 +111,7 @@
                 d3.select(areaPoints[index]).style('stroke-width', 5);
             }
             this.lineList.classed('xc-radar-tooltip-line', false);
-            d3.select(this.lineList[0][index]).classed('xc-radar-tooltip-line', true);
+            d3.select(this.lineList._groups[0][index]).classed('xc-radar-tooltip-line', true);
         }
     });
     function __correctConfig() {
@@ -241,9 +241,10 @@
         var radar = this.main
             .selectAll('.xc-radar')
             .data([1]);
-        radar.enter()
+        radar = radar.enter()
             .append('g')
-            .classed('xc-radar', true);
+            .classed('xc-radar', true)
+            .merge(radar);
         radar.attr('transform', 'translate(' + this.radarConfig.center[0] + ',' + this.radarConfig.center[1] + ')');
         return radar;
     }
@@ -251,14 +252,16 @@
         var webs = this.radar
             .selectAll('.xc-radar-webs')
             .data([1]);
-        webs.enter()
+        webs = webs.enter()
             .append('g')
-            .classed('xc-radar-webs', true);
+            .classed('xc-radar-webs', true)
+            .merge(webs);
         var webList = webs.selectAll('.xc-radar-web')
             .data(this.polygonWebs);
-        webList.enter()
+        webList = webList.enter()
             .append('polygon')
-            .classed('xc-radar-web', true);
+            .classed('xc-radar-web', true)
+            .merge(webList);
         webList.attr('points', function(d) { return d.webString; });
         return webList;
     }
@@ -266,24 +269,24 @@
         var lines = this.radar
             .selectAll('.xc-radar-lines')
             .data([1]);
-        lines.enter()
+        lines = lines.enter()
             .append('g')
-            .classed('xc-radar-lines', true);
+            .classed('xc-radar-lines', true)
+            .merge(lines);
         var lineList = lines.selectAll('.xc-radar-line')
             .data(this.polygonWebs[0].webPoints);
-        lineList.enter()
+        lineList = lineList.enter()
             .append('line')
-            .classed('xc-radar-line', true);
-        lineList.attr({
-            x1: 0,
-            y1: 0,
-            x2: function(d) {
+            .classed('xc-radar-line', true)
+            .merge(lineList);
+        lineList.attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', function(d) {
                 return d.x;
-            },
-            y2: function(d) {
+            })
+            .attr('y2', function(d) {
                 return d.y;
-            }
-        });
+            });
         return lineList;
     }
     function __renderAreas(animationEase, animationTime) {
@@ -291,38 +294,42 @@
         var areas = this.radar
             .selectAll('.xc-radar-areas')
             .data([1]);
-        areas.enter()
+        areas = areas.enter()
             .append('g')
-            .classed('xc-radar-areas', true);
+            .classed('xc-radar-areas', true)
+            .merge(areas);
         var areaList = areas.selectAll('.xc-radar-area')
             .data(this.areas);
-        areaList.enter()
+        areaList = areaList.enter()
             .append('g')
             .attr('class', function(d, i) {
                 return 'xc-radar-area xc-radar-area' + d.originalData.idx;
-            });
+            })
+            .merge(areaList);
         var polygonList = areaList.selectAll('polygon')
             .data(function(d) {
                 return [d];
             });
-        polygonList.enter()
+        polygonList = polygonList.enter()
             .append('polygon')
             .attr('points', function(d) {
                 return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
                     return '0,0';
                 }).join(' ');
             })
-            .style({
-                stroke: function(d) {
-                    if(!d.originalData.color) {
-                        d.originalData.color = _self.getColor(d.originalData.idx);
-                    }
-                    return d.originalData.color;
-                },
-                fill: !this.radarConfig.fill ? '' : function(d) {
+            .style('stroke', function (d) {
+                if(!d.originalData.color) {
+                    d.originalData.color = _self.getColor(d.originalData.idx);
+                }
+                return d.originalData.color;
+            })
+            .style('fill', function(d) {
+                if(_self.radarConfig.fill) {
                     return d.originalData.color;
                 }
-            });
+                return '';
+            })
+            .merge(polygonList);
         polygonList.transition()
             .duration(animationTime)
             .ease(animationEase)
@@ -333,22 +340,23 @@
             .data(function(d) {
                 return d.areaPoints;
             });
-        pointsList.enter()
+        pointsList = pointsList.enter()
             .append('circle')
             .classed('xc-radar-area-point', true)
-            .attr({
-                cx: 0,
-                cy: 0
-            })
-            .style('stroke', function(d){
-                return d.originalData.color;
-            });
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .merge(pointsList);
+        pointsList.style('stroke', function(d){
+            return d.originalData.color;
+        });
         pointsList.transition()
             .duration(animationTime)
             .ease(animationEase)
-            .attr({
-                cx: function(d) { return d.x; },
-                cy: function(d) { return d.y; }
+            .attr('cx', function(d) {
+                return d.x;
+            })
+            .attr('cy', function(d) {
+                return d.y;
             });
         return areaList;
     }
@@ -357,36 +365,42 @@
         var texts = this.radar
             .selectAll('.xc-radar-texts')
             .data([1]);
-        texts.enter()
+        texts = texts.enter()
             .append('g')
-            .classed('xc-radar-texts', true);
+            .classed('xc-radar-texts', true)
+            .merge(texts);
         var textList = texts.selectAll('.xc-radar-text')
             .data(this.textPoints);
-        textList.enter()
+        textList = textList.enter()
             .append('text')
             .classed('xc-radar-text', true)
             .text(function(d, i) {
                 return _self.radarConfig.indicator[i].text;
             })
-            .attr('text-anchor', 'middle');
-        textList.attr({
-            x: function(d) { return d.x; },
-            y: function(d) { return d.y; }
-        });
+            .attr('text-anchor', 'middle')
+            .merge(textList);
+        textList.attr('x', function(d) {
+            return d.x;
+        })
+            .attr('y', function(d) {
+                return d.y;
+            });
         return textList;
     }
     function __renderCoverPolygons() {
         var coverPolygons = this.radar
             .selectAll('.xc-radar-coverPolygons')
             .data([1]);
-        coverPolygons.enter()
+        coverPolygons = coverPolygons.enter()
             .append('g')
-            .classed('xc-radar-coverPolygons', true);
+            .classed('xc-radar-coverPolygons', true)
+            .merge(coverPolygons);
         var coverPolygonList = coverPolygons.selectAll('.xc-radar-coverPolygon')
             .data(this.coverPolygons);
-        coverPolygonList.enter()
+        coverPolygonList = coverPolygonList.enter()
             .append('polygon')
-            .classed('xc-radar-coverPolygon', true);
+            .classed('xc-radar-coverPolygon', true)
+            .merge(coverPolygonList);
         coverPolygonList.attr('points', function(d) {
             return d.pointsStr;
         });
@@ -408,8 +422,8 @@
                     break;
                 }
             }
-            for(var i=0;i<_this.areaList[0].length;i++) {
-                var areaEle = d3.select(_this.areaList[0][i]);
+            for(var i=0;i<_this.areaList._groups[0].length;i++) {
+                var areaEle = d3.select(_this.areaList._groups[0][i]);
                 if(areaEle.datum() == areaData) {
                     areaEle.selectAll('.xc-radar-area-point')
                         .style('stroke-width', 5);
@@ -429,8 +443,8 @@
                     break;
                 }
             }
-            for(var i=0;i<_this.areaList[0].length;i++) {
-                var areaEle = d3.select(_this.areaList[0][i]);
+            for(var i=0;i<_this.areaList._groups[0].length;i++) {
+                var areaEle = d3.select(_this.areaList._groups[0][i]);
                 if(areaEle.datum() == areaData) {
                     areaEle.selectAll('.xc-radar-area-point')
                         .style('stroke-width', 3);

@@ -254,7 +254,11 @@
 
         scales.forEach(function (scale) {
             if (scale.scaleType === "value" || scale.scaleType === "time") scale.range(range);
-            else if (scale.scaleType === "barCategory") scale.rangeRoundBands(range, 0, 0.1);
+            else if (scale.scaleType === "barCategory") {
+                scale.range(range);
+                scale.paddingOuter(0.1);
+                /*scale.rangeRoundBands(range, 0, 0.1);*/
+            }
             else if (scale.scaleType === "category")  scale.range(range);
 
         });
