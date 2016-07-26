@@ -58,6 +58,7 @@ gulp.task('build-js', function () {
             },
             template:path.resolve(__dirname,'returnExportsGlobal.js')
         }))
+        .pipe(header(banner, {pkg: config}))
         .pipe(gulp.dest('./dist/'))
         .pipe(uglify(uglifyOptions))
         .pipe(rename({
