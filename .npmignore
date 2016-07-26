@@ -1,10 +1,17 @@
-doc
-kaifa
+.idea
+.DS_Store
+**/.DS_Store
 node_modules
-siren
-src
+siren/**
+logs.md
+kaifa
+demos
+lib
+
+# github有,npm不需要有
+angular-xCharts
+doc
 test
 .gitignore
 .npmignore
-build.sh
 karma.conf.js
