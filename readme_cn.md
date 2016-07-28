@@ -1,17 +1,17 @@
 # xCharts   
 
-## Installation   
-You can choose any one in the following methods：  
+## 安装   
+可以通过以下两种方法(任选其一)：  
 
--  Use NPM.    
+1. npm安装方法    
 
   ```  
   npm install xg-xcharts
   ```   
--  Download [source code](https://github.com/xgfe/xCharts/release) in github.
+2. 在github[项目](https://github.com/xgfe/xCharts/releases)中选择版本进行下载。
 
-## Get Started  
-1. Add xCharts to your project.   
+## 快速上手  
+1. 把xCharts添加到项目中：   
   
   ```
 <!DOCTYPE html>
@@ -19,24 +19,22 @@ You can choose any one in the following methods：
 		<head>
 			<meta charset="UTF-8">
 			<title>My first xCharts demo</title>
-			<!-- ... -->  
-			
-			<!-- add xCharts.css -->
-			<link rel="stylesheet" href="./dist/xCharts.css">
+			<!-- ... -->
+			<link rel="stylesheet" href="xCharts.css">
 		</head>
 		<body>
 			<div id="chartContainer" style="width: 1000px; height: 500px;"></div>
 			<!-- ... -->
 			
-			<!-- must add d3.js before xCharts.min.js -->
+			<!-- 必须在引入xCharts之前引入d3.js -->
 			<script src="d3.js"></script>
-			<script src="./dist/xCharts.min.js"></script>
+			<script src="xCharts.js"></script>
 			
 			<!-- Your code -->
 		</body>
 </html>  
   ```   
-2. Use xCharts to create a chart.  
+2. 用xCharts绘制图表：  
 
   ```  
 var chart = xCharts(document.querySelector('#chartContainer'));
@@ -83,8 +81,8 @@ var option = {
 };
 chart.loadConfig(option);
   ```
-  
-  If your project support AMD, you can also coding like this.  
+
+  如果你的项目支持AMD引入方式，那可以像下面这样引入xCharts。  
 
   ```
 require(['xCharts'],function(xCharts){
@@ -93,7 +91,7 @@ require(['xCharts'],function(xCharts){
 });
   ```  
  
-  Or your project support CMD, you can also coding like this.  
+  或者你的项目是支持CMD引入方式的，那就像下面这样引入xCharts。
 
   ```
 var xCharts = require('xCharts');
@@ -101,10 +99,10 @@ var xCharts = require('xCharts');
 // ... 
   ```
 
-## More examples 
-If you want to get more examples and API documents, you can access [http://xgfe.github.io/xCharts/](http://xgfe.github.io/xCharts/).  
+## 实例及文档  
+更多实例及API文档请移步[http://xgfe.github.io/xCharts/](http://xgfe.github.io/xCharts/)。  
 
-## Contact  
+## 联系方式  
 
 - @scliuyang&emsp;(mzefibp@163.com)  
 - @chenwubai&emsp;(chenwubai.cx@gmail.com)
