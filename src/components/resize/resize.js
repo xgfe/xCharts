@@ -51,6 +51,10 @@
             messageCenter.refreshAnimationTime = this.config.animationTime;
         },
         ready:function(){
+
+            // 绑定刷新事件
+            d3.select(window)
+
             // 比动画时间多1S
             var _this = this,
                 animationTime = _this.config.animationTime;
