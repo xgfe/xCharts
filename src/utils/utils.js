@@ -261,7 +261,7 @@
      */
     function stringToD3Ease(ease){
         var d3Ease = d3[ease];
-        if(d3Ease === undefined){
+        if(d3Ease === undefined && utils.isString(ease)){
             console.warn('animation.animationEase='+ease+' is not defined');
             d3Ease = d3.easeLinear;
         }
