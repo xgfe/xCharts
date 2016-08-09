@@ -1,7 +1,7 @@
 # xCharts   
 
 ## Installation   
-You can choose any one in the following methods：  
+You can choose one of the following methods：  
 
 -  Use NPM.    
 
@@ -84,7 +84,7 @@ var option = {
 chart.loadConfig(option);
   ```
   
-  If your project support AMD, you can also coding like this.  
+  If your project support AMD, code like this.  
 
   ```
 require(['xCharts'],function(xCharts){
@@ -93,7 +93,7 @@ require(['xCharts'],function(xCharts){
 });
   ```  
  
-  Or your project support CMD, you can also coding like this.  
+  Or your project support CMD, code like this.  
 
   ```
 var xCharts = require('xCharts');
@@ -102,7 +102,7 @@ var xCharts = require('xCharts');
   ```
 
 ## More examples 
-If you want to get more examples and API documents, you can access [http://xgfe.github.io/xCharts/](http://xgfe.github.io/xCharts/).  
+You can access [http://xgfe.github.io/xCharts/](http://xgfe.github.io/xCharts/) for more examples and API documents.  
 
 ## Contact  
 
