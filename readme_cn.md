@@ -19,16 +19,18 @@
 		<head>
 			<meta charset="UTF-8">
 			<title>My first xCharts demo</title>
-			<!-- ... -->
-			<link rel="stylesheet" href="xCharts.css">
+			<!-- ... -->  
+			
+			<!-- add xCharts.css -->
+			<link rel="stylesheet" href="./dist/xCharts.css">
 		</head>
 		<body>
 			<div id="chartContainer" style="width: 1000px; height: 500px;"></div>
 			<!-- ... -->
 			
-			<!-- 必须在引入xCharts之前引入d3.js -->
+			<!-- must add d3.js before xCharts.min.js -->
 			<script src="d3.js"></script>
-			<script src="xCharts.js"></script>
+			<script src="./dist/xCharts.min.js"></script>
 			
 			<!-- Your code -->
 		</body>
