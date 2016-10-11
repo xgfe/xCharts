@@ -423,10 +423,10 @@
 
 
         //用户手动控制最大最小值
-        if (domain[0] > singleConfig.minValue) {
+        if (domain[0] > singleConfig.minValue || domain[0] === undefined) {
             domain[0] = singleConfig.minValue;
         }
-        if (domain[1] < singleConfig.maxValue) {
+        if (domain[1] < singleConfig.maxValue || domain[1] === undefined) {
             domain[1] = singleConfig.maxValue;
         }
 
