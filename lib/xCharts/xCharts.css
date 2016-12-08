@@ -79,6 +79,11 @@
     fill-opacity: 0;
 }
 
+.xc-radar-tooltip-line {
+    stroke: #008ACD;
+    stroke-width: 2;
+}
+
 .xc-tooltip h3 {
     margin-top: 5px;
     margin-bottom: 5px;
@@ -103,18 +108,6 @@
 
 /* 柱状图样式 */
 .xc-bar-rect {
-    rx: 5;
-    ry: 5;
-}
-
-/*散点图*/
-.xc-scatter-assitline {
-    font-size:14px;
-    fill: #a2a2a2;
-}
-
-.xc-scatter-line-x,.xc-scatter-line-y{
-    stroke-width: 1px;
-    stroke: #a2a2a2;
-    stroke-dasharray: 5;
+    /*rx: 5;*/
+    /*ry: 5;*/
 }
