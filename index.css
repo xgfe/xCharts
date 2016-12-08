@@ -1,0 +1,104 @@
+#main {
+    position: relative;
+    top: 51px;
+}
+#firstEye {
+    position: relative;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+#chart,
+#chartCover,
+#textWrap {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+#chart {
+    z-index: 111;
+}
+#chartCover {
+    background-color: #fff;
+    opacity: 0.7;
+    z-index: 222;
+}
+#textWrap {
+    z-index: 333;
+    text-align: center;
+}
+
+
+.chart {
+    height: 180px;
+}
+.thumbnail {
+    padding: 20px;
+}
+#contact {
+    height: 100px;
+    background-color: #F8F8F8;
+    text-align: center;
+}
+#contact p {
+    margin: 0;
+}
+@media (min-width: 768px) {
+    #firstEye {
+        height: 400px;
+    }
+    #chart {
+        padding: 20px 50px;
+    }
+    #textWrap {
+        padding-top: 100px;
+    }
+    #textWrap h1 {
+        font-size: 58px;
+    }
+    #textWrap p {
+        font-size: 26px;
+    }
+    .fixedWidth {
+        width: 100px;
+    }
+    #introduce {
+        padding: 0 50px;
+    }
+    #charts {
+        padding: 30px 20px 10px;
+    }
+    #contact p {
+        line-height: 100px;
+    }
+}
+@media (max-width: 767px) {
+    #firstEye {
+        height: 300px;
+    }
+    #chart {
+        padding: 10px 0;
+    }
+    #textWrap {
+        padding-top: 50px;
+    }
+    #textWrap h1 {
+        font-size: 40px;
+    }
+    #textWrap p {
+        font-size: 18px;
+    }
+    .fixedWidth {
+        width: 75px;
+    }
+    .thumbnail {
+        margin-bottom: 0;
+        border-top-width: 0;
+        border-right-width: 0;
+        border-left-width: 0;
+        border-bottom: 1px dotted #ddd;
+    }
+    #contact {
+        padding-top: 30px;
+    }
+}
