@@ -1,7 +1,7 @@
 /**
  * xg-xcharts - charts base on d3.js
  * @version v1.0.0
- * @date 2016-10-11 16:53:52
+ * @date 2016-12-06 15:48:27
 */
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
@@ -923,7 +923,7 @@ var animationConfig = {
 
                 var axis;
 
-                switch (config.position){
+                switch (config.position) {
                     case 'left':
                         axis = d3.axisLeft(scale);
                         break;
@@ -1046,12 +1046,12 @@ var animationConfig = {
                 _this.legendRefresh = false;
             });
         },
-        _brushReady:function () {
+        _brushReady: function () {
 
             var scale = this.scales[0].copy();
-            scale.range([0,1]);
-            this.on('brushChange.axis',function (selection) {
-                var domain = [scale.invert(selection[0]),scale.invert(selection[1])];
+            scale.range([0, 1]);
+            this.on('brushChange.axis', function (selection) {
+                var domain = [scale.invert(selection[0]), scale.invert(selection[1])];
 
                 this.scales[0].domain(domain);
 
@@ -1178,14 +1178,14 @@ var animationConfig = {
         }
 
         if (isBar(this.config.series)) {
-            var scale = d3.scaleBand ()
+            var scale = d3.scaleBand()
                 .domain(singleConfig.data);
 
 
             scale.scaleType = "barCategory";
 
         } else {
-            var scale = d3.scalePoint ()
+            var scale = d3.scalePoint()
                 .domain(singleConfig.data);
 
 
@@ -1273,11 +1273,25 @@ var animationConfig = {
 
 
         if (domain[0] % tickRange !== 0 && !isNaN(tickRange)) {
-            domain[0] = parseInt(domain[0] / tickRange) * tickRange;
+
+            var multiple = parseInt(domain[0] / tickRange);
+
+            if (multiple < 0) {
+                multiple--;
+            }
+
+            domain[0] = multiple * tickRange;
         }
 
         if (domain[1] % tickRange !== 0 && !isNaN(tickRange)) {
-            domain[1] = (parseInt(domain[1] / tickRange) + 1) * tickRange;
+
+            var multiple = parseInt(domain[1] / tickRange);
+
+            if (multiple >= 0) {
+                multiple++;
+            }
+
+            domain[1] = multiple * tickRange;
         }
 
         scale.domain(domain);
@@ -1687,21 +1701,21 @@ var animationConfig = {
 }(xCharts, d3));
 /**
  * Author mzefibp@163.com
- * Date 16/6/21
- * Describe 坐标系里的辅助线
+ * Date 16/6/23
+ * Describe 时间轴刷子
  */
 (function (xCharts, d3) {
     var utils = xCharts.utils;
     var components = xCharts.components;
     var Component = components['Component'];
 
-    utils.inherits(guides, Component);
-    components.extend({guides: guides});
+    utils.inherits(brush, Component);
+    components.extend({brush: brush});
 
-    function guides(messageCenter, config, type) {
+    function brush(messageCenter, config, type) {
         //show=false时不做显示处理
         // 不是坐标系不显示
-        if (config.guides.show === false || messageCenter.xAxisScale===undefined || messageCenter.yAxisScale===undefined) {
+        if (config.brush.show === false) {
             this._show = false;
             return;
         } else {
@@ -1712,280 +1726,194 @@ var animationConfig = {
         Component.call(this, messageCenter, config, type);
     }
 
-    guides.prototype.extend = utils.extend;
+    brush.prototype.extend = utils.extend;
 
-    guides.prototype.extend({
-        init: function () {
-            this.guidesConfig = utils.merage(defaultConfig(), this.config.guides);
+    brush.prototype.extend({
+        init: function (messageCenter, config) {
+            // 先占位,等坐标轴完成后再绘制时间刷
+
+            this.messageCenter.brush = true;
+
+            this.brushConfig = utils.merage(defaultConfig(), config.brush);
+
+            this.margin.bottom += this.brushConfig.brushHeight + 20;
+
+            var messageCenter = this.messageCenter;
+            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
         },
         render: function () {
-            __renderLine.call(this);
-            __renderBox.call(this);
+
+            var brush = d3.brushX();
+
+            brush.extent(initExtent(this));
+
+            // brush.handleSize(50)
+
+            var translateX = 0;
+            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
+            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
+            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
+
+            var group = this.main.selectAll('g.xc-brush').data([this]);
+            group = group.enter().append('g')
+                .attr('class', 'xc-brush')
+                .merge(group);
+
+            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
+                .call(brush);
+
+
+            brush.move(group, initMove(this));
+            // group.selectAll('rect.background')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#e0e0e0')
+            //     .attr('opacity', 0.5)
+            //
+            // group.selectAll('rect')
+            //     .attr('height', 25)
+            //     .attr('fill', '#e0e0e0');
+            //
+            // group.selectAll('.resize rect')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#a2a2a2')
+            //     .attr('width', 10);
+
+            group.selectAll('rect.overlay')
+                .attr('fill', '#e0e0e0')
+                .attr('opacity', 0.5);
+
+            group.selectAll('rect.handle')
+                .attr('fill', '#777');
+
+            this.brush = brush;
+
+            //添加clipath路径
+            var defGroup = this.svg.selectAll('defs').data([this]);
+            defGroup = defGroup.enter().append('defs').merge(defGroup);
+
+            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
+            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
+
+            var rect = clip.selectAll('rect').data([this]);
+            rect = rect.enter().append('rect').merge(rect);
+            rect.attr('width', width)
+                .attr('height', height);
+
         },
         ready: function () {
-            if (this.mobileMode) {
-                this.mobileReady();
-            } else {
-                // 绑定到div上
-                this.div.on('mousemove.scatter', assitLineTrigger(this));
-            }
+            var brush = this.brush;
+            var brushChangeBind = brushChange(this);
+            this.brush.on('brush', brushChangeBind);
+
+            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
+            this.on('xAxisRender.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+
+            this.on('xAxisReady.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+        },
+        refresh:function(animationEase, animationTime){
+
+            // 关闭显示的组件不进行刷新
+            if (!this._show) return true;
+
+            //当容器改变时，刷新当前组件
+            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
+            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
+            this.originalWidth = this.messageCenter.originalWidth
+            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
+            this.render(animationEase, animationTime);//刷新
+            this.ready();
         }
     });
 
-    /**
-     * 绘出xy线
-     * @private
-     */
-    function __renderLine() {
-        var guidesConfig = this.guidesConfig;
-        var xLine = this.svg.selectAll('line.xc-scatter-line-x').data([this]);
-        xLine = xLine.enter().append('line')
-            .attr('class', 'xc-scatter-line-x')
-            .style('pointer-events', 'none')
-            .attr('stroke-width',guidesConfig.lineStyle.width)
-            .attr('stroke',guidesConfig.lineStyle.color)
-            .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray)
-            .merge(xLine);
+    function initMove(ctx) {
+        var min = parseFloat(ctx.brushConfig.domain[0]);
+        var max = parseFloat(ctx.brushConfig.domain[1]);
 
-        var yLine = this.svg.selectAll('line.xc-scatter-line-y').data([this])
-        yLine = yLine.enter().append('line')
-            .attr('class', 'xc-scatter-line-y')
-            .style('pointer-events', 'none')
-            .attr('stroke-width',guidesConfig.lineStyle.width)
-            .attr('stroke',guidesConfig.lineStyle.color)
-            .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray)
-            .merge(yLine)
+        if (isNaN(min) || isNaN(max)) {
+            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
+            return [0, 0];
+        }
 
+        var width = ctx.width;
 
-        this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
-        this.height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
+        var initMove = [
+            width * min / 100,
+            width * max / 100
+        ];
 
-        var x1 = this.margin.left;
-        var x2 = this.margin.left + this.width;
-        var y1 = this.margin.top;
-        var y2 = this.height + y1;
-        xLine.attr('x1', x1)
-            .attr('x2', x1)
-            .attr('y1', y1)
-            .attr('y2', y2)
-            .style('display', 'none')
+        ctx.initBrushSelection = [
+            utils.toFixed(initMove[0] / width, 3),
+            utils.toFixed(initMove[1] / width, 3)
+        ];
 
-        yLine.attr('x1', x1)
-            .attr('x2', x2)
-            .attr('y1', y1)
-            .attr('y2', y1)
-            .style('display', 'none')
-
-        this.xLine = xLine;
-        this.yLine = yLine;
+        return initMove;
     }
 
-    /**
-     * 插入文字容器
-     * @private
-     */
-    function __renderBox() {
-        var guidesConfig = this.guidesConfig;
-        var textBox = this.svg.selectAll('text.xc-scatter-assitline')
-            .data([this])
-            .enter()
-            .append('text')
-            .attr('class', 'xc-scatter-assitline')
-            .attr('text-anchor', 'left');
-        var textSpan = textBox.selectAll('tspan.xc-span').data([this]).enter().append('tspan')
-            .attr('class', 'xc-span')
-            .attr('fill',guidesConfig.textStyle.color)
-            .attr('font-size',guidesConfig.textStyle.fontSize)
-
-        this.textBox = textBox;
-        this.textSpan = textSpan;
-    }
-
-    guides.assitLineTrigger = assitLineTrigger;
-
-    function assitLineTrigger(ctx) {
-        var textSpan = ctx.textSpan;
-        var textBox = ctx.textBox;
-        var margin = ctx.margin;
-        var yScale = ctx.messageCenter.yAxisScale[0];
-        var xScale = ctx.messageCenter.xAxisScale[0];
-        var xLine = ctx.xLine;
-        var yLine = ctx.yLine;
-        var xFormat = ctx.guidesConfig.textStyle.xFormat;
-        var yFormat = ctx.guidesConfig.textStyle.yFormat;
+    function brushChange(ctx) {
+        var width = ctx.width;
         return function () {
-            
-            if(xScale.scaleType !== 'value' || yScale.scaleType !== 'value'){
-                // 辅助线必须在坐标轴都是value的情况下生效
-                return;
-            }
-            
-            var position = d3.mouse(ctx.svg.node());
-            if (!judgeOutBoundary(ctx, position)) {
-                xLine.style('display', 'none');
-                yLine.style('display', 'none');
-                textBox.style('display', 'none');
-                return false;
-            }
-            var x = position[0] - margin.left;
-            var y = position[1] - margin.top;
+            var domain = d3.event.selection;
+            var min = utils.toFixed(domain[0] / width, 3);
+            var max = utils.toFixed(domain[1] / width, 3);
 
-            var xValue = xScale.invert(x).toFixed(2);
-            var yValue = yScale.invert(y).toFixed(2);
+            ctx.fire('brushChange', [min, max]);
+        };
 
-            textBox.style('display', 'block');
-            textSpan.text(xFormat(xValue) + ',' + yFormat(yValue));
+        // console.log(domain)
 
-            xLine.attr('x1', position[0])
-                .attr('x2', position[0])
-                .style('display', 'block');
-            yLine.attr('y1', position[1])
-                .attr('y2', position[1])
-                .style('display', 'block');
-
-            // 文字向上偏移
-            position[1] -= 10;
-            position[0] += 10;
-            textBox.attr('transform', 'translate(' + position.join(',') + ')');
-        }
+        // this.fire('brushChange',domain);
     }
 
-    /**
-     * 判断超出边界,边界以坐标轴为准
-     * @param ctx 上下文this
-     * @param position 当前鼠标坐标
-     * @return {boolean} true:未超出边界,false超出边界
-     */
-    function judgeOutBoundary(ctx, position) {
-        var x1 = ctx.margin.left;
-        var x2 = ctx.margin.left + ctx.width;
-        if (position[0] <= x1 || position[0] >= x2) {
-            return false;
-        }
 
-        var y1 = ctx.margin.top;
-        var y2 = ctx.margin.top + ctx.height;
-
-        if (position[1] <= y1 || position[1] >= y2) {
-            return false;
-        }
-
-        return true;
+    // 设置时间刷初始值
+    function initExtent(ctx) {
+        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
     }
 
     function defaultConfig() {
+
         /**
-         * guides配置项
-         * @var guides
+         * brush配置项
+         * @var brush
          * @type Object
          * @extends xCharts
-         * @description 辅助线配置项,注意只有在坐标系存在的情况下才存在
+         * @description 时间轴特有的时间刷
          */
         return {
             /**
              * @var show
              * @type Boolean
-             * @extends xCharts.guides
+             * @extends xCharts.brush
              * @default true
-             * @description 控制辅助线是否显示
+             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
              */
             show: true,
             /**
-             * @var lineStyle
-             * @type Object
-             * @extends xCharts.guides
-             * @description 两条直线样式控制
+             * @var domain
+             * @type Array
+             * @extends xCharts.brush
+             * @default ['90%','100%']
+             * @description 设置时间刷的初始值,只支持百分比的形式
              */
-            lineStyle: {
-                /**
-                 * @var color
-                 * @type String
-                 * @extends xCharts.guides.lineStyle
-                 * @default '#a2a2a2'
-                 * @description 辅助线颜色
-                 */
-                color: '#a2a2a2',
-                /**
-                 * @var width
-                 * @type Number
-                 * @extends xCharts.guides.lineStyle
-                 * @default '#a2a2a2'
-                 * @description 辅助线宽度
-                 */
-                width: 1,
-                /**
-                 * @var dasharray
-                 * @type Number
-                 * @extends xCharts.guides.lineStyle
-                 * @default 5
-                 * @description 数字越大,虚线越长
-                 */
-                dasharray: 5
-            },
+            domain: ['90%', '100%'],
             /**
-             * @var textStyle
-             * @type Object
-             * @extends xCharts.guides
-             * @description 文字样式控制
+             * @var brushHeight
+             * @type Number
+             * @extends xCharts.brush
+             * @default 30
+             * @description 设置时间刷的高
              */
-            textStyle: {
-                /**
-                 * @var color
-                 * @type String
-                 * @extends xCharts.guides.textStyle
-                 * @default '#a2a2a2'
-                 * @description 文字颜色
-                 */
-                color: '#a2a2a2',
-                /**
-                 * @var fontSize
-                 * @type Number
-                 * @extends xCharts.guides.textStyle
-                 * @default 14
-                 * @description 文字大小
-                 */
-                fontSize: 14,
-                /**
-                 * @var xFormat
-                 * @type Function
-                 * @extends xCharts.guides.textStyle
-                 * @default Loop
-                 * @description x轴文字格式化
-                 */
-                xFormat: utils.loop,
-                /**
-                 * @var yFormat
-                 * @type Function
-                 * @extends xCharts.guides.textStyle
-                 * @default Loop
-                 * @description y轴文字格式化
-                 */
-                yFormat:  utils.loop,
-            }
+            brushHeight: 30
         }
     }
 
 }(xCharts, d3));
-/**
- * Author liuyang46@meituan.com
- * Date 16/5/27
- * Describe 辅助线,移动端
- */
-
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var components = xCharts.components;
-    var guides = components.guides;
-
-    guides.prototype.extend({
-        mobileReady: function () {
-            var moveEvent = guides.assitLineTrigger(this);
-            this.div.on('touchmove.scatter',moveEvent);
-            this.div.on('touchstart.scatter',moveEvent);
-        }
-    });
-}(xCharts, d3));
-
 /**
  * xCharts.legend
  * extends Component
@@ -2698,6 +2626,307 @@ var animationConfig = {
         }
     });
 }(xCharts, d3));
+/**
+ * Author mzefibp@163.com
+ * Date 16/6/21
+ * Describe 坐标系里的辅助线
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var components = xCharts.components;
+    var Component = components['Component'];
+
+    utils.inherits(guides, Component);
+    components.extend({guides: guides});
+
+    function guides(messageCenter, config, type) {
+        //show=false时不做显示处理
+        // 不是坐标系不显示
+        if (config.guides.show === false || messageCenter.xAxisScale===undefined || messageCenter.yAxisScale===undefined) {
+            this._show = false;
+            return;
+        } else {
+            this._show = true;
+        }
+
+        //继承Component的属性
+        Component.call(this, messageCenter, config, type);
+    }
+
+    guides.prototype.extend = utils.extend;
+
+    guides.prototype.extend({
+        init: function () {
+            this.guidesConfig = utils.merage(defaultConfig(), this.config.guides);
+        },
+        render: function () {
+            __renderLine.call(this);
+            __renderBox.call(this);
+        },
+        ready: function () {
+            if (this.mobileMode) {
+                this.mobileReady();
+            } else {
+                // 绑定到div上
+                this.div.on('mousemove.scatter', assitLineTrigger(this));
+            }
+        }
+    });
+
+    /**
+     * 绘出xy线
+     * @private
+     */
+    function __renderLine() {
+        var guidesConfig = this.guidesConfig;
+        var xLine = this.svg.selectAll('line.xc-scatter-line-x').data([this]);
+        xLine = xLine.enter().append('line')
+            .attr('class', 'xc-scatter-line-x')
+            .style('pointer-events', 'none')
+            .attr('stroke-width',guidesConfig.lineStyle.width)
+            .attr('stroke',guidesConfig.lineStyle.color)
+            .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray)
+            .merge(xLine);
+
+        var yLine = this.svg.selectAll('line.xc-scatter-line-y').data([this])
+        yLine = yLine.enter().append('line')
+            .attr('class', 'xc-scatter-line-y')
+            .style('pointer-events', 'none')
+            .attr('stroke-width',guidesConfig.lineStyle.width)
+            .attr('stroke',guidesConfig.lineStyle.color)
+            .attr('stroke-dasharray',guidesConfig.lineStyle.dasharray)
+            .merge(yLine)
+
+
+        this.width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
+        this.height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
+
+        var x1 = this.margin.left;
+        var x2 = this.margin.left + this.width;
+        var y1 = this.margin.top;
+        var y2 = this.height + y1;
+        xLine.attr('x1', x1)
+            .attr('x2', x1)
+            .attr('y1', y1)
+            .attr('y2', y2)
+            .style('display', 'none')
+
+        yLine.attr('x1', x1)
+            .attr('x2', x2)
+            .attr('y1', y1)
+            .attr('y2', y1)
+            .style('display', 'none')
+
+        this.xLine = xLine;
+        this.yLine = yLine;
+    }
+
+    /**
+     * 插入文字容器
+     * @private
+     */
+    function __renderBox() {
+        var guidesConfig = this.guidesConfig;
+        var textBox = this.svg.selectAll('text.xc-scatter-assitline')
+            .data([this])
+            .enter()
+            .append('text')
+            .attr('class', 'xc-scatter-assitline')
+            .attr('text-anchor', 'left');
+        var textSpan = textBox.selectAll('tspan.xc-span').data([this]).enter().append('tspan')
+            .attr('class', 'xc-span')
+            .attr('fill',guidesConfig.textStyle.color)
+            .attr('font-size',guidesConfig.textStyle.fontSize)
+
+        this.textBox = textBox;
+        this.textSpan = textSpan;
+    }
+
+    guides.assitLineTrigger = assitLineTrigger;
+
+    function assitLineTrigger(ctx) {
+        var textSpan = ctx.textSpan;
+        var textBox = ctx.textBox;
+        var margin = ctx.margin;
+        var yScale = ctx.messageCenter.yAxisScale[0];
+        var xScale = ctx.messageCenter.xAxisScale[0];
+        var xLine = ctx.xLine;
+        var yLine = ctx.yLine;
+        var xFormat = ctx.guidesConfig.textStyle.xFormat;
+        var yFormat = ctx.guidesConfig.textStyle.yFormat;
+        return function () {
+            
+            if(xScale.scaleType !== 'value' || yScale.scaleType !== 'value'){
+                // 辅助线必须在坐标轴都是value的情况下生效
+                return;
+            }
+            
+            var position = d3.mouse(ctx.svg.node());
+            if (!judgeOutBoundary(ctx, position)) {
+                xLine.style('display', 'none');
+                yLine.style('display', 'none');
+                textBox.style('display', 'none');
+                return false;
+            }
+            var x = position[0] - margin.left;
+            var y = position[1] - margin.top;
+
+            var xValue = xScale.invert(x).toFixed(2);
+            var yValue = yScale.invert(y).toFixed(2);
+
+            textBox.style('display', 'block');
+            textSpan.text(xFormat(xValue) + ',' + yFormat(yValue));
+
+            xLine.attr('x1', position[0])
+                .attr('x2', position[0])
+                .style('display', 'block');
+            yLine.attr('y1', position[1])
+                .attr('y2', position[1])
+                .style('display', 'block');
+
+            // 文字向上偏移
+            position[1] -= 10;
+            position[0] += 10;
+            textBox.attr('transform', 'translate(' + position.join(',') + ')');
+        }
+    }
+
+    /**
+     * 判断超出边界,边界以坐标轴为准
+     * @param ctx 上下文this
+     * @param position 当前鼠标坐标
+     * @return {boolean} true:未超出边界,false超出边界
+     */
+    function judgeOutBoundary(ctx, position) {
+        var x1 = ctx.margin.left;
+        var x2 = ctx.margin.left + ctx.width;
+        if (position[0] <= x1 || position[0] >= x2) {
+            return false;
+        }
+
+        var y1 = ctx.margin.top;
+        var y2 = ctx.margin.top + ctx.height;
+
+        if (position[1] <= y1 || position[1] >= y2) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function defaultConfig() {
+        /**
+         * guides配置项
+         * @var guides
+         * @type Object
+         * @extends xCharts
+         * @description 辅助线配置项,注意只有在坐标系存在的情况下才存在
+         */
+        return {
+            /**
+             * @var show
+             * @type Boolean
+             * @extends xCharts.guides
+             * @default true
+             * @description 控制辅助线是否显示
+             */
+            show: true,
+            /**
+             * @var lineStyle
+             * @type Object
+             * @extends xCharts.guides
+             * @description 两条直线样式控制
+             */
+            lineStyle: {
+                /**
+                 * @var color
+                 * @type String
+                 * @extends xCharts.guides.lineStyle
+                 * @default '#a2a2a2'
+                 * @description 辅助线颜色
+                 */
+                color: '#a2a2a2',
+                /**
+                 * @var width
+                 * @type Number
+                 * @extends xCharts.guides.lineStyle
+                 * @default '#a2a2a2'
+                 * @description 辅助线宽度
+                 */
+                width: 1,
+                /**
+                 * @var dasharray
+                 * @type Number
+                 * @extends xCharts.guides.lineStyle
+                 * @default 5
+                 * @description 数字越大,虚线越长
+                 */
+                dasharray: 5
+            },
+            /**
+             * @var textStyle
+             * @type Object
+             * @extends xCharts.guides
+             * @description 文字样式控制
+             */
+            textStyle: {
+                /**
+                 * @var color
+                 * @type String
+                 * @extends xCharts.guides.textStyle
+                 * @default '#a2a2a2'
+                 * @description 文字颜色
+                 */
+                color: '#a2a2a2',
+                /**
+                 * @var fontSize
+                 * @type Number
+                 * @extends xCharts.guides.textStyle
+                 * @default 14
+                 * @description 文字大小
+                 */
+                fontSize: 14,
+                /**
+                 * @var xFormat
+                 * @type Function
+                 * @extends xCharts.guides.textStyle
+                 * @default Loop
+                 * @description x轴文字格式化
+                 */
+                xFormat: utils.loop,
+                /**
+                 * @var yFormat
+                 * @type Function
+                 * @extends xCharts.guides.textStyle
+                 * @default Loop
+                 * @description y轴文字格式化
+                 */
+                yFormat:  utils.loop,
+            }
+        }
+    }
+
+}(xCharts, d3));
+/**
+ * Author liuyang46@meituan.com
+ * Date 16/5/27
+ * Describe 辅助线,移动端
+ */
+
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var components = xCharts.components;
+    var guides = components.guides;
+
+    guides.prototype.extend({
+        mobileReady: function () {
+            var moveEvent = guides.assitLineTrigger(this);
+            this.div.on('touchmove.scatter',moveEvent);
+            this.div.on('touchstart.scatter',moveEvent);
+        }
+    });
+}(xCharts, d3));
+
 /**
  * Author liuyang46@meituan.com
  * Date 16/3/9
@@ -3536,221 +3765,6 @@ var animationConfig = {
     });
 }(xCharts, d3));
 /**
- * Author mzefibp@163.com
- * Date 16/6/23
- * Describe 时间轴刷子
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var components = xCharts.components;
-    var Component = components['Component'];
-
-    utils.inherits(brush, Component);
-    components.extend({brush: brush});
-
-    function brush(messageCenter, config, type) {
-        //show=false时不做显示处理
-        // 不是坐标系不显示
-        if (config.brush.show === false) {
-            this._show = false;
-            return;
-        } else {
-            this._show = true;
-        }
-
-        //继承Component的属性
-        Component.call(this, messageCenter, config, type);
-    }
-
-    brush.prototype.extend = utils.extend;
-
-    brush.prototype.extend({
-        init: function (messageCenter, config) {
-            // 先占位,等坐标轴完成后再绘制时间刷
-
-            this.messageCenter.brush = true;
-
-            this.brushConfig = utils.merage(defaultConfig(), config.brush);
-
-            this.margin.bottom += this.brushConfig.brushHeight + 20;
-
-            var messageCenter = this.messageCenter;
-            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
-        },
-        render: function () {
-
-            var brush = d3.brushX();
-
-            brush.extent(initExtent(this));
-
-            // brush.handleSize(50)
-
-            var translateX = 0;
-            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
-            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
-            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
-
-            var group = this.main.selectAll('g.xc-brush').data([this]);
-            group = group.enter().append('g')
-                .attr('class', 'xc-brush')
-                .merge(group);
-
-            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
-                .call(brush);
-
-
-            brush.move(group, initMove(this));
-            // group.selectAll('rect.background')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#e0e0e0')
-            //     .attr('opacity', 0.5)
-            //
-            // group.selectAll('rect')
-            //     .attr('height', 25)
-            //     .attr('fill', '#e0e0e0');
-            //
-            // group.selectAll('.resize rect')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#a2a2a2')
-            //     .attr('width', 10);
-
-            group.selectAll('rect.overlay')
-                .attr('fill', '#e0e0e0')
-                .attr('opacity', 0.5);
-
-            group.selectAll('rect.handle')
-                .attr('fill', '#777');
-
-            this.brush = brush;
-
-            //添加clipath路径
-            var defGroup = this.svg.selectAll('defs').data([this]);
-            defGroup = defGroup.enter().append('defs').merge(defGroup);
-
-            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
-            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
-
-            var rect = clip.selectAll('rect').data([this]);
-            rect = rect.enter().append('rect').merge(rect);
-            rect.attr('width', width)
-                .attr('height', height);
-
-        },
-        ready: function () {
-            var brush = this.brush;
-            var brushChangeBind = brushChange(this);
-            this.brush.on('brush', brushChangeBind);
-
-            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
-            this.on('xAxisRender.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-
-            this.on('xAxisReady.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-        },
-        refresh:function(animationEase, animationTime){
-
-            // 关闭显示的组件不进行刷新
-            if (!this._show) return true;
-
-            //当容器改变时，刷新当前组件
-            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
-            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
-            this.originalWidth = this.messageCenter.originalWidth
-            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
-            this.render(animationEase, animationTime);//刷新
-            this.ready();
-        }
-    });
-
-    function initMove(ctx) {
-        var min = parseFloat(ctx.brushConfig.domain[0]);
-        var max = parseFloat(ctx.brushConfig.domain[1]);
-
-        if (isNaN(min) || isNaN(max)) {
-            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
-            return [0, 0];
-        }
-
-        var width = ctx.width;
-
-        var initMove = [
-            width * min / 100,
-            width * max / 100
-        ];
-
-        ctx.initBrushSelection = [
-            utils.toFixed(initMove[0] / width, 3),
-            utils.toFixed(initMove[1] / width, 3)
-        ];
-
-        return initMove;
-    }
-
-    function brushChange(ctx) {
-        var width = ctx.width;
-        return function () {
-            var domain = d3.event.selection;
-            var min = utils.toFixed(domain[0] / width, 3);
-            var max = utils.toFixed(domain[1] / width, 3);
-
-            ctx.fire('brushChange', [min, max]);
-        };
-
-        // console.log(domain)
-
-        // this.fire('brushChange',domain);
-    }
-
-
-    // 设置时间刷初始值
-    function initExtent(ctx) {
-        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
-    }
-
-    function defaultConfig() {
-
-        /**
-         * brush配置项
-         * @var brush
-         * @type Object
-         * @extends xCharts
-         * @description 时间轴特有的时间刷
-         */
-        return {
-            /**
-             * @var show
-             * @type Boolean
-             * @extends xCharts.brush
-             * @default true
-             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
-             */
-            show: true,
-            /**
-             * @var domain
-             * @type Array
-             * @extends xCharts.brush
-             * @default ['90%','100%']
-             * @description 设置时间刷的初始值,只支持百分比的形式
-             */
-            domain: ['90%', '100%'],
-            /**
-             * @var brushHeight
-             * @type Number
-             * @extends xCharts.brush
-             * @default 30
-             * @description 设置时间刷的高
-             */
-            brushHeight: 30
-        }
-    }
-
-}(xCharts, d3));
-/**
  * Created by liuyang on 15/10/27.
  * chars的基类
  */
@@ -3794,6 +3808,438 @@ var animationConfig = {
     xCharts.charts.extend({Chart:Chart});
 
 }(xCharts,d3));
+/**
+ * @file 柱状图
+ * @author chenwubai.cx@gmail.com
+ */
+
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var Chart = xCharts.charts.Chart;
+
+    // 创建bar构造函数
+    function bar(messageCenter, config) {
+        // 调用这一步的原因是为了继承属性
+        Chart.call(this, messageCenter, config, 'bar');
+    }
+
+    // 在xCharts中注册bar构造函数
+    xCharts.charts.extend({bar: bar});
+    // 从父类Chart里继承一系列的方法
+    utils.inherits(bar, Chart);
+
+    bar.prototype.extend = xCharts.extend;
+    bar.prototype.extend({
+        init: function (messageCenter, config, type, series) {
+            var _self = this;
+            if (!this.barSeries) {
+                // 提出type为bar的series的子元素对象
+                // 按stack分类,没有stack的话默认
+                this.barSeries = [];
+                for (var i = 0; i < series.length; i++) {
+                    if (series[i].type == 'bar') {
+                        this.barSeries.push(utils.copy(series[i], true));
+                    }
+                }
+                // 给每种柱状添加颜色值
+                this.barSeries.forEach(function (series) {
+                    series.color = _self.getColor(series.idx);
+                    series.isShow = true;
+                });
+            }
+
+            __correctConfig.apply(this);
+            // 用变量存储messageCenter里的一些信息，方便后面使用
+            this.xAxisScale = messageCenter.xAxisScale;
+            this.yAxisScale = messageCenter.yAxisScale;
+
+            // TODO 这里暂时只考虑柱状图都在一个x轴和y轴上进行绘制，且x轴在下方
+            for (var i = 0; i < this.xAxisScale.length; i++) {
+                // TODO 这个判断条件是否靠谱待调研
+                if (this.xAxisScale[i].scaleType === 'barCategory') {
+                    this.barXScale = this.xAxisScale[i];
+                    break;
+                }
+            }
+
+
+            this.barYScale = this.yAxisScale[0];
+
+            // 获取每组矩形容器的左上角坐标以及其内的矩形左上角的坐标、宽度和高度
+            this.rectsData = __getDefaultData.apply(this);
+            // 如果有series的isShow为false，则重新计算每组矩形的坐标和宽高
+            for (var i = 0; i < this.barSeries.length; i++) {
+                if (!this.barSeries[i].isShow) {
+                    __changeRectsData.apply(this);
+                    break;
+                }
+            }
+        },
+        render: function (animationEase, animationTime) {
+            // 添加柱状图容器
+            this.bar = __renderBarWrapper.apply(this);
+            // 添加每组矩形的容器
+            this.rectWrapperList = __renderRectWrapper.apply(this);
+            // 添加柱状
+            this.rectList = __renderRect.apply(this, [animationEase, animationTime]);
+        },
+        ready: function () {
+            if (this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if (this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if (this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
+            }
+        },
+        getTooltipPosition: function (tickIndex) {
+            var rangeBand = this.barXScale.bandwidth(),
+                rangeBandNum = this.barXScale.domain().length,
+                xRange = this.barXScale.range();
+            var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
+            return xRange[0] + outPadding + tickIndex * rangeBand + rangeBand / 2;
+        },
+        _reRenderBars: function (nameList) {
+            var animationConfig = this.config.animation;
+            // 先把所有series的isShow属性设为false
+            this.barSeries.forEach(function (series) {
+                series.isShow = false;
+            });
+            // 根据nameList把其中对应的series的isShow属性设为true
+            for (var i = 0; i < nameList.length; i++) {
+                for (var k = 0; k < this.barSeries.length; k++) {
+                    if (nameList[i] == this.barSeries[k].name) {
+                        this.barSeries[k].isShow = true;
+                        break;
+                    }
+                }
+            }
+            // 根据新的isShow配置进行计算
+            __changeRectsData.apply(this);
+            __renderRect.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+        },
+        _tooltipSectionChange: function () {
+            var _this = this;
+            this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
+                var htmlStr = '';
+                _this.barSeries.forEach(function (series) {
+                    if (!series.isShow) {
+                        return;
+                    } else {
+                        var formatter = series.formatter || format || defaultFormatter;
+                        htmlStr += formatter(series.name, series.data[sectionNumber]);
+                    }
+                })
+                callback(htmlStr);
+            });
+        }
+    });
+    function __correctConfig() {
+        // 合并默认值
+        this.barSeries = this.barSeries.map(function (item) {
+            return utils.merage(defaultConfig(), item);
+        });
+    }
+
+    function __getDefaultData() {
+        var rangeBand = this.barXScale.bandwidth(),
+            rangeBandNum = this.barXScale.domain().length,
+            xRange = this.barXScale.range(),
+            yRange = this.barYScale.range();
+
+        this.xRange = xRange[1] - xRange[0];
+        this.yRange = yRange[0] - yRange[1];
+        var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
+        // 定义同组矩形之间的间距
+        var rectMargin = 10;
+        // 假设所有矩形均可见的情况下，计算矩形宽度
+        var seriesLength = this.barSeries.length;
+        var rectWidth = (rangeBand - (seriesLength + 1) * rectMargin) / seriesLength;
+
+        var rectGroupData = [],
+            tempX = outPadding;
+        for (var i = 0; i < rangeBandNum; i++) {
+            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
+            var rectsData = [];
+            var rectX = rectMargin;
+            for (var k = 0; k < seriesLength; k++) {
+                var tempRect = {
+                    x: rectX,
+                    y: this.barYScale(this.barSeries[k].data[i]),
+                    width: rectWidth > 0 ? rectWidth : 0,
+                    height: this.yRange - this.barYScale(this.barSeries[k].data[i]),
+                    color: this.barSeries[k].color
+                };
+                rectsData.push(tempRect);
+                rectX += rectWidth + rectMargin;
+            }
+            // 每组矩形容器的坐标以及每组矩形的坐标和宽高
+            var tempData = {
+                x: tempX,
+                y: 0,
+                rectsData: rectsData
+            };
+            rectGroupData.push(tempData);
+            tempX += rangeBand;
+        }
+        return rectGroupData;
+    }
+
+    function __changeRectsData() {
+        var rangeBand = this.barXScale.bandwidth();
+        // 定义同组矩形之间的间距
+        var rectMargin = 10;
+
+        // 根据矩形是否可见，求出实际的矩形宽度
+        var visibleSeriesLength = 0;
+        for (var i = 0; i < this.barSeries.length; i++) {
+            if (this.barSeries[i].isShow) {
+                visibleSeriesLength++;
+            }
+        }
+        var realRectWidth = (rangeBand - (visibleSeriesLength + 1) * rectMargin) / visibleSeriesLength;
+
+        for (var i = 0; i < this.rectsData.length; i++) {
+            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
+            var tempRect = this.rectsData[i].rectsData;
+            var rectX = rectMargin;
+            for (var k = 0; k < tempRect.length; k++) {
+                // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
+                if (this.barSeries[k].isShow) {
+                    tempRect[k].x = rectX;
+                    tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
+                    tempRect[k].width = realRectWidth;
+                    tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
+                    rectX += realRectWidth + rectMargin;
+                } else {
+                    tempRect[k].y = this.yRange;
+                    tempRect[k].height = 0;
+                }
+            }
+        }
+    }
+
+    function __renderBarWrapper() {
+        var bar = this.main
+            .selectAll('.xc-bar')
+            .data([1]);
+        bar = bar.enter()
+            .append('g')
+            .classed('xc-bar', true)
+            .merge(bar);
+        return bar;
+    }
+
+    function __renderRectWrapper() {
+        var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
+            .data(this.rectsData);
+        rectWrapperList = rectWrapperList.enter()
+            .append('g')
+            .classed('xc-bar-rectWrapper', true)
+            .merge(rectWrapperList);
+        rectWrapperList.attr('transform', function (d) {
+            return 'translate(' + d.x + ',' + d.y + ')';
+        });
+        return rectWrapperList;
+    }
+
+    function __renderRect(animationEase, animationTime) {
+        var rectList = this.rectWrapperList
+            .selectAll('.xc-bar-rect')
+            .data(function (d) {
+                return d.rectsData;
+            });
+        rectList = rectList.enter()
+            .append('rect')
+            .classed('xc-bar-rect', true)
+            .attr('x', function (d) {
+                return d.x;
+            })
+            .attr('y', this.yRange)
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', 0)
+            .attr('fill', function (d) {
+                return d.color;
+            })
+            // 没办法只控制rect的某一个角,暂时不用rx,ry,后期可以考虑用path来画
+            // 通过js设置rx和ry是因为
+            // .attr('rx', 5)
+            // .attr('ry', 5)
+            .merge(rectList);
+        rectList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('x', function (d) {
+                return d.x;
+            })
+            .attr('y', function (d) {
+                return d.y;
+            })
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', function (d) {
+                return d.height;
+            });
+        return rectList;
+    }
+
+    function __legendReady() {
+        __legendMouseenter.apply(this);
+        __legendMouseleave.apply(this);
+        __legendClick.apply(this);
+    }
+
+    function __legendMouseenter() {
+        var _this = this;
+        this.on('legendMouseenter.bar', function (name) {
+            // 取出对应rect的idx
+            var idx = 0;
+            for (var i = 0; i < _this.barSeries.length; i++) {
+                if (_this.barSeries[i].name == name) {
+                    idx = _this.barSeries[i].idx;
+                    break;
+                }
+            }
+            // 把对应的矩形透明度设成0.5
+            _this.rectList._groups.forEach(function (rectArr) {
+                d3.select(rectArr[idx])
+                    .attr('fill-opacity', 0.5);
+            });
+        });
+    }
+
+    function __legendMouseleave() {
+        var _this = this;
+        this.on('legendMouseleave.bar', function (name) {
+            // 取出对应rect的idx
+            var idx = 0;
+            for (var i = 0; i < _this.barSeries.length; i++) {
+                if (_this.barSeries[i].name == name) {
+                    idx = _this.barSeries[i].idx;
+                    break;
+                }
+            }
+            // 把对应的矩形透明度的属性去掉
+            _this.rectList._groups.forEach(function (rectArr) {
+                d3.select(rectArr[idx])
+                    .attr('fill-opacity', null);
+            });
+        });
+    }
+
+    function __legendClick() {
+        var _this = this;
+        this.on('legendClick.bar', function (nameList) {
+            _this._reRenderBars(nameList);
+        });
+    }
+
+    function __tooltipReady() {
+        if (this.config.tooltip.trigger == 'axis') {
+            this._tooltipSectionChange();
+        } else {
+            //TODO 待添加trigger为 'item'时的tooltip事件
+        }
+    }
+
+    function defaultFormatter(name, value) {
+        var htmlStr = '';
+        htmlStr += "<div>" + name + "：" + value + "</div>";
+        return htmlStr;
+    }
+
+    function defaultConfig() {
+        /**
+         * @var bar
+         * @type Object
+         * @extends xCharts.series
+         * @description 柱状图配置项
+         */
+        var config = {
+            /**
+             * @var type
+             * @type String
+             * @description 指定图表类型
+             * @values 'bar'
+             * @extends xCharts.series.bar
+             */
+            type: 'bar',
+            /**
+             * @var name
+             * @type String
+             * @description 数据项名称
+             * @extends xCharts.series.bar
+             */
+            // name: '',
+            /**
+             * @var data
+             * @type Array
+             * @description 柱状图数据项对应的各项指标的值的集合
+             * @extends xCharts.series.bar
+             */
+            // data: [],
+            /**
+             * @var formatter
+             * @type function
+             * @description 数据项信息展示文本的格式化函数
+             * @extends xCharts.series.bar
+             */
+            // formatter: function(name, value) {},
+            /**
+             * @var stack
+             * @type Number|String
+             * @description 堆栈柱状图使用,相同stack会被堆叠为一个柱子
+             * @extends xCharts.series.bar
+             */
+            // stack: 'one'
+        };
+        return config;
+    }
+}(xCharts, d3));
+/**
+ * @file 柱状图(移动端)
+ * @date 2016-05-30
+ * @author chenxuan.cx@gmail.com
+ */
+(function(xCharts, d3) {
+    var utils = xCharts.utils;
+    var charts = xCharts.charts;
+    var bar = charts.bar;
+
+    bar.prototype.extend({
+        mobileReady: function() {
+            if(this.config.legend && this.config.legend.show) {
+                __legendMobileReady.apply(this);
+            }
+            if(this.config.tooltip && this.config.tooltip.show) {
+                __tooltipMobileReady.apply(this);
+            }
+        }
+    });
+    function __legendMobileReady() {
+        __legendTouch.apply(this);
+    }
+    function __legendTouch() {
+        var _this = this;
+        this.on('legendClick.bar', function(nameList) {
+            _this._reRenderBars(nameList);
+            _this.messageCenter.components.tooltip.hiddenTooltip();
+        });
+    }
+    function __tooltipMobileReady() {
+        if(this.config.tooltip.trigger == 'axis') {
+            this._tooltipSectionChange();
+        } else {
+            //TODO 待添加trigger为 'item'时的tooltip事件
+        }
+    }
+}(xCharts, d3));
 /**
  * 漏斗图
  */
@@ -4362,416 +4808,6 @@ var animationConfig = {
             tooltip.setPosition(position);
             
 
-        }
-    }
-}(xCharts, d3));
-/**
- * @file 柱状图
- * @author chenwubai.cx@gmail.com
- */
-(function(xCharts, d3) {
-    var utils = xCharts.utils;
-    var Chart = xCharts.charts.Chart;
-
-    // 创建bar构造函数
-    function bar(messageCenter, config) {
-        // 调用这一步的原因是为了继承属性
-        Chart.call(this, messageCenter, config, 'bar');
-    }
-
-    // 在xCharts中注册bar构造函数
-    xCharts.charts.extend({ bar: bar });
-    // 从父类Chart里继承一系列的方法
-    utils.inherits(bar, Chart);
-
-    bar.prototype.extend = xCharts.extend;
-    bar.prototype.extend({
-        init: function(messageCenter, config, type, series) {
-            var _self = this;
-            if(!this.barSeries) {
-                // 提出type为bar的series的子元素对象
-                // 提出type为bar的series的子元素对象
-                this.barSeries = [];
-                for(var i=0;i<series.length;i++) {
-                    if(series[i].type == 'bar') {
-                        this.barSeries.push(utils.copy(series[i], true));
-                    }
-                }
-                // 给每种柱状添加颜色值
-                this.barSeries.forEach(function(series) {
-                    series.color = _self.getColor(series.idx);
-                    series.isShow = true;
-                });
-            }
-
-            __correctConfig.apply(this);
-            // 用变量存储messageCenter里的一些信息，方便后面使用
-            this.xAxisScale = messageCenter.xAxisScale;
-            this.yAxisScale = messageCenter.yAxisScale;
-
-            // TODO 这里暂时只考虑柱状图都在一个x轴和y轴上进行绘制，且x轴在下方
-            for(var i=0;i<this.xAxisScale.length;i++) {
-                // TODO 这个判断条件是否靠谱待调研
-                if(this.xAxisScale[i].scaleType === 'barCategory') {
-                    this.barXScale = this.xAxisScale[i];
-                    break;
-                };
-            }
-            this.barYScale = this.yAxisScale[0];
-
-            // 获取每组矩形容器的左上角坐标以及其内的矩形左上角的坐标、宽度和高度
-            this.rectsData = __getDefaultData.apply(this);
-            // 如果有series的isShow为false，则重新计算每组矩形的坐标和宽高
-            for(var i=0;i<this.barSeries.length;i++) {
-                if(!this.barSeries[i].isShow) {
-                    __changeRectsData.apply(this);
-                    break;
-                }
-            }
-        },
-        render: function(animationEase, animationTime) {
-            // 添加柱状图容器
-            this.bar = __renderBarWrapper.apply(this);
-            // 添加每组矩形的容器
-            this.rectWrapperList = __renderRectWrapper.apply(this);
-            // 添加柱状
-            this.rectList = __renderRect.apply(this, [animationEase, animationTime]);
-        },
-        ready: function() {
-            if(this.mobileMode) {
-                this.mobileReady();
-            } else {
-                if(this.config.legend && this.config.legend.show) {
-                    __legendReady.apply(this);
-                }
-                if(this.config.tooltip && this.config.tooltip.show) {
-                    __tooltipReady.apply(this);
-                }
-            }
-        },
-        getTooltipPosition: function (tickIndex) {
-            var rangeBand = this.barXScale.bandwidth(),
-                rangeBandNum = this.barXScale.domain().length,
-                xRange = this.barXScale.range();
-            var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
-            return xRange[0] + outPadding + tickIndex*rangeBand + rangeBand/2;
-        },
-        _reRenderBars: function(nameList) {
-            var animationConfig = this.config.animation;
-            // 先把所有series的isShow属性设为false
-            this.barSeries.forEach(function(series) {
-                series.isShow = false;
-            });
-            // 根据nameList把其中对应的series的isShow属性设为true
-            for(var i=0;i<nameList.length;i++) {
-                for(var k=0;k<this.barSeries.length;k++) {
-                    if(nameList[i] == this.barSeries[k].name) {
-                        this.barSeries[k].isShow = true;
-                        break;
-                    }
-                }
-            }
-            // 根据新的isShow配置进行计算
-            __changeRectsData.apply(this);
-            __renderRect.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
-        },
-        _tooltipSectionChange: function() {
-            var _this = this;
-            this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
-                var htmlStr = '';
-                _this.barSeries.forEach(function (series) {
-                    if (!series.isShow) {
-                        return;
-                    } else {
-                        var formatter = series.formatter || format || defaultFormatter;
-                        htmlStr += formatter(series.name, series.data[sectionNumber]);
-                    }
-                })
-                callback(htmlStr);
-            });
-        }
-    });
-    function __correctConfig() {
-        // 合并默认值
-        this.barSeries.forEach(function (item) {
-            item = utils.merage(defaultConfig(), item);
-        });
-    }
-    function __getDefaultData() {
-        var rangeBand = this.barXScale.bandwidth(),
-            rangeBandNum = this.barXScale.domain().length,
-            xRange = this.barXScale.range(),
-            yRange = this.barYScale.range();
-
-        this.xRange = xRange[1] - xRange[0];
-        this.yRange = yRange[0] - yRange[1];
-        var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
-        // 定义同组矩形之间的间距
-        var rectMargin = 10;
-        // 假设所有矩形均可见的情况下，计算矩形宽度
-        var seriesLength = this.barSeries.length;
-        var rectWidth = (rangeBand - (seriesLength+1)*rectMargin)/seriesLength;
-
-        var rectGroupData = [],
-            tempX = outPadding;
-        for(var i=0;i<rangeBandNum;i++) {
-            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-            var rectsData = [];
-            var rectX = rectMargin;
-            for(var k=0;k<seriesLength;k++) {
-                var tempRect = {
-                    x: rectX,
-                    y: this.barYScale(this.barSeries[k].data[i]),
-                    width: rectWidth > 0 ? rectWidth : 0,
-                    height: this.yRange - this.barYScale(this.barSeries[k].data[i]),
-                    color: this.barSeries[k].color
-                };
-                rectsData.push(tempRect);
-                rectX += rectWidth + rectMargin;
-            }
-            // 每组矩形容器的坐标以及每组矩形的坐标和宽高
-            var tempData = {
-                x: tempX,
-                y: 0,
-                rectsData: rectsData
-            };
-            rectGroupData.push(tempData);
-            tempX += rangeBand;
-        }
-        return rectGroupData;
-    }
-    function __changeRectsData() {
-        var rangeBand = this.barXScale.bandwidth();
-        // 定义同组矩形之间的间距
-        var rectMargin = 10;
-
-        // 根据矩形是否可见，求出实际的矩形宽度
-        var visibleSeriesLength = 0;
-        for(var i=0;i<this.barSeries.length;i++) {
-            if(this.barSeries[i].isShow) {
-                visibleSeriesLength++;
-            }
-        }
-        var realRectWidth = (rangeBand - (visibleSeriesLength+1)*rectMargin)/visibleSeriesLength;
-
-        for(var i=0;i<this.rectsData.length;i++) {
-            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-            var tempRect = this.rectsData[i].rectsData;
-            var rectX = rectMargin;
-            for(var k=0;k<tempRect.length;k++) {
-                // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
-                if(this.barSeries[k].isShow) {
-                    tempRect[k].x = rectX;
-                    tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
-                    tempRect[k].width = realRectWidth;
-                    tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
-                    rectX += realRectWidth + rectMargin;
-                } else {
-                    tempRect[k].y = this.yRange;
-                    tempRect[k].height = 0;
-                }
-            }
-        }
-    }
-    function __renderBarWrapper() {
-        var bar = this.main
-            .selectAll('.xc-bar')
-            .data([1]);
-        bar = bar.enter()
-            .append('g')
-            .classed('xc-bar', true)
-            .merge(bar);
-        return bar;
-    }
-    function __renderRectWrapper() {
-        var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
-            .data(this.rectsData);
-        rectWrapperList = rectWrapperList.enter()
-            .append('g')
-            .classed('xc-bar-rectWrapper', true)
-            .merge(rectWrapperList);
-        rectWrapperList.attr('transform', function(d) {
-            return 'translate(' + d.x + ',' + d.y + ')';
-        });
-        return rectWrapperList;
-    }
-    function __renderRect(animationEase, animationTime) {
-        var rectList = this.rectWrapperList
-            .selectAll('.xc-bar-rect')
-            .data(function(d) {
-                return d.rectsData;
-            });
-        rectList = rectList.enter()
-            .append('rect')
-            .classed('xc-bar-rect', true)
-            .attr('x', function(d) {
-                return d.x;
-            })
-            .attr('y', this.yRange)
-            .attr('width', function(d) {
-                return d.width;
-            })
-            .attr('height', 0)
-            .attr('fill', function(d) {
-                return d.color;
-            })
-            // 通过js设置rx和ry是因为
-            .attr('rx', 5)
-            .attr('ry', 5)
-            .merge(rectList);
-        rectList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('x', function(d) {
-                return d.x;
-            })
-            .attr('y', function(d) {
-                return d.y;
-            })
-            .attr('width', function(d) {
-                return d.width;
-            })
-            .attr('height', function(d) {
-                return d.height;
-            });
-        return rectList;
-    }
-    function __legendReady() {
-        __legendMouseenter.apply(this);
-        __legendMouseleave.apply(this);
-        __legendClick.apply(this);
-    }
-    function __legendMouseenter() {
-        var _this = this;
-        this.on('legendMouseenter.bar', function(name) {
-            // 取出对应rect的idx
-            var idx = 0;
-            for(var i=0;i<_this.barSeries.length;i++) {
-                if(_this.barSeries[i].name == name) {
-                    idx = _this.barSeries[i].idx;
-                    break;
-                }
-            }
-            // 把对应的矩形透明度设成0.5
-            _this.rectList._groups.forEach(function(rectArr) {
-                d3.select(rectArr[idx])
-                    .attr('fill-opacity', 0.5);
-            });
-        });
-    }
-    function __legendMouseleave() {
-        var _this = this;
-        this.on('legendMouseleave.bar', function(name) {
-            // 取出对应rect的idx
-            var idx = 0;
-            for(var i=0;i<_this.barSeries.length;i++) {
-                if(_this.barSeries[i].name == name) {
-                    idx = _this.barSeries[i].idx;
-                    break;
-                }
-            }
-            // 把对应的矩形透明度的属性去掉
-            _this.rectList._groups.forEach(function(rectArr) {
-                d3.select(rectArr[idx])
-                    .attr('fill-opacity', null);
-            });
-        });
-    }
-    function __legendClick() {
-        var _this = this;
-        this.on('legendClick.bar', function(nameList) {
-            _this._reRenderBars(nameList);
-        });
-    }
-    function __tooltipReady() {
-        if(this.config.tooltip.trigger == 'axis') {
-            this._tooltipSectionChange();
-        } else {
-            //TODO 待添加trigger为 'item'时的tooltip事件
-        }
-    }
-    function defaultFormatter(name, value) {
-        var htmlStr = '';
-        htmlStr += "<div>" + name + "：" + value + "</div>";
-        return htmlStr;
-    }
-
-    function defaultConfig() {
-        /**
-         * @var bar
-         * @type Object
-         * @extends xCharts.series
-         * @description 柱状图配置项
-         */
-        var config = {
-            /**
-             * @var type
-             * @type String
-             * @description 指定图表类型
-             * @values 'bar'
-             * @extends xCharts.series.bar
-             */
-            type: 'bar',
-            /**
-             * @var name
-             * @type String
-             * @description 数据项名称
-             * @extends xCharts.series.bar
-             */
-            // name: '',
-            /**
-             * @var data
-             * @type Array
-             * @description 柱状图数据项对应的各项指标的值的集合
-             * @extends xCharts.series.bar
-             */
-            // data: [],
-            /**
-             * @var formatter
-             * @type function
-             * @description 数据项信息展示文本的格式化函数
-             * @extends xCharts.series.bar
-             */
-            // formatter: function(name, value) {}
-        }
-        return config;
-    }
-}(xCharts, d3));
-/**
- * @file 柱状图(移动端)
- * @date 2016-05-30
- * @author chenxuan.cx@gmail.com
- */
-(function(xCharts, d3) {
-    var utils = xCharts.utils;
-    var charts = xCharts.charts;
-    var bar = charts.bar;
-
-    bar.prototype.extend({
-        mobileReady: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendMobileReady.apply(this);
-            }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipMobileReady.apply(this);
-            }
-        }
-    });
-    function __legendMobileReady() {
-        __legendTouch.apply(this);
-    }
-    function __legendTouch() {
-        var _this = this;
-        this.on('legendClick.bar', function(nameList) {
-            _this._reRenderBars(nameList);
-            _this.messageCenter.components.tooltip.hiddenTooltip();
-        });
-    }
-    function __tooltipMobileReady() {
-        if(this.config.tooltip.trigger == 'axis') {
-            this._tooltipSectionChange();
-        } else {
-            //TODO 待添加trigger为 'item'时的tooltip事件
         }
     }
 }(xCharts, d3));

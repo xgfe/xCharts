@@ -103,7 +103,7 @@
 
                 var axis;
 
-                switch (config.position){
+                switch (config.position) {
                     case 'left':
                         axis = d3.axisLeft(scale);
                         break;
@@ -226,12 +226,12 @@
                 _this.legendRefresh = false;
             });
         },
-        _brushReady:function () {
+        _brushReady: function () {
 
             var scale = this.scales[0].copy();
-            scale.range([0,1]);
-            this.on('brushChange.axis',function (selection) {
-                var domain = [scale.invert(selection[0]),scale.invert(selection[1])];
+            scale.range([0, 1]);
+            this.on('brushChange.axis', function (selection) {
+                var domain = [scale.invert(selection[0]), scale.invert(selection[1])];
 
                 this.scales[0].domain(domain);
 
@@ -358,14 +358,14 @@
         }
 
         if (isBar(this.config.series)) {
-            var scale = d3.scaleBand ()
+            var scale = d3.scaleBand()
                 .domain(singleConfig.data);
 
 
             scale.scaleType = "barCategory";
 
         } else {
-            var scale = d3.scalePoint ()
+            var scale = d3.scalePoint()
                 .domain(singleConfig.data);
 
 
@@ -453,11 +453,25 @@
 
 
         if (domain[0] % tickRange !== 0 && !isNaN(tickRange)) {
-            domain[0] = parseInt(domain[0] / tickRange) * tickRange;
+
+            var multiple = parseInt(domain[0] / tickRange);
+
+            if (multiple < 0) {
+                multiple--;
+            }
+
+            domain[0] = multiple * tickRange;
         }
 
         if (domain[1] % tickRange !== 0 && !isNaN(tickRange)) {
-            domain[1] = (parseInt(domain[1] / tickRange) + 1) * tickRange;
+
+            var multiple = parseInt(domain[1] / tickRange);
+
+            if (multiple >= 0) {
+                multiple++;
+            }
+
+            domain[1] = multiple * tickRange;
         }
 
         scale.domain(domain);

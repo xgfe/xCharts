@@ -2,7 +2,8 @@
  * @file 柱状图
  * @author chenwubai.cx@gmail.com
  */
-(function(xCharts, d3) {
+
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
 
@@ -13,71 +14,107 @@
     }
 
     // 在xCharts中注册bar构造函数
-    xCharts.charts.extend({ bar: bar });
+    xCharts.charts.extend({bar: bar});
     // 从父类Chart里继承一系列的方法
     utils.inherits(bar, Chart);
 
     bar.prototype.extend = xCharts.extend;
     bar.prototype.extend({
-        init: function(messageCenter, config, type, series) {
+        init: function (messageCenter, config, type, series) {
             var _self = this;
-            if(!this.barSeries) {
+            if (!this.barSeries) {
                 // 提出type为bar的series的子元素对象
-                // 提出type为bar的series的子元素对象
-                this.barSeries = [];
-                for(var i=0;i<series.length;i++) {
-                    if(series[i].type == 'bar') {
-                        this.barSeries.push(utils.copy(series[i], true));
+
+                // 按stack分类,没有stack的话默认
+
+                // bar的全局配置
+                var globalBarConfig = utils.merage(barDefaultConfig(), this.config.bar);
+
+                var barSeries = {};
+                var xAxisData = this.config.xAxis[0].data;
+                // 保存未分类的值
+                var seriesList = [];
+                for (var i = 0; i < series.length; i++) {
+                    if (series[i].type == 'bar') {
+                        var serie = __correctConfig(series[i], globalBarConfig);
+                        var stack = serie.stack || ('%bar' + i);
+
+                        // 转化为列表
+                        serie.labelList = labelToArray(xAxisData, serie.label);
+
+                        // 为了让没有stack有默认值
+                        serie.stack = stack;
+
+                        barSeries[stack] = barSeries[stack] || [];
+                        barSeries[stack].push(serie);
+
+                        // 添加颜色值
+                        serie.color = this.getColor(serie.idx);
+                        serie.isShow = true;
+                        seriesList.push(serie);
                     }
                 }
                 // 给每种柱状添加颜色值
-                this.barSeries.forEach(function(series) {
-                    series.color = _self.getColor(series.idx);
-                    series.isShow = true;
-                });
+                // this.barSeries.forEach(function (series) {
+                //     series.color = _self.getColor(series.idx);
+                //     series.isShow = true;
+                // });
+
+                this.barSeries = barSeries;
+                this.seriesList = seriesList;
             }
 
-            __correctConfig.apply(this);
+
             // 用变量存储messageCenter里的一些信息，方便后面使用
             this.xAxisScale = messageCenter.xAxisScale;
             this.yAxisScale = messageCenter.yAxisScale;
 
             // TODO 这里暂时只考虑柱状图都在一个x轴和y轴上进行绘制，且x轴在下方
-            for(var i=0;i<this.xAxisScale.length;i++) {
+            for (var i = 0; i < this.xAxisScale.length; i++) {
                 // TODO 这个判断条件是否靠谱待调研
-                if(this.xAxisScale[i].scaleType === 'barCategory') {
+                if (this.xAxisScale[i].scaleType === 'barCategory') {
                     this.barXScale = this.xAxisScale[i];
                     break;
-                };
+                }
             }
+
+
             this.barYScale = this.yAxisScale[0];
 
             // 获取每组矩形容器的左上角坐标以及其内的矩形左上角的坐标、宽度和高度
             this.rectsData = __getDefaultData.apply(this);
             // 如果有series的isShow为false，则重新计算每组矩形的坐标和宽高
-            for(var i=0;i<this.barSeries.length;i++) {
-                if(!this.barSeries[i].isShow) {
+            for (var i = 0; i < this.seriesList.length; i++) {
+                if (!this.seriesList[i].isShow) {
                     __changeRectsData.apply(this);
                     break;
                 }
             }
         },
-        render: function(animationEase, animationTime) {
+        render: function (animationEase, animationTime) {
             // 添加柱状图容器
             this.bar = __renderBarWrapper.apply(this);
             // 添加每组矩形的容器
             this.rectWrapperList = __renderRectWrapper.apply(this);
             // 添加柱状
             this.rectList = __renderRect.apply(this, [animationEase, animationTime]);
+
+            // 添加label,业务相关
+            this.labelList = __renderLabel.apply(this);
+
+            // 添加文字
+            this.textList = __renderText.apply(this);
+
+
         },
-        ready: function() {
-            if(this.mobileMode) {
+        ready: function () {
+            if (this.mobileMode) {
                 this.mobileReady();
             } else {
-                if(this.config.legend && this.config.legend.show) {
+                if (this.config.legend && this.config.legend.show) {
                     __legendReady.apply(this);
                 }
-                if(this.config.tooltip && this.config.tooltip.show) {
+                if (this.config.tooltip && this.config.tooltip.show) {
                     __tooltipReady.apply(this);
                 }
             }
@@ -86,20 +123,27 @@
             var rangeBand = this.barXScale.bandwidth(),
                 rangeBandNum = this.barXScale.domain().length,
                 xRange = this.barXScale.range();
-            var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
-            return xRange[0] + outPadding + tickIndex*rangeBand + rangeBand/2;
+            var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
+            return xRange[0] + outPadding + tickIndex * rangeBand + rangeBand / 2;
         },
-        _reRenderBars: function(nameList) {
+        _reRenderBars: function (nameList) {
             var animationConfig = this.config.animation;
             // 先把所有series的isShow属性设为false
-            this.barSeries.forEach(function(series) {
-                series.isShow = false;
-            });
+
+            var keys = Object.keys(this.barSeries);
+
+            for (var i = 0; i < keys.length; i++) {
+                var series = this.barSeries[keys[i]];
+                series.forEach(function (series) {
+                    series.isShow = false;
+                });
+            }
+
             // 根据nameList把其中对应的series的isShow属性设为true
-            for(var i=0;i<nameList.length;i++) {
-                for(var k=0;k<this.barSeries.length;k++) {
-                    if(nameList[i] == this.barSeries[k].name) {
-                        this.barSeries[k].isShow = true;
+            for (var i = 0; i < nameList.length; i++) {
+                for (var k = 0; k < this.seriesList.length; k++) {
+                    if (nameList[i] == this.seriesList[k].name) {
+                        this.seriesList[k].isShow = true;
                         break;
                     }
                 }
@@ -107,105 +151,468 @@
             // 根据新的isShow配置进行计算
             __changeRectsData.apply(this);
             __renderRect.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+            __renderLabel.apply(this);
+            __renderText.apply(this);
         },
-        _tooltipSectionChange: function() {
+        _tooltipSectionChange: function () {
             var _this = this;
             this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
                 var htmlStr = '';
-                _this.barSeries.forEach(function (series) {
+                _this.seriesList.forEach(function (series) {
                     if (!series.isShow) {
                         return;
                     } else {
                         var formatter = series.formatter || format || defaultFormatter;
                         htmlStr += formatter(series.name, series.data[sectionNumber]);
                     }
-                })
+                });
                 callback(htmlStr);
             });
         }
     });
-    function __correctConfig() {
-        // 合并默认值
-        this.barSeries.forEach(function (item) {
-            item = utils.merage(defaultConfig(), item);
+
+    function __renderText() {
+        var textList = this.rectWrapperList
+            .selectAll('.xc-bar-text')
+            .data(function (d) {
+                return d.rectsData
+            });
+        textList = textList.enter()
+            .append('text')
+            .classed('xc-bar-text', true)
+            .merge(textList);
+
+        textList.attr('x', function (d) {
+            return d.text.x;
+        })
+            .attr('y', function (d) {
+                return d.text.y;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('fill', function (d) {
+                return d.text.color;
+            })
+            .attr('font-size', function (d) {
+                return d.text.fontSize;
+            })
+            .text('');
+        this.on('drawBarEnd.barText', function () {
+            textList.text(function (d) {
+
+                // 不显示情况 空串即可
+                if (d.text.show === false) {
+                    return '';
+                }
+
+                return d.text.value;
+            })
         });
+
+        return textList;
+
     }
+
+    function __correctConfig(serie, globalConfig) {
+
+        var defaultCon = utils.merage(defaultConfig(), globalConfig);
+
+        // 合并默认值
+        return utils.merage(defaultCon, serie);
+    }
+
     function __getDefaultData() {
         var rangeBand = this.barXScale.bandwidth(),
             rangeBandNum = this.barXScale.domain().length,
             xRange = this.barXScale.range(),
             yRange = this.barYScale.range();
 
+        var stackGap = 2;
         this.xRange = xRange[1] - xRange[0];
         this.yRange = yRange[0] - yRange[1];
-        var outPadding = (this.xRange - rangeBand*rangeBandNum)/2;
+        var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
         // 定义同组矩形之间的间距
         var rectMargin = 10;
         // 假设所有矩形均可见的情况下，计算矩形宽度
-        var seriesLength = this.barSeries.length;
-        var rectWidth = (rangeBand - (seriesLength+1)*rectMargin)/seriesLength;
+        var seriesKeys = Object.keys(this.barSeries);
+        var seriesLength = seriesKeys.length;
+        var rectWidth = (rangeBand - (seriesLength + 1) * rectMargin) / seriesLength;
 
         var rectGroupData = [],
             tempX = outPadding;
-        for(var i=0;i<rangeBandNum;i++) {
+        for (var i = 0; i < rangeBandNum; i++) {
             // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
             var rectsData = [];
+            var labelData = [];
             var rectX = rectMargin;
-            for(var k=0;k<seriesLength;k++) {
-                var tempRect = {
-                    x: rectX,
-                    y: this.barYScale(this.barSeries[k].data[i]),
-                    width: rectWidth > 0 ? rectWidth : 0,
-                    height: this.yRange - this.barYScale(this.barSeries[k].data[i]),
-                    color: this.barSeries[k].color
-                };
-                rectsData.push(tempRect);
+            for (var k = 0; k < seriesLength; k++) {
+
+                // 处理每一个柱子的x,y坐标和宽度高度
+                var key = seriesKeys[k];
+                var series = this.barSeries[key];
+                var rects = [];
+                var bottomY = this.yRange;
+                var bottomRect = true;
+                for (var l = 0; l < series.length; l++) {
+                    var serie = series[l];
+                    var labelObj = serie.labelList[i];
+                    var tempRect = {
+                        x: rectX,
+                        width: rectWidth > 0 ? rectWidth : 0,
+                        height: this.yRange - this.barYScale(serie.data[i]),
+                        color: serie.color,
+                        idx: serie.idx
+                    };
+
+                    // 如果label存在,最小高度不能小于5
+                    if (labelObj && tempRect.height < 5) {
+                        tempRect.height = 5;
+                    }
+
+                    tempRect.y = bottomY - tempRect.height;
+
+                    if (tempRect.y < 0) {
+
+                        tempRect.height += tempRect.y;
+
+                        tempRect.y = 0;
+                    }
+
+                    if (tempRect.height > 0 && bottomRect === false) {
+                        // 最底层的柱子不需要修正高度
+                        tempRect.height -= stackGap;
+                    } else if(tempRect.height > 0){
+                        bottomRect = false;
+                    }
+
+
+                    // 中心显示文字
+                    tempRect.text = {
+                        x: tempRect.x + tempRect.width / 2,
+                        y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
+                        value: serie.textFormat(serie.data[i]),
+                        color: serie.textStyle.color,
+                        fontSize: serie.textStyle.fontSize,
+                        show: true
+                    };
+
+                    if (tempRect.text.fontSize + 2 >= tempRect.height) {
+                        tempRect.text.show = false;
+                    }
+
+
+                    if (labelObj) {
+
+                        // 最小显示高度5
+                        var minHeight = 5;
+                        var labelHeight = 14;
+                        var fontSzie = 12;
+                        var labelWidth = labelObj.value.length * fontSzie + 10;
+
+
+                        var label = {
+                            x: tempRect.x,
+                            y: tempRect.y,
+                            height: labelHeight,
+                            width: labelWidth,
+                            color: labelObj.color,
+                            text: {
+                                value: labelObj.value,
+                                x: tempRect.x + labelWidth / 2,
+                                y: tempRect.y + labelHeight / 2 + fontSzie / 2 - 2,
+                                fontSize: fontSzie
+                            }
+                        };
+
+                        if (tempRect.height / 2 < (tempRect.text.fontSize / 2 + label.height)) {
+
+                            // 这种情况是已经没有什么位置给label显示了
+                            label.showValue = false;
+                            label.height = minHeight;
+                        } else {
+                            label.showValue = true;
+                        }
+
+                        if (labelWidth > tempRect.width) {
+                            label.showValue = false;
+                            label.width = tempRect.width / 2;
+                        }
+
+                        labelData.push(label);
+                    }
+
+
+                    bottomY = tempRect.y;
+                    rects.push(tempRect);
+                }
+
+
+                rectsData = rectsData.concat(rects);
                 rectX += rectWidth + rectMargin;
             }
             // 每组矩形容器的坐标以及每组矩形的坐标和宽高
             var tempData = {
                 x: tempX,
                 y: 0,
-                rectsData: rectsData
+                rectsData: rectsData,
+                labelData: labelData
             };
             rectGroupData.push(tempData);
             tempX += rangeBand;
         }
         return rectGroupData;
     }
+
     function __changeRectsData() {
         var rangeBand = this.barXScale.bandwidth();
         // 定义同组矩形之间的间距
         var rectMargin = 10;
+        var stackGap = 2;
 
         // 根据矩形是否可见，求出实际的矩形宽度
+        var visibleStack = {};
         var visibleSeriesLength = 0;
-        for(var i=0;i<this.barSeries.length;i++) {
-            if(this.barSeries[i].isShow) {
-                visibleSeriesLength++;
+        for (var i = 0; i < this.seriesList.length; i++) {
+            if (this.seriesList[i].isShow) {
+                visibleStack[this.seriesList[i].stack] = true;
             }
         }
-        var realRectWidth = (rangeBand - (visibleSeriesLength+1)*rectMargin)/visibleSeriesLength;
 
-        for(var i=0;i<this.rectsData.length;i++) {
+        visibleSeriesLength = Object.keys(visibleStack).length;
+
+        var realRectWidth = (rangeBand - (visibleSeriesLength + 1) * rectMargin) / visibleSeriesLength;
+
+        for (var i = 0; i < this.rectsData.length; i++) {
             // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-            var tempRect = this.rectsData[i].rectsData;
+            // var tempRect = this.rectsData[i].rectsData;
             var rectX = rectMargin;
-            for(var k=0;k<tempRect.length;k++) {
+            var labelData = [];
+            var stackKeys = Object.keys(this.barSeries);
+            var rectsList = [];
+            for (var k = 0; k < stackKeys.length; k++) {
                 // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
-                if(this.barSeries[k].isShow) {
-                    tempRect[k].x = rectX;
-                    tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
-                    tempRect[k].width = realRectWidth;
-                    tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
-                    rectX += realRectWidth + rectMargin;
-                } else {
-                    tempRect[k].y = this.yRange;
-                    tempRect[k].height = 0;
+
+                var series = this.barSeries[stackKeys[k]];
+                var rects = [];
+                var bottomY = this.yRange;
+                var bottomRect = true;
+                for (var l = 0; l < series.length; l++) {
+                    var serie = series[l];
+                    var labelObj = serie.labelList[i];
+
+                    if (serie.isShow) {
+                        // tempRect[k].x = rectX;
+                        // tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
+                        // tempRect[k].width = realRectWidth;
+                        // tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
+                        // rectX += realRectWidth + rectMargin;
+
+                        var tempRect = {
+                            x: rectX,
+                            width: realRectWidth,
+                            height: this.yRange - this.barYScale(serie.data[i]),
+                            color: serie.color,
+                            idx: serie.idx
+                        };
+
+                        // 如果label存在,最小高度不能小于5
+                        if (labelObj && tempRect.height < 5) {
+                            tempRect.height = 5;
+                        }
+
+                        tempRect.y = bottomY - tempRect.height;
+
+                        if (tempRect.y < 0) {
+
+                            tempRect.height += tempRect.y;
+
+                            tempRect.y = 0;
+                        }
+
+                        if (tempRect.height > 0 && bottomRect === false) {
+                            // 最底层的柱子不需要修正高度
+                            tempRect.height -= stackGap;
+                        } else if(tempRect.height > 0){
+                            bottomRect = false;
+                        }
+
+                        tempRect.text = {
+                            x: tempRect.x + tempRect.width / 2,
+                            y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
+                            value: serie.textFormat(serie.data[i]),
+                            color: serie.textStyle.color,
+                            fontSize: serie.textStyle.fontSize,
+                            show: true
+                        };
+
+                        // 中心显示文字
+                        tempRect.text = {
+                            x: tempRect.x + tempRect.width / 2,
+                            y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
+                            value: serie.textFormat(serie.data[i]),
+                            color: serie.textStyle.color,
+                            fontSize: serie.textStyle.fontSize,
+                            show: true
+                        };
+
+                        if (tempRect.text.fontSize + 2 >= tempRect.height) {
+                            tempRect.text.show = false;
+                        }
+
+
+                        if (labelObj) {
+
+                            // 最小显示高度5
+                            var minHeight = 5;
+                            var labelHeight = 14;
+                            var fontSzie = 12;
+                            var labelWidth = labelObj.value.length * fontSzie + 10;
+
+
+                            var label = {
+                                x: tempRect.x,
+                                y: tempRect.y,
+                                height: labelHeight,
+                                width: labelWidth,
+                                color: labelObj.color,
+                                text: {
+                                    value: labelObj.value,
+                                    x: tempRect.x + labelWidth / 2,
+                                    y: tempRect.y + labelHeight / 2 + fontSzie / 2 - 2,
+                                    fontSize: fontSzie
+                                }
+                            };
+
+                            if (tempRect.height / 2 < (tempRect.text.fontSize / 2 + label.height)) {
+
+                                // 这种情况是已经没有什么位置给label显示了
+                                label.showValue = false;
+                                label.height = minHeight;
+                            } else {
+                                label.showValue = true;
+                            }
+
+                            if (labelWidth > tempRect.width) {
+                                label.showValue = false;
+                                label.width = tempRect.width / 2;
+                            }
+
+                            labelData.push(label);
+                        }
+
+
+                        bottomY = tempRect.y;
+                        rects.push(tempRect);
+                    } else {
+                        // tempRect[k].y = this.yRange;
+                        // tempRect[k].height = 0;
+
+                        var tempRect = {
+                            x: rectX,
+                            width: 0,
+                            height: 0,
+                            color: serie.color,
+                            idx: serie.idx
+                        };
+
+                        tempRect.text = {
+                            x: 0,
+                            y: 0,
+                            value: 0,
+                            color: serie.textStyle.color,
+                            fontSize: 0,
+                            show: false
+                        };
+
+                        tempRect.y = bottomY;
+                        rects.push(tempRect);
+
+                    }
+
                 }
+                rectX += realRectWidth + rectMargin;
+                rectsList = rectsList.concat(rects);
+
             }
+
+            this.rectsData[i].rectsData = rectsList;
+            this.rectsData[i].labelData = labelData;
         }
     }
+
+    function __renderLabel() {
+
+        // 添加rect
+        var labelList = this.rectWrapperList.selectAll('.xc-bar-label-rect')
+            .data(function (d) {
+                return d.labelData;
+            });
+
+        labelList.exit().remove();
+        labelList = labelList.enter()
+            .append('rect')
+            .classed('xc-bar-label-rect', true)
+            .merge(labelList);
+
+
+
+        labelList.attr('x', function (d) {
+            return d.x;
+        })
+            .attr('y', function (d) {
+                return d.y;
+            })
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', function (d) {
+                return d.height;
+            })
+            .attr('fill', 'transparent');
+
+
+        // 添加text
+        var textList = this.rectWrapperList.selectAll('.xc-bar-label-text')
+            .data(function (d) {
+                return d.labelData;
+            });
+        textList.exit().remove();
+        textList = textList.enter()
+            .append('text')
+            .classed('xc-bar-label-text', true)
+            .merge(textList);
+
+
+
+        textList.attr('x', function (d) {
+            return d.text.x;
+        })
+            .attr('y', function (d) {
+                return d.text.y;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .attr('font-size', function (d) {
+                return d.text.fontSize;
+            })
+            .text('');
+
+        this.on('drawBarEnd.barLabel', function () {
+            textList.text(function (d) {
+
+                if (d.showValue === false) {
+                    return '';
+                }
+
+                return d.text.value;
+            });
+            labelList.attr('fill', function (d) {
+                return d.color;
+            });
+        });
+
+
+    }
+
     function __renderBarWrapper() {
         var bar = this.main
             .selectAll('.xc-bar')
@@ -216,6 +623,7 @@
             .merge(bar);
         return bar;
     }
+
     function __renderRectWrapper() {
         var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
             .data(this.rectsData);
@@ -223,110 +631,166 @@
             .append('g')
             .classed('xc-bar-rectWrapper', true)
             .merge(rectWrapperList);
-        rectWrapperList.attr('transform', function(d) {
+        rectWrapperList.attr('transform', function (d) {
             return 'translate(' + d.x + ',' + d.y + ')';
         });
         return rectWrapperList;
     }
+
     function __renderRect(animationEase, animationTime) {
+        var that = this;
         var rectList = this.rectWrapperList
             .selectAll('.xc-bar-rect')
-            .data(function(d) {
+            .data(function (d) {
                 return d.rectsData;
             });
         rectList = rectList.enter()
             .append('rect')
             .classed('xc-bar-rect', true)
-            .attr('x', function(d) {
+            .attr('x', function (d) {
                 return d.x;
             })
             .attr('y', this.yRange)
-            .attr('width', function(d) {
+            .attr('width', function (d) {
                 return d.width;
             })
             .attr('height', 0)
-            .attr('fill', function(d) {
+            .attr('fill', function (d) {
                 return d.color;
             })
+            .attr('data-index', function (d) {
+                return d.idx;
+            })
+            // 没办法只控制rect的某一个角,暂时不用rx,ry,后期可以考虑用path来画
             // 通过js设置rx和ry是因为
-            .attr('rx', 5)
-            .attr('ry', 5)
+            // .attr('rx', 5)
+            // .attr('ry', 5)
             .merge(rectList);
-        rectList.transition()
+        var transition = rectList.transition()
             .duration(animationTime)
             .ease(animationEase)
-            .attr('x', function(d) {
+            .attr('x', function (d) {
                 return d.x;
             })
-            .attr('y', function(d) {
+            .attr('y', function (d) {
                 return d.y;
             })
-            .attr('width', function(d) {
+            .attr('width', function (d) {
                 return d.width;
             })
-            .attr('height', function(d) {
+            .attr('height', function (d) {
                 return d.height;
             });
+        var flag = false;
+        transition.on('end.bar', function () {
+            if (flag === false) {
+                that.fire('drawBarEnd')
+            } else {
+                flag = true;
+            }
+        });
         return rectList;
     }
+
     function __legendReady() {
         __legendMouseenter.apply(this);
         __legendMouseleave.apply(this);
         __legendClick.apply(this);
     }
+
     function __legendMouseenter() {
         var _this = this;
-        this.on('legendMouseenter.bar', function(name) {
+        this.on('legendMouseenter.bar', function (name) {
             // 取出对应rect的idx
             var idx = 0;
-            for(var i=0;i<_this.barSeries.length;i++) {
-                if(_this.barSeries[i].name == name) {
-                    idx = _this.barSeries[i].idx;
+            for (var i = 0; i < _this.seriesList.length; i++) {
+                if (_this.seriesList[i].name == name) {
+                    idx = _this.seriesList[i].idx;
                     break;
                 }
             }
             // 把对应的矩形透明度设成0.5
-            _this.rectList._groups.forEach(function(rectArr) {
-                d3.select(rectArr[idx])
-                    .attr('fill-opacity', 0.5);
+            _this.rectList._groups.forEach(function (rectArr) {
+
+                rectArr.forEach(function (rect) {
+                    if (rect.__data__.idx === idx) {
+                        d3.select(rect)
+                            .attr('fill-opacity', 0.5);
+                    }
+                });
+
             });
         });
     }
+
     function __legendMouseleave() {
         var _this = this;
-        this.on('legendMouseleave.bar', function(name) {
+        this.on('legendMouseleave.bar', function (name) {
             // 取出对应rect的idx
             var idx = 0;
-            for(var i=0;i<_this.barSeries.length;i++) {
-                if(_this.barSeries[i].name == name) {
-                    idx = _this.barSeries[i].idx;
+            for (var i = 0; i < _this.seriesList.length; i++) {
+                if (_this.seriesList[i].name == name) {
+                    idx = _this.seriesList[i].idx;
                     break;
                 }
             }
             // 把对应的矩形透明度的属性去掉
-            _this.rectList._groups.forEach(function(rectArr) {
-                d3.select(rectArr[idx])
-                    .attr('fill-opacity', null);
+            _this.rectList._groups.forEach(function (rectArr) {
+
+                rectArr.forEach(function (rect) {
+                    if (rect.__data__.idx === idx) {
+                        d3.select(rect)
+                            .attr('fill-opacity', null);
+                    }
+                });
+
+
             });
         });
     }
+
     function __legendClick() {
         var _this = this;
-        this.on('legendClick.bar', function(nameList) {
+        this.on('legendClick.bar', function (nameList) {
             _this._reRenderBars(nameList);
         });
     }
+
     function __tooltipReady() {
-        if(this.config.tooltip.trigger == 'axis') {
+        if (this.config.tooltip.trigger == 'axis') {
             this._tooltipSectionChange();
         } else {
             //TODO 待添加trigger为 'item'时的tooltip事件
         }
     }
+
     function defaultFormatter(name, value) {
         var htmlStr = '';
         htmlStr += "<div>" + name + "：" + value + "</div>";
         return htmlStr;
+    }
+
+
+    /**
+     * label对象转化为数据,和xAxis.data一一对应
+     * @param data
+     * @param label
+     */
+    function labelToArray(data, label) {
+        label = label || {};
+        var list = [];
+        var keys = Object.keys(label);
+        for (var i = 0; i < data.length; i++) {
+            list[i] = null;
+            for (var j = 0; j < keys.length; j++) {
+                var obj = label[keys[j]];
+                if (obj.xAxis == data[i]) {
+                    list[i] = obj;
+                    break;
+                }
+            }
+        }
+        return list;
     }
 
     function defaultConfig() {
@@ -365,8 +829,83 @@
              * @description 数据项信息展示文本的格式化函数
              * @extends xCharts.series.bar
              */
-            // formatter: function(name, value) {}
-        }
+            // formatter: function(name, value) {},
+            /**
+             * @var stack
+             * @type Number|String
+             * @description 堆栈柱状图使用,相同stack会被堆叠为一个柱子
+             * @extends xCharts.series.bar
+             */
+            // stack: 'one'
+        };
         return config;
     }
+
+    // TODO 设置全局的bar变量,控制间隔啊之类的
+    function barDefaultConfig() {
+        /**
+         * @var bar
+         * @type Object
+         * @extends xCharts
+         * @description 柱状图通用配置项
+         */
+        var config = {
+            /**
+             * @var textShow
+             * @type Boolean
+             * @extends xCharts.bar
+             * @description 是否在柱状图中心显示文字
+             * @default false
+             */
+            textShow: false,
+            /**
+             * @var textFormat
+             * @type Function
+             * @extends xCharts.bar
+             * @description 格式化文字
+             * @example
+             *  function (data, index) {
+             *       return value;
+             *   },
+             */
+            textFormat: function (data, index) {
+                return data;
+            },
+            /**
+             * @var textStyle
+             * @type Object
+             * @extends xCharts.bar
+             * @description 文字样式
+             */
+            textStyle: {
+                /**
+                 * @var fontSize
+                 * @type Number
+                 * @extends xCharts.bar.textStyle
+                 * @description 文字大小
+                 * @default 14
+                 */
+                fontSize: 14,
+                /**
+                 * @var color
+                 * @type String
+                 * @extends xCharts.bar.textStyle
+                 * @description 文字颜色
+                 * @default #fff
+                 */
+                color: '#fff'
+            },
+            /**
+             * @var hoverOpacity
+             * @type Number
+             * @extends xCharts.bar
+             * @description 鼠标响应legend透明度
+             * @default 0.5
+             */
+            hoverOpacity: 0.5
+        };
+
+        return config;
+    }
+
 }(xCharts, d3));
