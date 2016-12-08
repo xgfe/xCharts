@@ -280,7 +280,7 @@
                     if (tempRect.height > 0 && bottomRect === false) {
                         // 最底层的柱子不需要修正高度
                         tempRect.height -= stackGap;
-                    } else if(tempRect.height > 0){
+                    } else if (tempRect.height > 0) {
                         bottomRect = false;
                     }
 
@@ -431,7 +431,7 @@
                         if (tempRect.height > 0 && bottomRect === false) {
                             // 最底层的柱子不需要修正高度
                             tempRect.height -= stackGap;
-                        } else if(tempRect.height > 0){
+                        } else if (tempRect.height > 0) {
                             bottomRect = false;
                         }
 
@@ -554,7 +554,6 @@
             .merge(labelList);
 
 
-
         labelList.attr('x', function (d) {
             return d.x;
         })
@@ -580,7 +579,6 @@
             .append('text')
             .classed('xc-bar-label-text', true)
             .merge(textList);
-
 
 
         textList.attr('x', function (d) {
@@ -836,7 +834,42 @@
              * @description 堆栈柱状图使用,相同stack会被堆叠为一个柱子
              * @extends xCharts.series.bar
              */
-            // stack: 'one'
+            // stack: 'one',
+            /**
+             * @var label
+             * @type Array
+             * @description 添加左上角label
+             * @extends xCharts.series.bar
+             * @example
+             *  [{
+             *      xAxis: '语文',
+             *      value:'下降',
+             *       color:'#344c09'
+             *  }]
+             */
+            // label: [{
+                /**
+                 * @var xAxis
+                 * @type String
+                 * @description 与xAxis.data值对应
+                 * @extends xCharts.series.bar.label
+                 */
+                // xAxis: '语文',
+                /**
+                 * @var value
+                 * @type String
+                 * @description label的显示文本
+                 * @extends xCharts.series.bar.label
+                 */
+                // value: '语文',
+                /**
+                 * @var color
+                 * @type String
+                 * @description 文本的颜色
+                 * @extends xCharts.series.bar.label
+                 */
+                // color: '#fff',
+            // }]
         };
         return config;
     }
