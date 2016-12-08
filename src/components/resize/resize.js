@@ -60,7 +60,7 @@
                 animationTime = _this.config.animationTime;
 
 
-            var resizeFn = utils.throttle(function(){
+            var resizeFn = utils.debounce(function(){
                 _this.messageCenter.refresh();
             },animationTime+300,true);
 
