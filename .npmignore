@@ -1,0 +1,17 @@
+.idea
+.DS_Store
+**/.DS_Store
+node_modules
+siren/**
+logs.md
+kaifa
+demos
+lib
+
+# github有,npm不需要有
+angular-xCharts
+doc
+test
+.gitignore
+.npmignore
+karma.conf.js

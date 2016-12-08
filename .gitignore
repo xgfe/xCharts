@@ -1,8 +1,15 @@
 .idea
 .DS_Store
 **/.DS_Store
-js/test.html
 node_modules
+<<<<<<< HEAD
 siren
 dist/
 kaifa/
+=======
+siren/**
+logs.md
+kaifa
+demos
+lib
+>>>>>>> master
