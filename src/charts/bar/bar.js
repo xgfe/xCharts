@@ -295,9 +295,13 @@
                         show: true
                     };
 
+                    tempRect.text.show = serie.textShow;
+
                     if (tempRect.text.fontSize + 2 >= tempRect.height) {
                         tempRect.text.show = false;
                     }
+
+
 
 
                     if (labelObj) {
@@ -453,7 +457,7 @@
                             fontSize: serie.textStyle.fontSize,
                             show: true
                         };
-
+                        tempRect.text.show = serie.textShow;
                         if (tempRect.text.fontSize + 2 >= tempRect.height) {
                             tempRect.text.show = false;
                         }
