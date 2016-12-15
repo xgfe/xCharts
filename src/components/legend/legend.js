@@ -203,6 +203,12 @@
     function legendMouseClick(ctx, nameList, opacity) {
 
         return function (data) {
+
+            // legend点击事件失效状态
+            if(ctx.legendConfig.clickable === false){
+                return true;
+            }
+
             this.isChecked = !this.isChecked;
             if (multiple) {
                 //多选的情况下
@@ -686,7 +692,15 @@
                  * @default 'auto' 保持和图标颜色一致
                  */
                 hoverColor: 'auto'
-            }
+            },
+            /**
+             * @var clickable
+             * @extends xCharts.legend
+             * @type Boolean
+             * @description 图例是否可以点击
+             * @default true
+             */
+            clickable:true
         }
         return legend;
     }
