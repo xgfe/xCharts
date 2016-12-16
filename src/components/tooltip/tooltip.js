@@ -132,12 +132,12 @@
             offsetX = offsetX || 5, offsetY = offsetY || 5;
 
             // 计算一次tooltip的宽高
-            if (!_this.tooltipWidth) {
+            // if (!_this.tooltipWidth) {
                 _this.tooltipWidth = _this.tooltip.node().clientWidth;
                 _this.tooltipWidth = parseFloat(_this.tooltipWidth);
                 _this.tooltipHeight = _this.tooltip.node().clientHeight;
                 _this.tooltipHeight = parseFloat(_this.tooltipHeight);
-            }
+            // }
 
             var tooltipWidth = _this.tooltipWidth,
                 tooltipHeight = _this.tooltipHeight,
@@ -154,10 +154,16 @@
                 tooltipX += offsetX;
             }
             if (tooltipY + tooltipHeight > height) {
-                tooltipY = tooltipY - tooltipHeight - offsetY;
+                tooltipY = height - tooltipHeight - offsetY;
             } else {
                 tooltipY += offsetY;
             }
+
+            // 当tooltip高度 已经大于整个svg高度时,直接保持居中
+            if (tooltipHeight > height) {
+                tooltipY = (tooltipHeight - height) / 2;
+            }
+
 
             _this.tooltip.style('transform', "translate(" + tooltipX + "px," + tooltipY + "px)")
 
