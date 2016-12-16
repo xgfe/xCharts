@@ -72,13 +72,18 @@
 
             itemList.attr('transform', function (serie) {
 
-                    // 这里保存点击状态，默认选中
-                    // 为了刷新时只刷新位置，选中状态不变化
-                    this.isChecked = this.isChecked == undefined ?
-                        true : this.isChecked;
+                // 这里保存点击状态，默认选中
+                // 为了刷新时只刷新位置，选中状态不变化
 
-                    return 'translate(' + serie.position + ')';
-                })
+                if (this.isChecked === undefined) {
+                    this.isChecked = serie.isChecked;
+                }
+
+                // this.isChecked = this.isChecked == undefined ?
+                //     true : this.isChecked;
+
+                return 'translate(' + serie.position + ')';
+            })
                 .attr('fill', color)
                 .attr('opacity', function () {
                     return this.isChecked ?
@@ -205,7 +210,7 @@
         return function (data) {
 
             // legend点击事件失效状态
-            if(ctx.legendConfig.clickable === false){
+            if (ctx.legendConfig.clickable === false) {
                 return true;
             }
 
@@ -219,28 +224,41 @@
                 d3.select(this).attr('opacity', 1);
             }
 
-            reload.call(ctx, data.name, multiple, nameList);
+            reload.call(ctx, data.name, multiple, nameList, ctx.legendSeries);
         }
     }
 
     /**
      * 分两种模式处理刷新
      * 传递给接受者一个 name的数组
+     * todo namelist 可以不用传了
      * @param name
      */
-    function reload(name, multiple, nameList) {
+    function reload(name, multiple, nameList, series) {
+        nameList = [];
         if (multiple) {
             //如果存在则删除，不存在则从_series中拿出添加
-            var isAdd = true;
-            for (var i = 0, s; s = nameList[i++];) {
-                if (s == name) {
-                    nameList.splice(i - 1, 1);
-                    isAdd = false;
-                    break;
+            // var isAdd = true;
+            // for (var i = 0, s; s = nameList[i++];) {
+            //     if (s == name) {
+            //         nameList.splice(i - 1, 1);
+            //         isAdd = false;
+            //         break;
+            //     }
+            // }
+            // if (isAdd)
+            //     nameList.push(name);
+            series.forEach(function (serie) {
+
+                if (serie.name === name) {
+                    serie.isChecked = !serie.isChecked;
                 }
-            }
-            if (isAdd)
-                nameList.push(name);
+
+                if (serie.isChecked === true) {
+                    nameList.push(serie.name)
+                }
+            });
+
 
             if (nameList.length == 0) this.fire('tooltipNone');
             else this.fire('tooltipShow');
@@ -394,6 +412,11 @@
             }
 
         //多图表共存时，需要对legendList的name去重，否则会出现name一样，legend图例颜色不一样的情况
+
+        legendSeries.forEach(function (serie) {
+            // 如果legendShow === false,legend默认不显示
+            serie.isChecked = serie.legendShow === false ? false : true;
+        })
 
         return legendSeries;
     }
@@ -700,7 +723,7 @@
              * @description 图例是否可以点击
              * @default true
              */
-            clickable:true
+            clickable: true
         }
         return legend;
     }

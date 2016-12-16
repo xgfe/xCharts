@@ -88,8 +88,8 @@
                 });
             }
 
-            this.on('brushChange.tooltip',function(domain){
-               _this.brushDomain = domain;
+            this.on('brushChange.tooltip', function (domain) {
+                _this.brushDomain = domain;
             });
 
         },
@@ -159,7 +159,7 @@
                 tooltipY += offsetY;
             }
 
-            _this.tooltip.style('transform',"translate(" + tooltipX + "px," + tooltipY + "px)")
+            _this.tooltip.style('transform', "translate(" + tooltipX + "px," + tooltipY + "px)")
 
         },
         setTooltipHtml: function (html) {
@@ -263,7 +263,7 @@
                 width = _this.originalWidth - _this.margin.left - _this.margin.right,
                 height = _this.originalHeight - _this.margin.top - _this.margin.bottom;
 
-            var sectionObj = getSectionLength.call(_this,xAxisData);
+            var sectionObj = getSectionLength.call(_this, xAxisData);
 
             var sectionLength = sectionObj.length - 1;
 
@@ -273,13 +273,13 @@
 
             var sectionWidth = width / sectionLength; //计算每个区域的宽度,注意这里是均分
             var sectionNumber = 0; //得到在哪个区域，从0开始
-            if(_this.messageCenter.xAxisScale[0].scaleType === 'barCategory'){
+            if (_this.messageCenter.xAxisScale[0].scaleType === 'barCategory') {
                 sectionNumber = Math.floor((mouseX - _this.margin.left) / sectionWidth);
-            }else{
+            } else {
                 sectionNumber = Math.round((mouseX - _this.margin.left) / sectionWidth);
             }
 
-            sectionNumber+=sectionObj.offset;
+            sectionNumber += sectionObj.offset;
 
             if (sectionNumber !== oldSectionNumber) {
                 //触发tooltipSectionChange事件，获取文本
@@ -307,29 +307,29 @@
         }
     }
 
-    function getSectionLength(data){
+    function getSectionLength(data) {
 
-        if(this.messageCenter.brush !== true){
+        if (this.messageCenter.brush !== true) {
             return {
-                length:data.length,
-                offset:0
+                length: data.length,
+                offset: 0
             }
         }
 
-        var domain = this.brushDomain || [0,1];
+        var domain = this.brushDomain || [0, 1];
         var minData = data[0];
-        var maxData = data[data.length-1];
+        var maxData = data[data.length - 1];
 
         var extent = [
-            (maxData-minData)*domain[0] + minData,
-            (maxData-minData)*domain[1] + minData
+            (maxData - minData) * domain[0] + minData,
+            (maxData - minData) * domain[1] + minData
         ];
-        var length = 0,offset;
-        for(var i=0;i<data.length;i++){
-            if(data[i] <= extent[1] && data[i] >= extent[0]){
+        var length = 0, offset;
+        for (var i = 0; i < data.length; i++) {
+            if (data[i] <= extent[1] && data[i] >= extent[0]) {
                 length++;
 
-                if(offset === undefined){
+                if (offset === undefined) {
                     offset = i;
                 }
             }
@@ -337,8 +337,8 @@
         }
 
         return {
-            length:length,
-            offset:offset
+            length: length,
+            offset: offset
         };
     }
 
@@ -374,7 +374,7 @@
              * @description 格式化函数，如果在各项series里面定义了formatter会覆盖此函数
              * @default 请查看各个series里面的格式化函数
              */
-            //formatter: function (name,data) {
+            //formatter: function (name,data,index) {
             //    return name+':&nbsp;'+data;
             //},
             /**

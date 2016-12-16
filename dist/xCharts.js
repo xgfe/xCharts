@@ -1,7 +1,7 @@
 /**
  * xg-xcharts - charts base on d3.js
- * @version v0.2.1
- * @date 2016-12-08 17:05:23
+ * @version v0.2.2
+ * @date 2016-12-16 12:17:50
 */
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
@@ -1701,6 +1701,221 @@ var animationConfig = {
 }(xCharts, d3));
 /**
  * Author mzefibp@163.com
+ * Date 16/6/23
+ * Describe 时间轴刷子
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var components = xCharts.components;
+    var Component = components['Component'];
+
+    utils.inherits(brush, Component);
+    components.extend({brush: brush});
+
+    function brush(messageCenter, config, type) {
+        //show=false时不做显示处理
+        // 不是坐标系不显示
+        if (config.brush.show === false) {
+            this._show = false;
+            return;
+        } else {
+            this._show = true;
+        }
+
+        //继承Component的属性
+        Component.call(this, messageCenter, config, type);
+    }
+
+    brush.prototype.extend = utils.extend;
+
+    brush.prototype.extend({
+        init: function (messageCenter, config) {
+            // 先占位,等坐标轴完成后再绘制时间刷
+
+            this.messageCenter.brush = true;
+
+            this.brushConfig = utils.merage(defaultConfig(), config.brush);
+
+            this.margin.bottom += this.brushConfig.brushHeight + 20;
+
+            var messageCenter = this.messageCenter;
+            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
+        },
+        render: function () {
+
+            var brush = d3.brushX();
+
+            brush.extent(initExtent(this));
+
+            // brush.handleSize(50)
+
+            var translateX = 0;
+            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
+            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
+            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
+
+            var group = this.main.selectAll('g.xc-brush').data([this]);
+            group = group.enter().append('g')
+                .attr('class', 'xc-brush')
+                .merge(group);
+
+            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
+                .call(brush);
+
+
+            brush.move(group, initMove(this));
+            // group.selectAll('rect.background')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#e0e0e0')
+            //     .attr('opacity', 0.5)
+            //
+            // group.selectAll('rect')
+            //     .attr('height', 25)
+            //     .attr('fill', '#e0e0e0');
+            //
+            // group.selectAll('.resize rect')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#a2a2a2')
+            //     .attr('width', 10);
+
+            group.selectAll('rect.overlay')
+                .attr('fill', '#e0e0e0')
+                .attr('opacity', 0.5);
+
+            group.selectAll('rect.handle')
+                .attr('fill', '#777');
+
+            this.brush = brush;
+
+            //添加clipath路径
+            var defGroup = this.svg.selectAll('defs').data([this]);
+            defGroup = defGroup.enter().append('defs').merge(defGroup);
+
+            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
+            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
+
+            var rect = clip.selectAll('rect').data([this]);
+            rect = rect.enter().append('rect').merge(rect);
+            rect.attr('width', width)
+                .attr('height', height);
+
+        },
+        ready: function () {
+            var brush = this.brush;
+            var brushChangeBind = brushChange(this);
+            this.brush.on('brush', brushChangeBind);
+
+            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
+            this.on('xAxisRender.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+
+            this.on('xAxisReady.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+        },
+        refresh:function(animationEase, animationTime){
+
+            // 关闭显示的组件不进行刷新
+            if (!this._show) return true;
+
+            //当容器改变时，刷新当前组件
+            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
+            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
+            this.originalWidth = this.messageCenter.originalWidth
+            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
+            this.render(animationEase, animationTime);//刷新
+            this.ready();
+        }
+    });
+
+    function initMove(ctx) {
+        var min = parseFloat(ctx.brushConfig.domain[0]);
+        var max = parseFloat(ctx.brushConfig.domain[1]);
+
+        if (isNaN(min) || isNaN(max)) {
+            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
+            return [0, 0];
+        }
+
+        var width = ctx.width;
+
+        var initMove = [
+            width * min / 100,
+            width * max / 100
+        ];
+
+        ctx.initBrushSelection = [
+            utils.toFixed(initMove[0] / width, 3),
+            utils.toFixed(initMove[1] / width, 3)
+        ];
+
+        return initMove;
+    }
+
+    function brushChange(ctx) {
+        var width = ctx.width;
+        return function () {
+            var domain = d3.event.selection;
+            var min = utils.toFixed(domain[0] / width, 3);
+            var max = utils.toFixed(domain[1] / width, 3);
+
+            ctx.fire('brushChange', [min, max]);
+        };
+
+        // console.log(domain)
+
+        // this.fire('brushChange',domain);
+    }
+
+
+    // 设置时间刷初始值
+    function initExtent(ctx) {
+        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
+    }
+
+    function defaultConfig() {
+
+        /**
+         * brush配置项
+         * @var brush
+         * @type Object
+         * @extends xCharts
+         * @description 时间轴特有的时间刷
+         */
+        return {
+            /**
+             * @var show
+             * @type Boolean
+             * @extends xCharts.brush
+             * @default true
+             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
+             */
+            show: true,
+            /**
+             * @var domain
+             * @type Array
+             * @extends xCharts.brush
+             * @default ['90%','100%']
+             * @description 设置时间刷的初始值,只支持百分比的形式
+             */
+            domain: ['90%', '100%'],
+            /**
+             * @var brushHeight
+             * @type Number
+             * @extends xCharts.brush
+             * @default 30
+             * @description 设置时间刷的高
+             */
+            brushHeight: 30
+        }
+    }
+
+}(xCharts, d3));
+/**
+ * Author mzefibp@163.com
  * Date 16/6/21
  * Describe 坐标系里的辅助线
  */
@@ -2001,221 +2216,6 @@ var animationConfig = {
 }(xCharts, d3));
 
 /**
- * Author mzefibp@163.com
- * Date 16/6/23
- * Describe 时间轴刷子
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var components = xCharts.components;
-    var Component = components['Component'];
-
-    utils.inherits(brush, Component);
-    components.extend({brush: brush});
-
-    function brush(messageCenter, config, type) {
-        //show=false时不做显示处理
-        // 不是坐标系不显示
-        if (config.brush.show === false) {
-            this._show = false;
-            return;
-        } else {
-            this._show = true;
-        }
-
-        //继承Component的属性
-        Component.call(this, messageCenter, config, type);
-    }
-
-    brush.prototype.extend = utils.extend;
-
-    brush.prototype.extend({
-        init: function (messageCenter, config) {
-            // 先占位,等坐标轴完成后再绘制时间刷
-
-            this.messageCenter.brush = true;
-
-            this.brushConfig = utils.merage(defaultConfig(), config.brush);
-
-            this.margin.bottom += this.brushConfig.brushHeight + 20;
-
-            var messageCenter = this.messageCenter;
-            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
-        },
-        render: function () {
-
-            var brush = d3.brushX();
-
-            brush.extent(initExtent(this));
-
-            // brush.handleSize(50)
-
-            var translateX = 0;
-            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
-            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
-            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
-
-            var group = this.main.selectAll('g.xc-brush').data([this]);
-            group = group.enter().append('g')
-                .attr('class', 'xc-brush')
-                .merge(group);
-
-            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
-                .call(brush);
-
-
-            brush.move(group, initMove(this));
-            // group.selectAll('rect.background')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#e0e0e0')
-            //     .attr('opacity', 0.5)
-            //
-            // group.selectAll('rect')
-            //     .attr('height', 25)
-            //     .attr('fill', '#e0e0e0');
-            //
-            // group.selectAll('.resize rect')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#a2a2a2')
-            //     .attr('width', 10);
-
-            group.selectAll('rect.overlay')
-                .attr('fill', '#e0e0e0')
-                .attr('opacity', 0.5);
-
-            group.selectAll('rect.handle')
-                .attr('fill', '#777');
-
-            this.brush = brush;
-
-            //添加clipath路径
-            var defGroup = this.svg.selectAll('defs').data([this]);
-            defGroup = defGroup.enter().append('defs').merge(defGroup);
-
-            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
-            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
-
-            var rect = clip.selectAll('rect').data([this]);
-            rect = rect.enter().append('rect').merge(rect);
-            rect.attr('width', width)
-                .attr('height', height);
-
-        },
-        ready: function () {
-            var brush = this.brush;
-            var brushChangeBind = brushChange(this);
-            this.brush.on('brush', brushChangeBind);
-
-            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
-            this.on('xAxisRender.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-
-            this.on('xAxisReady.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-        },
-        refresh:function(animationEase, animationTime){
-
-            // 关闭显示的组件不进行刷新
-            if (!this._show) return true;
-
-            //当容器改变时，刷新当前组件
-            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
-            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
-            this.originalWidth = this.messageCenter.originalWidth
-            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
-            this.render(animationEase, animationTime);//刷新
-            this.ready();
-        }
-    });
-
-    function initMove(ctx) {
-        var min = parseFloat(ctx.brushConfig.domain[0]);
-        var max = parseFloat(ctx.brushConfig.domain[1]);
-
-        if (isNaN(min) || isNaN(max)) {
-            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
-            return [0, 0];
-        }
-
-        var width = ctx.width;
-
-        var initMove = [
-            width * min / 100,
-            width * max / 100
-        ];
-
-        ctx.initBrushSelection = [
-            utils.toFixed(initMove[0] / width, 3),
-            utils.toFixed(initMove[1] / width, 3)
-        ];
-
-        return initMove;
-    }
-
-    function brushChange(ctx) {
-        var width = ctx.width;
-        return function () {
-            var domain = d3.event.selection;
-            var min = utils.toFixed(domain[0] / width, 3);
-            var max = utils.toFixed(domain[1] / width, 3);
-
-            ctx.fire('brushChange', [min, max]);
-        };
-
-        // console.log(domain)
-
-        // this.fire('brushChange',domain);
-    }
-
-
-    // 设置时间刷初始值
-    function initExtent(ctx) {
-        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
-    }
-
-    function defaultConfig() {
-
-        /**
-         * brush配置项
-         * @var brush
-         * @type Object
-         * @extends xCharts
-         * @description 时间轴特有的时间刷
-         */
-        return {
-            /**
-             * @var show
-             * @type Boolean
-             * @extends xCharts.brush
-             * @default true
-             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
-             */
-            show: true,
-            /**
-             * @var domain
-             * @type Array
-             * @extends xCharts.brush
-             * @default ['90%','100%']
-             * @description 设置时间刷的初始值,只支持百分比的形式
-             */
-            domain: ['90%', '100%'],
-            /**
-             * @var brushHeight
-             * @type Number
-             * @extends xCharts.brush
-             * @default 30
-             * @description 设置时间刷的高
-             */
-            brushHeight: 30
-        }
-    }
-
-}(xCharts, d3));
-/**
  * xCharts.legend
  * extends Component
  */
@@ -2289,13 +2289,18 @@ var animationConfig = {
 
             itemList.attr('transform', function (serie) {
 
-                    // 这里保存点击状态，默认选中
-                    // 为了刷新时只刷新位置，选中状态不变化
-                    this.isChecked = this.isChecked == undefined ?
-                        true : this.isChecked;
+                // 这里保存点击状态，默认选中
+                // 为了刷新时只刷新位置，选中状态不变化
 
-                    return 'translate(' + serie.position + ')';
-                })
+                if (this.isChecked === undefined) {
+                    this.isChecked = serie.isChecked;
+                }
+
+                // this.isChecked = this.isChecked == undefined ?
+                //     true : this.isChecked;
+
+                return 'translate(' + serie.position + ')';
+            })
                 .attr('fill', color)
                 .attr('opacity', function () {
                     return this.isChecked ?
@@ -2420,6 +2425,12 @@ var animationConfig = {
     function legendMouseClick(ctx, nameList, opacity) {
 
         return function (data) {
+
+            // legend点击事件失效状态
+            if (ctx.legendConfig.clickable === false) {
+                return true;
+            }
+
             this.isChecked = !this.isChecked;
             if (multiple) {
                 //多选的情况下
@@ -2430,28 +2441,41 @@ var animationConfig = {
                 d3.select(this).attr('opacity', 1);
             }
 
-            reload.call(ctx, data.name, multiple, nameList);
+            reload.call(ctx, data.name, multiple, nameList, ctx.legendSeries);
         }
     }
 
     /**
      * 分两种模式处理刷新
      * 传递给接受者一个 name的数组
+     * todo namelist 可以不用传了
      * @param name
      */
-    function reload(name, multiple, nameList) {
+    function reload(name, multiple, nameList, series) {
+        nameList = [];
         if (multiple) {
             //如果存在则删除，不存在则从_series中拿出添加
-            var isAdd = true;
-            for (var i = 0, s; s = nameList[i++];) {
-                if (s == name) {
-                    nameList.splice(i - 1, 1);
-                    isAdd = false;
-                    break;
+            // var isAdd = true;
+            // for (var i = 0, s; s = nameList[i++];) {
+            //     if (s == name) {
+            //         nameList.splice(i - 1, 1);
+            //         isAdd = false;
+            //         break;
+            //     }
+            // }
+            // if (isAdd)
+            //     nameList.push(name);
+            series.forEach(function (serie) {
+
+                if (serie.name === name) {
+                    serie.isChecked = !serie.isChecked;
                 }
-            }
-            if (isAdd)
-                nameList.push(name);
+
+                if (serie.isChecked === true) {
+                    nameList.push(serie.name)
+                }
+            });
+
 
             if (nameList.length == 0) this.fire('tooltipNone');
             else this.fire('tooltipShow');
@@ -2605,6 +2629,11 @@ var animationConfig = {
             }
 
         //多图表共存时，需要对legendList的name去重，否则会出现name一样，legend图例颜色不一样的情况
+
+        legendSeries.forEach(function (serie) {
+            // 如果legendShow === false,legend默认不显示
+            serie.isChecked = serie.legendShow === false ? false : true;
+        })
 
         return legendSeries;
     }
@@ -2903,7 +2932,15 @@ var animationConfig = {
                  * @default 'auto' 保持和图标颜色一致
                  */
                 hoverColor: 'auto'
-            }
+            },
+            /**
+             * @var clickable
+             * @extends xCharts.legend
+             * @type Boolean
+             * @description 图例是否可以点击
+             * @default true
+             */
+            clickable: true
         }
         return legend;
     }
@@ -3720,7 +3757,7 @@ var animationConfig = {
              * @description 格式化函数，如果在各项series里面定义了formatter会覆盖此函数
              * @default 请查看各个series里面的格式化函数
              */
-            //formatter: function (name,data) {
+            //formatter: function (name,data,index) {
             //    return name+':&nbsp;'+data;
             //},
             /**
@@ -3809,573 +3846,1049 @@ var animationConfig = {
 
 }(xCharts,d3));
 /**
- * 漏斗图
+ * @file 柱状图
+ * @author chenwubai.cx@gmail.com
  */
+
 (function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
-    xCharts.charts.extend({funnel: funnel});
-    utils.inherits(funnel, Chart);
 
-    function funnel(messageCenter, config) {
-        Chart.call(this, messageCenter, config, 'funnel');
+    // 创建bar构造函数
+    function bar(messageCenter, config) {
+        // 调用这一步的原因是为了继承属性
+        Chart.call(this, messageCenter, config, 'bar');
     }
 
-    funnel.prototype.extend = xCharts.extend;
-    funnel.prototype.extend({
+    // 在xCharts中注册bar构造函数
+    xCharts.charts.extend({bar: bar});
+    // 从父类Chart里继承一系列的方法
+    utils.inherits(bar, Chart);
+
+    bar.prototype.extend = xCharts.extend;
+    bar.prototype.extend({
         init: function (messageCenter, config, type, series) {
-            var _this = this;
-            _this.series = parseSeries(series, _this);
+            var _self = this;
+            if (!this.barSeries) {
+                // 提出type为bar的series的子元素对象
+
+                // 按stack分类,没有stack的话默认
+
+                // bar的全局配置
+                var globalBarConfig = utils.merage(barDefaultConfig(), this.config.bar);
+                this.globalBarConfig = globalBarConfig;
+
+                var barSeries = {};
+                var xAxisData = this.config.xAxis[0].data;
+                // 保存未分类的值
+                var seriesList = [];
+                for (var i = 0; i < series.length; i++) {
+                    if (series[i].type == 'bar') {
+                        var serie = __correctConfig(series[i], globalBarConfig);
+                        var stack = serie.stack || ('%bar' + i);
+                        serie.isShow = serie.legendShow === false ? false : true;
+                        // 转化为列表
+                        serie.labelList = labelToArray(xAxisData, serie.label);
+
+                        // 为了让没有stack有默认值
+                        serie.stack = stack;
+
+                        barSeries[stack] = barSeries[stack] || [];
+                        barSeries[stack].push(serie);
+
+                        // 添加颜色值
+                        serie.color = this.getColor(serie.idx);
+                        seriesList.push(serie);
+                    }
+                }
+                // 给每种柱状添加颜色值
+                // this.barSeries.forEach(function (series) {
+                //     series.color = _self.getColor(series.idx);
+                //     series.isShow = true;
+                // });
+
+                this.barSeries = barSeries;
+                this.seriesList = seriesList;
+            }
+
+
+            // 用变量存储messageCenter里的一些信息，方便后面使用
+            this.xAxisScale = messageCenter.xAxisScale;
+            this.yAxisScale = messageCenter.yAxisScale;
+
+            // TODO 这里暂时只考虑柱状图都在一个x轴和y轴上进行绘制，且x轴在下方
+            for (var i = 0; i < this.xAxisScale.length; i++) {
+                // TODO 这个判断条件是否靠谱待调研
+                if (this.xAxisScale[i].scaleType === 'barCategory') {
+                    this.barXScale = this.xAxisScale[i];
+                    break;
+                }
+            }
+
+
+            this.barYScale = this.yAxisScale[0];
+
+            // 获取每组矩形容器的左上角坐标以及其内的矩形左上角的坐标、宽度和高度
+            this.rectsData = __getDefaultData.apply(this);
+            // 如果有series的isShow为false，则重新计算每组矩形的坐标和宽高
+            for (var i = 0; i < this.seriesList.length; i++) {
+                if (!this.seriesList[i].isShow) {
+                    __changeRectsData.apply(this);
+                    break;
+                }
+            }
         },
         render: function (animationEase, animationTime) {
-            //注意一个serie就是一个图
-            var _this = this;
-            var animationConfig = _this.config.animation;
+            // 添加柱状图容器
+            this.bar = __renderBarWrapper.apply(this);
+            // 添加每组矩形的容器
+            this.rectWrapperList = __renderRectWrapper.apply(this);
+            // 添加柱状
+            this.rectList = __renderRect.apply(this, [animationEase, animationTime]);
 
-            var funnelGroup = _this.main.selectAll('.xc-funnel-group')
-                .data(_this.series);
+            // 添加label,业务相关
+            this.labelList = __renderLabel.apply(this);
 
-            funnelGroup = funnelGroup.enter().append('g')
-                .attr('class', 'xc-funnel-group')
-                .merge(funnelGroup);
+            // 添加文字
+            this.textList = __renderText.apply(this);
 
-            funnelGroup.exit().remove();//updateSeries时，删除多余的组
 
-            funnelGroup.attr('transform', function (serie) {
-                return 'translate(' + serie.xOffset + ',' + serie.yOffset + ')';
-            })
-            //画区块
-            var funnelSection = funnelGroup.selectAll('.xc-funnel-section').data(function (serie) {
-                return serie.data;
-            });
-            funnelSection = funnelSection.enter().append('path')
-                .attr('class', 'xc-funnel-section')
-                .merge(funnelSection)
-
-            funnelSection.attr('fill', function (d) {
-                    return _this.getColor(d.idx);
-                })
-                .transition()
-                .ease(animationEase)
-                .duration(animationTime)
-                .attrTween('d', function (d) {
-
-                    if (this.pathArr === undefined) {
-                        var pathArr = utils.copy(d.pathArr, true);
-                        pathArr[2][1] = pathArr[2][1] * 0.95;
-                        pathArr[3][1] = pathArr[3][1] * 0.95;
-                        this.pathArr = pathArr;
-                    }
-
-                    // this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
-                    var interpolate = d3.interpolate(this.pathArr, d.pathArr);
-                    this.pathArr = d.pathArr;
-                    return function (t) {
-                        return buildFunnelPath(interpolate(t));
-                    }
-                });
-
-            //画label
-            var funnelLabel = funnelGroup.selectAll('.xc-funnel-label')
-                .data(function (serie) {
-                    return serie.data;
-                });
-
-            var transitionStr = "opacity " + animationConfig.animationTime + "ms linear";
-
-            funnelLabel = funnelLabel.enter().append('g')
-                .attr('class', 'xc-funnel-label')
-                .style("transition", transitionStr)
-                .merge(funnelLabel);
-
-            funnelLabel.exit().remove();
-            funnelLabel.attr('opacity', function (d) {
-                    if (d.show == false)
-                        return 0;
-                    else
-                        return 1;
-                })
-                .transition()
-                .ease(animationEase)
-                .duration(animationTime)
-                .attrTween('transform', function (d) {
-
-                    if (this.labelPosition === undefined) {
-                        this.labelPosition = [d.labelPosition[0] * 1.1, d.labelPosition[1]];
-                    }
-
-                    // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
-                    var interpolate = d3.interpolate(this.labelPosition, d.labelPosition);
-                    this.labelPosition = d.labelPosition;
-                    return function (t) {
-                        return 'translate(' + interpolate(t) + ')';
-                    }
-
-                })
-
-            var labelLine = funnelLabel.selectAll('.xc-funnel-label-line')
-                .data(function (d) {
-                    if (d.show != false)
-                        return [d]
-                    else
-                        return [];
-                });
-
-            labelLine = labelLine.enter().append('path')
-                .attr('class', 'xc-funnel-label-line')
-                .merge(labelLine);
-
-            labelLine.attr('d', function (d) {
-                    return 'M0,0 L' + d.labelWidth + ',0';
-                })
-                .attr('stroke', function (d) {
-                    return _this.getColor(d.idx);
-                });
-
-            var labelText = funnelLabel.selectAll('.xc-funnel-label-text')
-                .data(function (d) {
-                    if (d.show != false)
-                        return [d]
-                    else
-                        return [];
-                });
-
-            labelText = labelText.enter().append('text')
-                .attr('class', 'xc-funnel-label-text')
-                .merge(labelText);
-            labelText.text(function (d) {
-                    return d.name
-                })
-                .attr('font-size', 14)
-                .attr('x', function (d) {
-                    return d.labelWidth + 5;
-                })
-                .attr('y', '0.2em');
-
-            _this.funnelSection = funnelSection;
         },
         ready: function () {
-            this.__legendReady();
-            this.__tooltipReady();
-        },
-        __legendReady: function () {
-            var _this = this;
-            _this.on('legendMouseenter.funnel', function (name) {
-                _this.funnelSection.attr('opacity', function (d) {
-                    var op = 1;
-                    if (d.name == name) op = d._serie.itemStyle.opacity
-                    return op;
-                });
-            });
-            _this.on('legendMouseleave.funnel', function () {
-                _this.funnelSection.attr('opacity', 1);
-            });
-            _this.on('legendClick.funnel', function (nameList) {
-                var series = legendClickSeries(_this.config.series, nameList);
-                var animationConfig = _this.config.animation;
-                _this.init(_this.series, _this.config, _this.type, series);
-                _this.render(animationConfig.animationEase, animationConfig.animationTime);
-            });
-        },
-        __tooltipReady: function () {
-            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
-            var _this = this;
-            var tooltip = _this.messageCenter.components['tooltip'];
-            var tooltipFormatter = tooltip.tooltipConfig.formatter;
-
-            if (_this.mobileMode) {
-                _this.mobileReady();
+            if (this.mobileMode) {
+                this.mobileReady();
             } else {
-                _this.funnelSection.on('mousemove.funnel', function (data) {
-                    var event = d3.event;
-                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+                if (this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if (this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
+            }
+        },
+        getTooltipPosition: function (tickIndex) {
+            var rangeBand = this.barXScale.bandwidth(),
+                rangeBandNum = this.barXScale.domain().length,
+                xRange = this.barXScale.range();
+            var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
+            return xRange[0] + outPadding + tickIndex * rangeBand + rangeBand / 2;
+        },
+        _reRenderBars: function (nameList) {
+            var animationConfig = this.config.animation;
+            // 先把所有series的isShow属性设为false
 
-                    var title = "<p>" + data._serie.name + "</p>";
-                    tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
-                    tooltip.setPosition([x, y]);
-                });
+            var keys = Object.keys(this.barSeries);
 
-                _this.funnelSection.on('mouseenter.funnel', function (data) {
-                    d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
-                    tooltip.showTooltip();
-                })
-
-                _this.funnelSection.on('mouseleave.funnel', function () {
-                    d3.select(this).attr('opacity', 1);
-                    tooltip.hiddenTooltip();
+            for (var i = 0; i < keys.length; i++) {
+                var series = this.barSeries[keys[i]];
+                series.forEach(function (series) {
+                    series.isShow = false;
                 });
             }
+
+            // 根据nameList把其中对应的series的isShow属性设为true
+            for (var i = 0; i < nameList.length; i++) {
+                for (var k = 0; k < this.seriesList.length; k++) {
+                    if (nameList[i] == this.seriesList[k].name) {
+                        this.seriesList[k].isShow = true;
+                        break;
+                    }
+                }
+            }
+            // 根据新的isShow配置进行计算
+            __changeRectsData.apply(this);
+            __renderRect.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
+            __renderLabel.apply(this);
+            __renderText.apply(this);
+        },
+        _tooltipSectionChange: function () {
+            var _this = this;
+            this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
+                var htmlStr = '';
+                _this.seriesList.forEach(function (series) {
+                    if (!series.isShow) {
+                        return;
+                    } else {
+                        var formatter = series.formatter || format || defaultFormatter;
+                        htmlStr += formatter(series.name, series.data[sectionNumber]);
+                    }
+                });
+                callback(htmlStr);
+            });
         }
     });
 
+    function __renderText() {
+        var textList = this.rectWrapperList
+            .selectAll('.xc-bar-text')
+            .data(function (d) {
+                return d.rectsData
+            });
+        textList = textList.enter()
+            .append('text')
+            .classed('xc-bar-text', true)
+            .merge(textList);
 
-    function legendClickSeries(series, nameList) {
-        series.forEach(function (serie) {
-
-            if (serie.type != 'funnel') return;
-
-            serie.data.forEach(function (d) {
-                if (inNameList(d.name, nameList)) d.show = true;
-                else d.show = false;
-            })
+        textList.attr('x', function (d) {
+            return d.text.x;
         })
-        return series;
+            .attr('y', function (d) {
+                return d.text.y;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('fill', function (d) {
+                return d.text.color;
+            })
+            .attr('font-size', function (d) {
+                return d.text.fontSize;
+            })
+            .attr('opacity', function (d) {
+                if (d.text.show === false) {
+                    return 0;
+                }
+
+                return 1;
+            })
+            .text('');
+        this.on('drawBarEnd.barText', function () {
+            textList.text(function (d) {
+
+                // 不显示情况 空串即可
+                if (d.text.show === false) {
+                    return '';
+                }
+
+                return d.text.value;
+            })
+        });
+
+        return textList;
+
     }
 
-    function inNameList(name, nameList) {
-        for (var i = 0, n; n = nameList[i++];) {
-            if (name == n)
-                return true;
+    function __correctConfig(serie, globalConfig) {
+
+        var defaultCon = utils.merage(defaultConfig(), globalConfig);
+
+        // 合并默认值
+        return utils.merage(defaultCon, serie);
+    }
+
+    function __getDefaultData() {
+        var rangeBand = this.barXScale.bandwidth(),
+            rangeBandNum = this.barXScale.domain().length,
+            xRange = this.barXScale.range(),
+            yRange = this.barYScale.range();
+
+        var stackGap = 2;
+        this.xRange = xRange[1] - xRange[0];
+        this.yRange = yRange[0] - yRange[1];
+        var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
+        // 定义同组矩形之间的间距
+        var rectMargin = this.globalBarConfig.barGap;
+        // 假设所有矩形均可见的情况下，计算矩形宽度
+        var seriesKeys = Object.keys(this.barSeries);
+        var seriesLength = seriesKeys.length;
+        var rectWidth = (rangeBand - (seriesLength + 1) * rectMargin) / seriesLength;
+
+        var rectGroupData = [],
+            tempX = outPadding;
+        for (var i = 0; i < rangeBandNum; i++) {
+            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
+            var rectsData = [];
+            var labelData = [];
+            var rectX = rectMargin;
+            for (var k = 0; k < seriesLength; k++) {
+
+                // 处理每一个柱子的x,y坐标和宽度高度
+                var key = seriesKeys[k];
+                var series = this.barSeries[key];
+                var rects = [];
+                var bottomY = this.yRange;
+                var bottomRect = true;
+                for (var l = 0; l < series.length; l++) {
+                    var serie = series[l];
+                    var labelObj = serie.labelList[i];
+                    var tempRect = {
+                        x: rectX,
+                        width: rectWidth > 0 ? rectWidth : 0,
+                        height: this.yRange - this.barYScale(serie.data[i]),
+                        color: serie.color,
+                        idx: serie.idx
+                    };
+
+                    // 如果label存在,最小高度不能小于5
+                    if (labelObj && tempRect.height < 5) {
+                        tempRect.height = 5;
+                    }
+
+                    tempRect.y = bottomY - tempRect.height;
+
+                    if (tempRect.y < 0) {
+
+                        tempRect.height += tempRect.y;
+
+                        tempRect.y = 0;
+                    }
+
+                    if (tempRect.height > 0 && bottomRect === false) {
+                        // 最底层的柱子不需要修正高度
+                        tempRect.height -= stackGap;
+                    } else if (tempRect.height > 0) {
+                        bottomRect = false;
+                    }
+
+
+                    // 中心显示文字
+                    tempRect.text = {
+                        x: tempRect.x + tempRect.width / 2,
+                        y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
+                        value: serie.textFormat(serie.data[i]),
+                        color: serie.textStyle.color,
+                        fontSize: serie.textStyle.fontSize,
+                        show: true
+                    };
+
+                    tempRect.text.show = serie.textShow;
+
+                    if (tempRect.text.fontSize + 2 >= tempRect.height) {
+                        tempRect.text.show = false;
+                    }
+
+
+                    if (labelObj) {
+
+                        // 最小显示高度5
+                        var minHeight = 5;
+                        var labelHeight = 14;
+                        var fontSzie = 12;
+                        var labelWidth = labelObj.value.length * fontSzie + 10;
+
+
+                        var label = {
+                            x: tempRect.x,
+                            y: tempRect.y,
+                            height: labelHeight,
+                            width: labelWidth,
+                            color: labelObj.color,
+                            text: {
+                                value: labelObj.value,
+                                x: tempRect.x + labelWidth / 2,
+                                y: tempRect.y + labelHeight / 2 + fontSzie / 2 - 2,
+                                fontSize: fontSzie
+                            }
+                        };
+
+                        if (tempRect.height / 2 < (tempRect.text.fontSize / 2 + label.height)) {
+
+                            // 这种情况是已经没有什么位置给label显示了
+                            label.showValue = false;
+                            label.height = minHeight;
+                        } else {
+                            label.showValue = true;
+                        }
+
+                        if (labelWidth > tempRect.width) {
+                            label.showValue = false;
+                            label.width = tempRect.width / 2;
+                        }
+
+                        labelData.push(label);
+                    }
+
+
+                    bottomY = tempRect.y;
+                    rects.push(tempRect);
+                }
+
+
+                rectsData = rectsData.concat(rects);
+                rectX += rectWidth + rectMargin;
+            }
+            // 每组矩形容器的坐标以及每组矩形的坐标和宽高
+            var tempData = {
+                x: tempX,
+                y: 0,
+                rectsData: rectsData,
+                labelData: labelData
+            };
+            rectGroupData.push(tempData);
+            tempX += rangeBand;
         }
-        return false;
+        return rectGroupData;
     }
 
-    function buildFunnelPath(pathArr) {
-        var dStr = 'M';
-        dStr += pathArr[0];
-        dStr += 'L' + pathArr[1];
-        dStr += 'L' + pathArr[2];
-        dStr += 'L' + pathArr[3];
-        return dStr;
+    function __changeRectsData() {
+        var rangeBand = this.barXScale.bandwidth();
+        // 定义同组矩形之间的间距
+        var rectMargin = this.globalBarConfig.barGap;
+        var stackGap = 2;
+
+        // 根据矩形是否可见，求出实际的矩形宽度
+        var visibleStack = {};
+        var visibleSeriesLength = 0;
+        for (var i = 0; i < this.seriesList.length; i++) {
+            if (this.seriesList[i].isShow) {
+                visibleStack[this.seriesList[i].stack] = true;
+            }
+        }
+
+        visibleSeriesLength = Object.keys(visibleStack).length;
+
+        var realRectWidth = (rangeBand - (visibleSeriesLength + 1) * rectMargin) / visibleSeriesLength;
+
+        for (var i = 0; i < this.rectsData.length; i++) {
+            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
+            // var tempRect = this.rectsData[i].rectsData;
+            var rectX = rectMargin;
+            var labelData = [];
+            var stackKeys = Object.keys(this.barSeries);
+            var rectsList = [];
+            for (var k = 0; k < stackKeys.length; k++) {
+                // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
+
+                var series = this.barSeries[stackKeys[k]];
+                var rects = [];
+                var bottomY = this.yRange;
+                var bottomRect = true;
+                for (var l = 0; l < series.length; l++) {
+                    var serie = series[l];
+                    var labelObj = serie.labelList[i];
+
+                    if (serie.isShow) {
+                        // tempRect[k].x = rectX;
+                        // tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
+                        // tempRect[k].width = realRectWidth;
+                        // tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
+                        // rectX += realRectWidth + rectMargin;
+
+                        var tempRect = {
+                            x: rectX,
+                            width: realRectWidth,
+                            height: this.yRange - this.barYScale(serie.data[i]),
+                            color: serie.color,
+                            idx: serie.idx
+                        };
+
+                        // 如果label存在,最小高度不能小于5
+                        if (labelObj && tempRect.height < 5) {
+                            tempRect.height = 5;
+                        }
+
+                        tempRect.y = bottomY - tempRect.height;
+
+                        if (tempRect.y < 0) {
+
+                            tempRect.height += tempRect.y;
+
+                            tempRect.y = 0;
+                        }
+
+                        if (tempRect.height > 0 && bottomRect === false) {
+                            // 最底层的柱子不需要修正高度
+                            tempRect.height -= stackGap;
+                        } else if (tempRect.height > 0) {
+                            bottomRect = false;
+                        }
+
+                        tempRect.text = {
+                            x: tempRect.x + tempRect.width / 2,
+                            y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
+                            value: serie.textFormat(serie.data[i]),
+                            color: serie.textStyle.color,
+                            fontSize: serie.textStyle.fontSize,
+                            show: true
+                        };
+
+                        // 中心显示文字
+                        tempRect.text = {
+                            x: tempRect.x + tempRect.width / 2,
+                            y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
+                            value: serie.textFormat(serie.data[i]),
+                            color: serie.textStyle.color,
+                            fontSize: serie.textStyle.fontSize,
+                            show: true
+                        };
+                        tempRect.text.show = serie.textShow;
+                        if (tempRect.text.fontSize + 2 >= tempRect.height) {
+                            tempRect.text.show = false;
+                        }
+
+
+                        if (labelObj) {
+
+                            // 最小显示高度5
+                            var minHeight = 5;
+                            var labelHeight = 14;
+                            var fontSzie = 12;
+                            var labelWidth = labelObj.value.length * fontSzie + 10;
+
+
+                            var label = {
+                                x: tempRect.x,
+                                y: tempRect.y,
+                                height: labelHeight,
+                                width: labelWidth,
+                                color: labelObj.color,
+                                text: {
+                                    value: labelObj.value,
+                                    x: tempRect.x + labelWidth / 2,
+                                    y: tempRect.y + labelHeight / 2 + fontSzie / 2 - 2,
+                                    fontSize: fontSzie
+                                }
+                            };
+
+                            if (tempRect.height / 2 < (tempRect.text.fontSize / 2 + label.height)) {
+
+                                // 这种情况是已经没有什么位置给label显示了
+                                label.showValue = false;
+                                label.height = minHeight;
+                            } else {
+                                label.showValue = true;
+                            }
+
+                            if (labelWidth > tempRect.width) {
+                                label.showValue = false;
+                                label.width = tempRect.width / 2;
+                            }
+
+                            labelData.push(label);
+                        }
+
+
+                        bottomY = tempRect.y;
+                        rects.push(tempRect);
+                    } else {
+                        // tempRect[k].y = this.yRange;
+                        // tempRect[k].height = 0;
+
+                        var tempRect = {
+                            x: rectX,
+                            width: 0,
+                            height: 0,
+                            color: serie.color,
+                            idx: serie.idx
+                        };
+
+                        tempRect.text = {
+                            x: 0,
+                            y: 0,
+                            value: 0,
+                            color: serie.textStyle.color,
+                            fontSize: 0,
+                            show: false
+                        };
+
+                        tempRect.y = bottomY;
+                        rects.push(tempRect);
+
+                    }
+
+                }
+
+                var maxWidth = 0;
+                var maxMargin = 0;
+                for (var index = 0; index < rects.length; index++) {
+                    if (rects[index].width > 0) {
+                        maxWidth = rects[index].width;
+                        maxMargin = rectMargin;
+                        break;
+                    }
+                }
+
+                rectX += maxWidth + maxMargin;
+                rectsList = rectsList.concat(rects);
+
+            }
+
+            this.rectsData[i].rectsData = rectsList;
+            this.rectsData[i].labelData = labelData;
+        }
     }
 
-    function parseSeries(series, that) {
-        var funnelSeries = []
-        for (var i = 0, s; s = series[i++];) {
-            //第一步判断是否是漏斗图
-            if (s.type != 'funnel') return;
-            s = utils.merage(defaultConfig(), s);
-            calcWidth(s, that);
-            calcPosition(s, that);
-            s.funnelPath = funnelPath(s);
-            s.data.forEach(function (d, idx) {
-                d.idx = d.idx == null ? idx : d.idx;
-                d._serie = s;
-                d.pathArr = s.funnelPath(idx);
+    function __renderLabel() {
 
-                //计算label的位置
-                var labelX = (d.pathArr[0][0] + d.pathArr[1][0]) / 2;
-                var labelY = (d.pathArr[0][1] + d.pathArr[2][1]) / 2;
-                d.labelPosition = [labelX, labelY];
-                //计算label线的长度
-                d.labelWidth = d.sectionWidth / 2 + 30;//30是突出多少
+        // 添加rect
+        var labelList = this.rectWrapperList.selectAll('.xc-bar-label-rect')
+            .data(function (d) {
+                return d.labelData;
             });
 
-            funnelSeries.push(s);
-        }
-        return funnelSeries;
+        labelList.exit().remove();
+        labelList = labelList.enter()
+            .append('rect')
+            .classed('xc-bar-label-rect', true)
+            .merge(labelList);
+
+
+        labelList.attr('x', function (d) {
+            return d.x;
+        })
+            .attr('y', function (d) {
+                return d.y;
+            })
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', function (d) {
+                return d.height;
+            })
+            .attr('fill', 'transparent');
+
+
+        // 添加text
+        var textList = this.rectWrapperList.selectAll('.xc-bar-label-text')
+            .data(function (d) {
+                return d.labelData;
+            });
+        textList.exit().remove();
+        textList = textList.enter()
+            .append('text')
+            .classed('xc-bar-label-text', true)
+            .merge(textList);
+
+
+        textList.attr('x', function (d) {
+            return d.text.x;
+        })
+            .attr('y', function (d) {
+                return d.text.y;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .attr('font-size', function (d) {
+                return d.text.fontSize;
+            })
+            .text('');
+
+        this.on('drawBarEnd.barLabel', function () {
+            textList.text(function (d) {
+
+                if (d.showValue === false) {
+                    return '';
+                }
+
+                return d.text.value;
+            });
+            labelList.attr('fill', function (d) {
+                return d.color;
+            });
+        });
+
+
     }
 
+    function __renderBarWrapper() {
+        var bar = this.main
+            .selectAll('.xc-bar')
+            .data([1]);
+        bar = bar.enter()
+            .append('g')
+            .classed('xc-bar', true)
+            .merge(bar);
+        return bar;
+    }
 
-    function funnelPath(serie) {
-        var width = serie.width, height = serie.height, data = serie.data, sort = serie.sort;
-        //塔尖向下，从大到小排序，塔尖向上，从小到大排序
-        data.sort(function (a, b) {
-            var ret = a.value - b.value;
-            if (sort == 'top') {
-                return ret;
+    function __renderRectWrapper() {
+        var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
+            .data(this.rectsData);
+        rectWrapperList = rectWrapperList.enter()
+            .append('g')
+            .classed('xc-bar-rectWrapper', true)
+            .merge(rectWrapperList);
+        rectWrapperList.attr('transform', function (d) {
+            return 'translate(' + d.x + ',' + d.y + ')';
+        });
+        return rectWrapperList;
+    }
+
+    function __renderRect(animationEase, animationTime) {
+        var that = this;
+        var rectList = this.rectWrapperList
+            .selectAll('.xc-bar-rect')
+            .data(function (d) {
+                return d.rectsData;
+            });
+        rectList = rectList.enter()
+            .append('rect')
+            .classed('xc-bar-rect', true)
+            .attr('x', function (d) {
+                return d.x;
+            })
+            .attr('y', this.yRange)
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', 0)
+            .attr('fill', function (d) {
+                return d.color;
+            })
+            .attr('data-index', function (d) {
+                return d.idx;
+            })
+            // 没办法只控制rect的某一个角,暂时不用rx,ry,后期可以考虑用path来画
+            // 通过js设置rx和ry是因为
+            // .attr('rx', 5)
+            // .attr('ry', 5)
+            .merge(rectList);
+        var transition = rectList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('x', function (d) {
+                return d.x;
+            })
+            .attr('y', function (d) {
+                return d.y;
+            })
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', function (d) {
+                return d.height;
+            });
+        var flag = false;
+        transition.on('end.bar', function () {
+            if (flag === false) {
+                that.fire('drawBarEnd')
             } else {
-                return -ret;
+                flag = true;
             }
         });
-        //计算还有多少区块需要显示
-        var length = data.length, maxValue = -Infinity;
-        data.forEach(function (d) {
-            if (d.show == false) length--;
-            maxValue = d3.max([maxValue, parseFloat(d.value)])
-        });
-        var sectionHeight = height / length;//每个区块的高度
-        //计算每个data对应的起点和终点
-        var index = sort == 'top' ? 1 : 0,//如果是塔尖向上，则第一个变量的y坐标不是0，而是一个sectionHeigth的高度,该变量是用来计算区块y坐标
-            position = [];
-        data.forEach(function (d, i) {
-            d.maxValue = maxValue;
-            d.percentage = parseFloat(d.value) / maxValue;
-            if (d.show == false) {
-                position[i] = undefined;
-                return
-            }
-            ;
-            var sectionWidth = d.percentage * width;
-            d.sectionWidth = sectionWidth;
-            var xOffset = (width - sectionWidth) / 2;
-            position[i] = [];
-            position[i][0] = [xOffset, sectionHeight * index];
-            position[i][1] = [xOffset + sectionWidth, sectionHeight * index];
-            index++;
-        });
+        return rectList;
+    }
 
-        //保证每个区块是由四个点组成，所以塔尖需要两个重复的点
-        if (sort == 'top') {
-            var topP = [width / 2, 0];
-            position.unshift([topP, topP]);
+    function __legendReady() {
+        __legendMouseenter.apply(this);
+        __legendMouseleave.apply(this);
+        __legendClick.apply(this);
+    }
+
+    function __legendMouseenter() {
+        var _this = this;
+        this.on('legendMouseenter.bar', function (name) {
+            // 取出对应rect的idx
+            var idx = 0;
+            for (var i = 0; i < _this.seriesList.length; i++) {
+                if (_this.seriesList[i].name == name) {
+                    idx = _this.seriesList[i].idx;
+                    break;
+                }
+            }
+            // 把对应的矩形透明度设成0.5
+            _this.rectList._groups.forEach(function (rectArr) {
+
+                rectArr.forEach(function (rect) {
+                    if (rect.__data__.idx === idx) {
+                        d3.select(rect)
+                            .attr('fill-opacity', 0.5);
+                    }
+                });
+
+            });
+        });
+    }
+
+    function __legendMouseleave() {
+        var _this = this;
+        this.on('legendMouseleave.bar', function (name) {
+            // 取出对应rect的idx
+            var idx = 0;
+            for (var i = 0; i < _this.seriesList.length; i++) {
+                if (_this.seriesList[i].name == name) {
+                    idx = _this.seriesList[i].idx;
+                    break;
+                }
+            }
+            // 把对应的矩形透明度的属性去掉
+            _this.rectList._groups.forEach(function (rectArr) {
+
+                rectArr.forEach(function (rect) {
+                    if (rect.__data__.idx === idx) {
+                        d3.select(rect)
+                            .attr('fill-opacity', null);
+                    }
+                });
+
+
+            });
+        });
+    }
+
+    function __legendClick() {
+        var _this = this;
+        this.on('legendClick.bar', function (nameList) {
+            _this._reRenderBars(nameList);
+        });
+    }
+
+    function __tooltipReady() {
+        if (this.config.tooltip.trigger == 'axis') {
+            this._tooltipSectionChange();
         } else {
-            var bottomP = [width / 2, sectionHeight * index];
-            position.push([bottomP, bottomP]);
-        }
-        //在第一次计算区块坐标时会导致show=false的position位置为undefined，这里根据塔尖方向的不同进行补全
-        //主要是为了动画效果,show=false的时候，只是区块高度为0，并不代表没有这个区块
-        for (var i = 0, len = position.length; i < len; i++) {
-            var p = position[i];
-            if (p != undefined) continue;
-            var j = 1;
-            //防止偏移后还是undefined
-            while (position[i] === undefined) {
-                if (sort == 'top')
-                    position[i] = position[i - j];
-                else
-                    position[i] = position[i + j];
-
-                j++;
-            }
-
-        }
-        return function (idx) {
-            //传入一个区块index，获取区块的4个点，依次是左上，又上，右下，左下
-            if (idx < 0 || idx >= data.length) {
-                console.error('内部代码错误,漏斗图获取区块%d，最大值为%d', idx, data.length);
-            }
-            var pathPoints = [];
-            pathPoints[0] = position[idx][0], pathPoints[1] = position[idx][1];
-            pathPoints[2] = position[idx + 1][1], pathPoints[3] = position[idx + 1][0];
-            return pathPoints;
+            //TODO 待添加trigger为 'item'时的tooltip事件
         }
     }
+
+    function defaultFormatter(name, value) {
+        var htmlStr = '';
+        htmlStr += "<div>" + name + "：" + value + "</div>";
+        return htmlStr;
+    }
+
 
     /**
-     * 计算每个漏斗图的宽高
-     * @param serie
-     * @param that
+     * label对象转化为数据,和xAxis.data一一对应
+     * @param data
+     * @param label
      */
-    function calcWidth(serie, that) {
-        var width = that.width, heigth = that.height, size = serie.size;
-        var fw = size[0];
-        if (typeof fw == 'string') {
-            if (fw.substr(-1) === '%') {
-                var percent = parseFloat(fw) / 100;
-                fw = percent * width;
-            } else if (fw.substr(-2) == 'px') {
-                fw = parseFloat(fw);
-            } else {
-                fw = parseFloat(fw);
-                if (isNaN(fw)) console.error("name:" + serie.name + " size[0] not support");
+    function labelToArray(data, label) {
+        label = label || {};
+        var list = [];
+        var keys = Object.keys(label);
+        for (var i = 0; i < data.length; i++) {
+            list[i] = null;
+            for (var j = 0; j < keys.length; j++) {
+                var obj = label[keys[j]];
+                if (obj.xAxis == data[i]) {
+                    list[i] = obj;
+                    break;
+                }
             }
-        } else if (typeof  fw != 'number') {
-            console.error("name:" + serie.name + " size[0] not support");
         }
-
-        var fh = size[1];
-
-        if (typeof fh == 'string') {
-            if (fh.substr(-1) === '%') {
-                var percent = parseFloat(fh) / 100;
-                fh = percent * heigth;
-            } else if (fh.substr(-2) == 'px') {
-                fh = parseFloat(fh);
-            } else {
-                fh = parseFloat(fh);
-                if (isNaN(fh)) console.error("name:" + serie.name + " size[1] not support");
-            }
-        } else if (typeof  fh != 'number') {
-            console.error("name:" + serie.name + " size[1] not support");
-        }
-        serie.width = fw;
-        serie.height = fh;
-    }
-
-    /**
-     * 计算漏斗图的起始位置
-     * @param series
-     * @param that
-     */
-    function calcPosition(serie, that) {
-        var width = that.width, height = that.height, x = serie.x, y = serie.y;
-        var xOffset = 0, yOffset = 0;
-        if (x == 'center') {
-            xOffset = (width - serie.width) / 2;
-        }
-        else if (x == 'right') {
-            xOffset = (width - serie.width);
-        }
-        else if (x.substr(-1) == '%') {
-            xOffset = parseFloat(x) / 100 * width;
-        } else {
-            x = parseFloat(x);
-            if (isNaN(x)) console.error("name:" + serie.name + " serie.x not support")
-            else xOffset = x;
-        }
-
-        if (y == 'middle') {
-            yOffset = (height - serie.height) / 2;
-        }
-        else if ('y' == 'bottom') {
-            yOffset = (height - serie.height);
-        }
-        else if (y.substr(-1) == '%') {
-            yOffset = parseFloat(y) / 100 * height;
-        } else {
-            y = parseFloat(y);
-            if (isNaN(y)) console.error("name:" + serie.name + " serie.y not support")
-            else yOffset = y;
-        }
-        serie.xOffset = xOffset;
-        serie.yOffset = yOffset;
-    }
-
-    funnel.defaultFormatter = defaultFormatter;
-    function defaultFormatter(name, value, percentage) {
-        return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
+        return list;
     }
 
     function defaultConfig() {
         /**
-         * @var funnel
+         * @var bar
          * @type Object
          * @extends xCharts.series
-         * @description 漏斗图配置项
+         * @description 柱状图配置项
          */
-        var funnel = {
-            /**
-             * @var name
-             * @type String
-             * @extends xCharts.series.funnel
-             * @description 漏斗图代表的名字
-             */
-            name: '漏斗图',
+        var config = {
             /**
              * @var type
              * @type String
-             * @extends xCharts.series.funnel
-             * @default funnel
-             * @description 漏斗图指定类型
+             * @description 指定图表类型
+             * @values 'bar'
+             * @extends xCharts.series.bar
              */
-            type: 'funnel',
+            type: 'bar',
             /**
-             * @var sort
+             * @var name
              * @type String
-             * @values 'top'|'down'
-             * @default 'down'
-             * @description 漏斗图尖角朝向
-             * @extends xCharts.series.funnel
+             * @description 数据项名称
+             * @extends xCharts.series.bar
              */
-            sort: 'down',
-            /**
-             * @var size
-             * @extends xCharts.series.funnel
-             * @type Array
-             * @description 漏斗图大小
-             * @description 可以为百分比，也可以为具体数字，默认单位px
-             * @default ['50%', '50%']
-             * @example
-             *  size:['50%','50%']//百分比
-             *  size:[500,'300']//固定宽高
-             */
-            size: ['50%', '50%'],
-            /**
-             *  @var x
-             *  @extends xCharts.series.funnel
-             *  @type String|Number
-             *  @default 'center'
-             *  @values 'left'|'right'|'center'|Number(单位像素)|Percentage
-             *  @description 漏斗图左上角在x轴方向的偏移量
-             */
-            x: 'center',
-            /**
-             *  @var y
-             *  @extends xCharts.series.funnel
-             *  @type String|Number
-             *  @default 'center'
-             *  @values 'top'|'middle'|'bottom'|Number(单位像素)|Percentage
-             *  @description 漏斗图左上角在y轴方向的偏移量
-             */
-            y: 'middle',
+            // name: '',
             /**
              * @var data
              * @type Array
-             * @extends xCharts.series.funnel
-             * @description 一个装有漏斗图数据的二维数组
-             * @example
-             *   [
-             *      {name: '腾讯', value: '80'},
-             *      {name: '百度', value: '100'},
-             *      {name: '阿里巴巴', value: '60'},
-             *      {name: '京东', value: '40'},
-             *      {name: '淘宝', value: '20'},
-             *   ]
+             * @description 柱状图数据项对应的各项指标的值的集合
+             * @extends xCharts.series.bar
              */
-            data: [],
+            // data: [],
             /**
              * @var formatter
-             * @extends xCharts.series.funnel
-             * @type Function
-             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
-             * @example
-             *  formatter: function (name,x,y) {
-             *      return '<p>'+name + ':&nbsp;' + value+' 占比:'+percentage+'%</p>';
-             *  }
+             * @type function
+             * @description 数据项信息展示文本的格式化函数
+             * @extends xCharts.series.bar
              */
-            //formatter:function(){},
+            // formatter: function(name, value) {},
             /**
-             * @var itemStyle
-             * @extends xCharts.series.funnel
-             * @type Object
-             * @description 每个漏斗图区块的样式
+             * @var stack
+             * @type Number|String
+             * @description 堆栈柱状图使用,相同stack会被堆叠为一个柱子
+             * @extends xCharts.series.bar
              */
-            itemStyle: {
+            // stack: 'one',
+            /**
+             * @var label
+             * @type Array
+             * @description 添加左上角label
+             * @extends xCharts.series.bar
+             * @example
+             *  [{
+             *      xAxis: '语文',
+             *      value:'下降',
+             *       color:'#344c09'
+             *  }]
+             */
+            // label: [{
+            /**
+             * @var xAxis
+             * @type String
+             * @description 与xAxis.data值对应
+             * @extends xCharts.series.bar.label
+             */
+            // xAxis: '语文',
+            /**
+             * @var value
+             * @type String
+             * @description label的显示文本
+             * @extends xCharts.series.bar.label
+             */
+            // value: '语文',
+            /**
+             * @var color
+             * @type String
+             * @description 文本的颜色
+             * @extends xCharts.series.bar.label
+             */
+            // color: '#fff',
+            // }]
+        };
+        return config;
+    }
+
+    // TODO 设置全局的bar变量,控制间隔啊之类的
+    function barDefaultConfig() {
+        /**
+         * @var bar
+         * @type Object
+         * @extends xCharts
+         * @description 柱状图通用配置项
+         */
+        var config = {
+            /**
+             * @var textShow
+             * @type Boolean
+             * @extends xCharts.bar
+             * @description 是否在柱状图中心显示文字
+             * @default false
+             */
+            textShow: false,
+            /**
+             * @var textFormat
+             * @type Function
+             * @extends xCharts.bar
+             * @description 格式化文字
+             * @example
+             *  function (data, index) {
+             *       return value;
+             *   },
+             */
+            textFormat: function (data, index) {
+                return data;
+            },
+            /**
+             * @var textStyle
+             * @type Object
+             * @extends xCharts.bar
+             * @description 文字样式
+             */
+            textStyle: {
                 /**
-                 * @var opacity
-                 * @extends xCharts.series.funnel.itemStyle
+                 * @var fontSize
                  * @type Number
-                 * @values 0-1
-                 * @description 鼠标移入时，变化的透明度
-                 * @default 0.5
+                 * @extends xCharts.bar.textStyle
+                 * @description 文字大小
+                 * @default 14
                  */
-                opacity: 0.5
-            }
-        }
-        return funnel;
+                fontSize: 14,
+                /**
+                 * @var color
+                 * @type String
+                 * @extends xCharts.bar.textStyle
+                 * @description 文字颜色
+                 * @default #fff
+                 */
+                color: '#fff'
+            },
+            /**
+             * @var hoverOpacity
+             * @type Number
+             * @extends xCharts.bar
+             * @description 鼠标响应legend透明度
+             * @default 0.5
+             */
+            hoverOpacity: 0.5,
+            /**
+             * @var label
+             * @type Array
+             * @extends xCharts.bar
+             * @description 类似于小tip
+             */
+            // label:[{
+            /**
+             * @var xAxis
+             * @type Any
+             * @extends xCharts.bar.label
+             * @description 和xAxis轴上的data对应
+             */
+            // xAxis: 1,
+            /**
+             * @var value
+             * @type Any
+             * @extends xCharts.bar.label
+             * @description 显示文字
+             */
+            // value: 1,
+            /**
+             * @var color
+             * @type Any
+             * @extends xCharts.bar.label
+             * @description 背景色
+             */
+            // color: #fff,
+            // }],
+            /**
+             * @var barGap
+             * @type Number
+             * @extends xCharts.bar
+             * @description 组内每个bar之间的间隔
+             * @default 10
+             */
+            barGap: 10,
+            /**
+             * @var legendShow
+             * @type Boolean
+             * @extends xCharts.bar
+             * @description 控制legend默认显示情况,false 默认不显示
+             * @default true
+             */
+            legendShow: true
+        };
+
+        return config;
     }
 
 }(xCharts, d3));
 /**
- * Author liuyang46@meituan.com
- * Date 16/5/27
- * Describe 漏斗图,移动端适配
+ * @file 柱状图(移动端)
+ * @date 2016-05-30
+ * @author chenxuan.cx@gmail.com
  */
-(function (xCharts, d3) {
+(function(xCharts, d3) {
     var utils = xCharts.utils;
     var charts = xCharts.charts;
-    var funnel = charts.funnel;
+    var bar = charts.bar;
 
-    funnel.prototype.extend({
-        mobileReady: function () {
-            this.funnelSection.on('touchstart.funnel', funnelSectionTrigger(this));
+    bar.prototype.extend({
+        mobileReady: function() {
+            if(this.config.legend && this.config.legend.show) {
+                __legendMobileReady.apply(this);
+            }
+            if(this.config.tooltip && this.config.tooltip.show) {
+                __tooltipMobileReady.apply(this);
+            }
         }
     });
-
-    var defaultFormatter = funnel.defaultFormatter;
-
-    function funnelSectionTrigger(ctx) {
-        var tooltip = ctx.messageCenter.components['tooltip'];
-        var tooltipFormatter = tooltip.tooltipConfig.formatter;
-
-        return function (data) {
-            ctx.funnelSection.attr('opacity', 1);
-            d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
-            tooltip.showTooltip();
-
-            // 设置HTML
-            var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-
-            var title = "<p>" + data._serie.name + "</p>";
-            tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
-
-            // 获取坐标
-            var position = d3.mouse(ctx.svg.node());
-            tooltip.setPosition(position);
-            
-
+    function __legendMobileReady() {
+        __legendTouch.apply(this);
+    }
+    function __legendTouch() {
+        var _this = this;
+        this.on('legendClick.bar', function(nameList) {
+            _this._reRenderBars(nameList);
+            _this.messageCenter.components.tooltip.hiddenTooltip();
+        });
+    }
+    function __tooltipMobileReady() {
+        if(this.config.tooltip.trigger == 'axis') {
+            this._tooltipSectionChange();
+        } else {
+            //TODO 待添加trigger为 'item'时的tooltip事件
         }
     }
 }(xCharts, d3));
@@ -5269,988 +5782,573 @@ var animationConfig = {
     });
 }(xCharts, d3));
 /**
- * @file 柱状图
- * @author chenwubai.cx@gmail.com
+ * 漏斗图
  */
-
 (function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
+    xCharts.charts.extend({funnel: funnel});
+    utils.inherits(funnel, Chart);
 
-    // 创建bar构造函数
-    function bar(messageCenter, config) {
-        // 调用这一步的原因是为了继承属性
-        Chart.call(this, messageCenter, config, 'bar');
+    function funnel(messageCenter, config) {
+        Chart.call(this, messageCenter, config, 'funnel');
     }
 
-    // 在xCharts中注册bar构造函数
-    xCharts.charts.extend({bar: bar});
-    // 从父类Chart里继承一系列的方法
-    utils.inherits(bar, Chart);
-
-    bar.prototype.extend = xCharts.extend;
-    bar.prototype.extend({
+    funnel.prototype.extend = xCharts.extend;
+    funnel.prototype.extend({
         init: function (messageCenter, config, type, series) {
-            var _self = this;
-            if (!this.barSeries) {
-                // 提出type为bar的series的子元素对象
-
-                // 按stack分类,没有stack的话默认
-
-                // bar的全局配置
-                var globalBarConfig = utils.merage(barDefaultConfig(), this.config.bar);
-
-                var barSeries = {};
-                var xAxisData = this.config.xAxis[0].data;
-                // 保存未分类的值
-                var seriesList = [];
-                for (var i = 0; i < series.length; i++) {
-                    if (series[i].type == 'bar') {
-                        var serie = __correctConfig(series[i], globalBarConfig);
-                        var stack = serie.stack || ('%bar' + i);
-
-                        // 转化为列表
-                        serie.labelList = labelToArray(xAxisData, serie.label);
-
-                        // 为了让没有stack有默认值
-                        serie.stack = stack;
-
-                        barSeries[stack] = barSeries[stack] || [];
-                        barSeries[stack].push(serie);
-
-                        // 添加颜色值
-                        serie.color = this.getColor(serie.idx);
-                        serie.isShow = true;
-                        seriesList.push(serie);
-                    }
-                }
-                // 给每种柱状添加颜色值
-                // this.barSeries.forEach(function (series) {
-                //     series.color = _self.getColor(series.idx);
-                //     series.isShow = true;
-                // });
-
-                this.barSeries = barSeries;
-                this.seriesList = seriesList;
-            }
-
-
-            // 用变量存储messageCenter里的一些信息，方便后面使用
-            this.xAxisScale = messageCenter.xAxisScale;
-            this.yAxisScale = messageCenter.yAxisScale;
-
-            // TODO 这里暂时只考虑柱状图都在一个x轴和y轴上进行绘制，且x轴在下方
-            for (var i = 0; i < this.xAxisScale.length; i++) {
-                // TODO 这个判断条件是否靠谱待调研
-                if (this.xAxisScale[i].scaleType === 'barCategory') {
-                    this.barXScale = this.xAxisScale[i];
-                    break;
-                }
-            }
-
-
-            this.barYScale = this.yAxisScale[0];
-
-            // 获取每组矩形容器的左上角坐标以及其内的矩形左上角的坐标、宽度和高度
-            this.rectsData = __getDefaultData.apply(this);
-            // 如果有series的isShow为false，则重新计算每组矩形的坐标和宽高
-            for (var i = 0; i < this.seriesList.length; i++) {
-                if (!this.seriesList[i].isShow) {
-                    __changeRectsData.apply(this);
-                    break;
-                }
-            }
+            var _this = this;
+            _this.series = parseSeries(series, _this);
         },
         render: function (animationEase, animationTime) {
-            // 添加柱状图容器
-            this.bar = __renderBarWrapper.apply(this);
-            // 添加每组矩形的容器
-            this.rectWrapperList = __renderRectWrapper.apply(this);
-            // 添加柱状
-            this.rectList = __renderRect.apply(this, [animationEase, animationTime]);
+            //注意一个serie就是一个图
+            var _this = this;
+            var animationConfig = _this.config.animation;
 
-            // 添加label,业务相关
-            this.labelList = __renderLabel.apply(this);
+            var funnelGroup = _this.main.selectAll('.xc-funnel-group')
+                .data(_this.series);
 
-            // 添加文字
-            this.textList = __renderText.apply(this);
+            funnelGroup = funnelGroup.enter().append('g')
+                .attr('class', 'xc-funnel-group')
+                .merge(funnelGroup);
 
+            funnelGroup.exit().remove();//updateSeries时，删除多余的组
 
+            funnelGroup.attr('transform', function (serie) {
+                return 'translate(' + serie.xOffset + ',' + serie.yOffset + ')';
+            })
+            //画区块
+            var funnelSection = funnelGroup.selectAll('.xc-funnel-section').data(function (serie) {
+                return serie.data;
+            });
+            funnelSection = funnelSection.enter().append('path')
+                .attr('class', 'xc-funnel-section')
+                .merge(funnelSection)
+
+            funnelSection.attr('fill', function (d) {
+                    return _this.getColor(d.idx);
+                })
+                .transition()
+                .ease(animationEase)
+                .duration(animationTime)
+                .attrTween('d', function (d) {
+
+                    if (this.pathArr === undefined) {
+                        var pathArr = utils.copy(d.pathArr, true);
+                        pathArr[2][1] = pathArr[2][1] * 0.95;
+                        pathArr[3][1] = pathArr[3][1] * 0.95;
+                        this.pathArr = pathArr;
+                    }
+
+                    // this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
+                    var interpolate = d3.interpolate(this.pathArr, d.pathArr);
+                    this.pathArr = d.pathArr;
+                    return function (t) {
+                        return buildFunnelPath(interpolate(t));
+                    }
+                });
+
+            //画label
+            var funnelLabel = funnelGroup.selectAll('.xc-funnel-label')
+                .data(function (serie) {
+                    return serie.data;
+                });
+
+            var transitionStr = "opacity " + animationConfig.animationTime + "ms linear";
+
+            funnelLabel = funnelLabel.enter().append('g')
+                .attr('class', 'xc-funnel-label')
+                .style("transition", transitionStr)
+                .merge(funnelLabel);
+
+            funnelLabel.exit().remove();
+            funnelLabel.attr('opacity', function (d) {
+                    if (d.show == false)
+                        return 0;
+                    else
+                        return 1;
+                })
+                .transition()
+                .ease(animationEase)
+                .duration(animationTime)
+                .attrTween('transform', function (d) {
+
+                    if (this.labelPosition === undefined) {
+                        this.labelPosition = [d.labelPosition[0] * 1.1, d.labelPosition[1]];
+                    }
+
+                    // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
+                    var interpolate = d3.interpolate(this.labelPosition, d.labelPosition);
+                    this.labelPosition = d.labelPosition;
+                    return function (t) {
+                        return 'translate(' + interpolate(t) + ')';
+                    }
+
+                })
+
+            var labelLine = funnelLabel.selectAll('.xc-funnel-label-line')
+                .data(function (d) {
+                    if (d.show != false)
+                        return [d]
+                    else
+                        return [];
+                });
+
+            labelLine = labelLine.enter().append('path')
+                .attr('class', 'xc-funnel-label-line')
+                .merge(labelLine);
+
+            labelLine.attr('d', function (d) {
+                    return 'M0,0 L' + d.labelWidth + ',0';
+                })
+                .attr('stroke', function (d) {
+                    return _this.getColor(d.idx);
+                });
+
+            var labelText = funnelLabel.selectAll('.xc-funnel-label-text')
+                .data(function (d) {
+                    if (d.show != false)
+                        return [d]
+                    else
+                        return [];
+                });
+
+            labelText = labelText.enter().append('text')
+                .attr('class', 'xc-funnel-label-text')
+                .merge(labelText);
+            labelText.text(function (d) {
+                    return d.name
+                })
+                .attr('font-size', 14)
+                .attr('x', function (d) {
+                    return d.labelWidth + 5;
+                })
+                .attr('y', '0.2em');
+
+            _this.funnelSection = funnelSection;
         },
         ready: function () {
-            if (this.mobileMode) {
-                this.mobileReady();
-            } else {
-                if (this.config.legend && this.config.legend.show) {
-                    __legendReady.apply(this);
-                }
-                if (this.config.tooltip && this.config.tooltip.show) {
-                    __tooltipReady.apply(this);
-                }
-            }
+            this.__legendReady();
+            this.__tooltipReady();
         },
-        getTooltipPosition: function (tickIndex) {
-            var rangeBand = this.barXScale.bandwidth(),
-                rangeBandNum = this.barXScale.domain().length,
-                xRange = this.barXScale.range();
-            var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
-            return xRange[0] + outPadding + tickIndex * rangeBand + rangeBand / 2;
-        },
-        _reRenderBars: function (nameList) {
-            var animationConfig = this.config.animation;
-            // 先把所有series的isShow属性设为false
-
-            var keys = Object.keys(this.barSeries);
-
-            for (var i = 0; i < keys.length; i++) {
-                var series = this.barSeries[keys[i]];
-                series.forEach(function (series) {
-                    series.isShow = false;
-                });
-            }
-
-            // 根据nameList把其中对应的series的isShow属性设为true
-            for (var i = 0; i < nameList.length; i++) {
-                for (var k = 0; k < this.seriesList.length; k++) {
-                    if (nameList[i] == this.seriesList[k].name) {
-                        this.seriesList[k].isShow = true;
-                        break;
-                    }
-                }
-            }
-            // 根据新的isShow配置进行计算
-            __changeRectsData.apply(this);
-            __renderRect.apply(this, [animationConfig.animationEase, animationConfig.animationTime]);
-            __renderLabel.apply(this);
-            __renderText.apply(this);
-        },
-        _tooltipSectionChange: function () {
+        __legendReady: function () {
             var _this = this;
-            this.on('tooltipSectionChange.bar', function (sectionNumber, callback, format) {
-                var htmlStr = '';
-                _this.seriesList.forEach(function (series) {
-                    if (!series.isShow) {
-                        return;
-                    } else {
-                        var formatter = series.formatter || format || defaultFormatter;
-                        htmlStr += formatter(series.name, series.data[sectionNumber]);
-                    }
+            _this.on('legendMouseenter.funnel', function (name) {
+                _this.funnelSection.attr('opacity', function (d) {
+                    var op = 1;
+                    if (d.name == name) op = d._serie.itemStyle.opacity
+                    return op;
                 });
-                callback(htmlStr);
             });
+            _this.on('legendMouseleave.funnel', function () {
+                _this.funnelSection.attr('opacity', 1);
+            });
+            _this.on('legendClick.funnel', function (nameList) {
+                var series = legendClickSeries(_this.config.series, nameList);
+                var animationConfig = _this.config.animation;
+                _this.init(_this.series, _this.config, _this.type, series);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+            });
+        },
+        __tooltipReady: function () {
+            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
+            var _this = this;
+            var tooltip = _this.messageCenter.components['tooltip'];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter;
+
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                _this.funnelSection.on('mousemove.funnel', function (data) {
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+
+                    var title = "<p>" + data._serie.name + "</p>";
+                    tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+                    tooltip.setPosition([x, y]);
+                });
+
+                _this.funnelSection.on('mouseenter.funnel', function (data) {
+                    d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+                    tooltip.showTooltip();
+                })
+
+                _this.funnelSection.on('mouseleave.funnel', function () {
+                    d3.select(this).attr('opacity', 1);
+                    tooltip.hiddenTooltip();
+                });
+            }
         }
     });
 
-    function __renderText() {
-        var textList = this.rectWrapperList
-            .selectAll('.xc-bar-text')
-            .data(function (d) {
-                return d.rectsData
-            });
-        textList = textList.enter()
-            .append('text')
-            .classed('xc-bar-text', true)
-            .merge(textList);
 
-        textList.attr('x', function (d) {
-            return d.text.x;
+    function legendClickSeries(series, nameList) {
+        series.forEach(function (serie) {
+
+            if (serie.type != 'funnel') return;
+
+            serie.data.forEach(function (d) {
+                if (inNameList(d.name, nameList)) d.show = true;
+                else d.show = false;
+            })
         })
-            .attr('y', function (d) {
-                return d.text.y;
-            })
-            .attr('text-anchor', 'middle')
-            .attr('fill', function (d) {
-                return d.text.color;
-            })
-            .attr('font-size', function (d) {
-                return d.text.fontSize;
-            })
-            .text('');
-        this.on('drawBarEnd.barText', function () {
-            textList.text(function (d) {
-
-                // 不显示情况 空串即可
-                if (d.text.show === false) {
-                    return '';
-                }
-
-                return d.text.value;
-            })
-        });
-
-        return textList;
-
+        return series;
     }
 
-    function __correctConfig(serie, globalConfig) {
-
-        var defaultCon = utils.merage(defaultConfig(), globalConfig);
-
-        // 合并默认值
-        return utils.merage(defaultCon, serie);
-    }
-
-    function __getDefaultData() {
-        var rangeBand = this.barXScale.bandwidth(),
-            rangeBandNum = this.barXScale.domain().length,
-            xRange = this.barXScale.range(),
-            yRange = this.barYScale.range();
-
-        var stackGap = 2;
-        this.xRange = xRange[1] - xRange[0];
-        this.yRange = yRange[0] - yRange[1];
-        var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
-        // 定义同组矩形之间的间距
-        var rectMargin = 10;
-        // 假设所有矩形均可见的情况下，计算矩形宽度
-        var seriesKeys = Object.keys(this.barSeries);
-        var seriesLength = seriesKeys.length;
-        var rectWidth = (rangeBand - (seriesLength + 1) * rectMargin) / seriesLength;
-
-        var rectGroupData = [],
-            tempX = outPadding;
-        for (var i = 0; i < rangeBandNum; i++) {
-            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-            var rectsData = [];
-            var labelData = [];
-            var rectX = rectMargin;
-            for (var k = 0; k < seriesLength; k++) {
-
-                // 处理每一个柱子的x,y坐标和宽度高度
-                var key = seriesKeys[k];
-                var series = this.barSeries[key];
-                var rects = [];
-                var bottomY = this.yRange;
-                var bottomRect = true;
-                for (var l = 0; l < series.length; l++) {
-                    var serie = series[l];
-                    var labelObj = serie.labelList[i];
-                    var tempRect = {
-                        x: rectX,
-                        width: rectWidth > 0 ? rectWidth : 0,
-                        height: this.yRange - this.barYScale(serie.data[i]),
-                        color: serie.color,
-                        idx: serie.idx
-                    };
-
-                    // 如果label存在,最小高度不能小于5
-                    if (labelObj && tempRect.height < 5) {
-                        tempRect.height = 5;
-                    }
-
-                    tempRect.y = bottomY - tempRect.height;
-
-                    if (tempRect.y < 0) {
-
-                        tempRect.height += tempRect.y;
-
-                        tempRect.y = 0;
-                    }
-
-                    if (tempRect.height > 0 && bottomRect === false) {
-                        // 最底层的柱子不需要修正高度
-                        tempRect.height -= stackGap;
-                    } else if (tempRect.height > 0) {
-                        bottomRect = false;
-                    }
-
-
-                    // 中心显示文字
-                    tempRect.text = {
-                        x: tempRect.x + tempRect.width / 2,
-                        y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
-                        value: serie.textFormat(serie.data[i]),
-                        color: serie.textStyle.color,
-                        fontSize: serie.textStyle.fontSize,
-                        show: true
-                    };
-
-                    tempRect.text.show = serie.textShow;
-
-                    if (tempRect.text.fontSize + 2 >= tempRect.height) {
-                        tempRect.text.show = false;
-                    }
-
-
-
-
-                    if (labelObj) {
-
-                        // 最小显示高度5
-                        var minHeight = 5;
-                        var labelHeight = 14;
-                        var fontSzie = 12;
-                        var labelWidth = labelObj.value.length * fontSzie + 10;
-
-
-                        var label = {
-                            x: tempRect.x,
-                            y: tempRect.y,
-                            height: labelHeight,
-                            width: labelWidth,
-                            color: labelObj.color,
-                            text: {
-                                value: labelObj.value,
-                                x: tempRect.x + labelWidth / 2,
-                                y: tempRect.y + labelHeight / 2 + fontSzie / 2 - 2,
-                                fontSize: fontSzie
-                            }
-                        };
-
-                        if (tempRect.height / 2 < (tempRect.text.fontSize / 2 + label.height)) {
-
-                            // 这种情况是已经没有什么位置给label显示了
-                            label.showValue = false;
-                            label.height = minHeight;
-                        } else {
-                            label.showValue = true;
-                        }
-
-                        if (labelWidth > tempRect.width) {
-                            label.showValue = false;
-                            label.width = tempRect.width / 2;
-                        }
-
-                        labelData.push(label);
-                    }
-
-
-                    bottomY = tempRect.y;
-                    rects.push(tempRect);
-                }
-
-
-                rectsData = rectsData.concat(rects);
-                rectX += rectWidth + rectMargin;
-            }
-            // 每组矩形容器的坐标以及每组矩形的坐标和宽高
-            var tempData = {
-                x: tempX,
-                y: 0,
-                rectsData: rectsData,
-                labelData: labelData
-            };
-            rectGroupData.push(tempData);
-            tempX += rangeBand;
+    function inNameList(name, nameList) {
+        for (var i = 0, n; n = nameList[i++];) {
+            if (name == n)
+                return true;
         }
-        return rectGroupData;
+        return false;
     }
 
-    function __changeRectsData() {
-        var rangeBand = this.barXScale.bandwidth();
-        // 定义同组矩形之间的间距
-        var rectMargin = 10;
-        var stackGap = 2;
+    function buildFunnelPath(pathArr) {
+        var dStr = 'M';
+        dStr += pathArr[0];
+        dStr += 'L' + pathArr[1];
+        dStr += 'L' + pathArr[2];
+        dStr += 'L' + pathArr[3];
+        return dStr;
+    }
 
-        // 根据矩形是否可见，求出实际的矩形宽度
-        var visibleStack = {};
-        var visibleSeriesLength = 0;
-        for (var i = 0; i < this.seriesList.length; i++) {
-            if (this.seriesList[i].isShow) {
-                visibleStack[this.seriesList[i].stack] = true;
-            }
+    function parseSeries(series, that) {
+        var funnelSeries = []
+        for (var i = 0, s; s = series[i++];) {
+            //第一步判断是否是漏斗图
+            if (s.type != 'funnel') return;
+            s = utils.merage(defaultConfig(), s);
+            calcWidth(s, that);
+            calcPosition(s, that);
+            s.funnelPath = funnelPath(s);
+            s.data.forEach(function (d, idx) {
+                d.idx = d.idx == null ? idx : d.idx;
+                d._serie = s;
+                d.pathArr = s.funnelPath(idx);
+
+                //计算label的位置
+                var labelX = (d.pathArr[0][0] + d.pathArr[1][0]) / 2;
+                var labelY = (d.pathArr[0][1] + d.pathArr[2][1]) / 2;
+                d.labelPosition = [labelX, labelY];
+                //计算label线的长度
+                d.labelWidth = d.sectionWidth / 2 + 30;//30是突出多少
+            });
+
+            funnelSeries.push(s);
         }
-
-        visibleSeriesLength = Object.keys(visibleStack).length;
-
-        var realRectWidth = (rangeBand - (visibleSeriesLength + 1) * rectMargin) / visibleSeriesLength;
-
-        for (var i = 0; i < this.rectsData.length; i++) {
-            // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
-            // var tempRect = this.rectsData[i].rectsData;
-            var rectX = rectMargin;
-            var labelData = [];
-            var stackKeys = Object.keys(this.barSeries);
-            var rectsList = [];
-            for (var k = 0; k < stackKeys.length; k++) {
-                // 根据矩形是否显示重新对一些矩形的坐标和宽高进行计算并赋值
-
-                var series = this.barSeries[stackKeys[k]];
-                var rects = [];
-                var bottomY = this.yRange;
-                var bottomRect = true;
-                for (var l = 0; l < series.length; l++) {
-                    var serie = series[l];
-                    var labelObj = serie.labelList[i];
-
-                    if (serie.isShow) {
-                        // tempRect[k].x = rectX;
-                        // tempRect[k].y = this.barYScale(this.barSeries[k].data[i]);
-                        // tempRect[k].width = realRectWidth;
-                        // tempRect[k].height = this.yRange - this.barYScale(this.barSeries[k].data[i]);
-                        // rectX += realRectWidth + rectMargin;
-
-                        var tempRect = {
-                            x: rectX,
-                            width: realRectWidth,
-                            height: this.yRange - this.barYScale(serie.data[i]),
-                            color: serie.color,
-                            idx: serie.idx
-                        };
-
-                        // 如果label存在,最小高度不能小于5
-                        if (labelObj && tempRect.height < 5) {
-                            tempRect.height = 5;
-                        }
-
-                        tempRect.y = bottomY - tempRect.height;
-
-                        if (tempRect.y < 0) {
-
-                            tempRect.height += tempRect.y;
-
-                            tempRect.y = 0;
-                        }
-
-                        if (tempRect.height > 0 && bottomRect === false) {
-                            // 最底层的柱子不需要修正高度
-                            tempRect.height -= stackGap;
-                        } else if (tempRect.height > 0) {
-                            bottomRect = false;
-                        }
-
-                        tempRect.text = {
-                            x: tempRect.x + tempRect.width / 2,
-                            y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
-                            value: serie.textFormat(serie.data[i]),
-                            color: serie.textStyle.color,
-                            fontSize: serie.textStyle.fontSize,
-                            show: true
-                        };
-
-                        // 中心显示文字
-                        tempRect.text = {
-                            x: tempRect.x + tempRect.width / 2,
-                            y: tempRect.y + tempRect.height / 2 + serie.textStyle.fontSize / 2,
-                            value: serie.textFormat(serie.data[i]),
-                            color: serie.textStyle.color,
-                            fontSize: serie.textStyle.fontSize,
-                            show: true
-                        };
-                        tempRect.text.show = serie.textShow;
-                        if (tempRect.text.fontSize + 2 >= tempRect.height) {
-                            tempRect.text.show = false;
-                        }
-
-
-                        if (labelObj) {
-
-                            // 最小显示高度5
-                            var minHeight = 5;
-                            var labelHeight = 14;
-                            var fontSzie = 12;
-                            var labelWidth = labelObj.value.length * fontSzie + 10;
-
-
-                            var label = {
-                                x: tempRect.x,
-                                y: tempRect.y,
-                                height: labelHeight,
-                                width: labelWidth,
-                                color: labelObj.color,
-                                text: {
-                                    value: labelObj.value,
-                                    x: tempRect.x + labelWidth / 2,
-                                    y: tempRect.y + labelHeight / 2 + fontSzie / 2 - 2,
-                                    fontSize: fontSzie
-                                }
-                            };
-
-                            if (tempRect.height / 2 < (tempRect.text.fontSize / 2 + label.height)) {
-
-                                // 这种情况是已经没有什么位置给label显示了
-                                label.showValue = false;
-                                label.height = minHeight;
-                            } else {
-                                label.showValue = true;
-                            }
-
-                            if (labelWidth > tempRect.width) {
-                                label.showValue = false;
-                                label.width = tempRect.width / 2;
-                            }
-
-                            labelData.push(label);
-                        }
-
-
-                        bottomY = tempRect.y;
-                        rects.push(tempRect);
-                    } else {
-                        // tempRect[k].y = this.yRange;
-                        // tempRect[k].height = 0;
-
-                        var tempRect = {
-                            x: rectX,
-                            width: 0,
-                            height: 0,
-                            color: serie.color,
-                            idx: serie.idx
-                        };
-
-                        tempRect.text = {
-                            x: 0,
-                            y: 0,
-                            value: 0,
-                            color: serie.textStyle.color,
-                            fontSize: 0,
-                            show: false
-                        };
-
-                        tempRect.y = bottomY;
-                        rects.push(tempRect);
-
-                    }
-
-                }
-                rectX += realRectWidth + rectMargin;
-                rectsList = rectsList.concat(rects);
-
-            }
-
-            this.rectsData[i].rectsData = rectsList;
-            this.rectsData[i].labelData = labelData;
-        }
+        return funnelSeries;
     }
 
-    function __renderLabel() {
 
-        // 添加rect
-        var labelList = this.rectWrapperList.selectAll('.xc-bar-label-rect')
-            .data(function (d) {
-                return d.labelData;
-            });
-
-        labelList.exit().remove();
-        labelList = labelList.enter()
-            .append('rect')
-            .classed('xc-bar-label-rect', true)
-            .merge(labelList);
-
-
-        labelList.attr('x', function (d) {
-            return d.x;
-        })
-            .attr('y', function (d) {
-                return d.y;
-            })
-            .attr('width', function (d) {
-                return d.width;
-            })
-            .attr('height', function (d) {
-                return d.height;
-            })
-            .attr('fill', 'transparent');
-
-
-        // 添加text
-        var textList = this.rectWrapperList.selectAll('.xc-bar-label-text')
-            .data(function (d) {
-                return d.labelData;
-            });
-        textList.exit().remove();
-        textList = textList.enter()
-            .append('text')
-            .classed('xc-bar-label-text', true)
-            .merge(textList);
-
-
-        textList.attr('x', function (d) {
-            return d.text.x;
-        })
-            .attr('y', function (d) {
-                return d.text.y;
-            })
-            .attr('text-anchor', 'middle')
-            .attr('fill', '#fff')
-            .attr('font-size', function (d) {
-                return d.text.fontSize;
-            })
-            .text('');
-
-        this.on('drawBarEnd.barLabel', function () {
-            textList.text(function (d) {
-
-                if (d.showValue === false) {
-                    return '';
-                }
-
-                return d.text.value;
-            });
-            labelList.attr('fill', function (d) {
-                return d.color;
-            });
-        });
-
-
-    }
-
-    function __renderBarWrapper() {
-        var bar = this.main
-            .selectAll('.xc-bar')
-            .data([1]);
-        bar = bar.enter()
-            .append('g')
-            .classed('xc-bar', true)
-            .merge(bar);
-        return bar;
-    }
-
-    function __renderRectWrapper() {
-        var rectWrapperList = this.bar.selectAll('.xc-bar-rectWrapper')
-            .data(this.rectsData);
-        rectWrapperList = rectWrapperList.enter()
-            .append('g')
-            .classed('xc-bar-rectWrapper', true)
-            .merge(rectWrapperList);
-        rectWrapperList.attr('transform', function (d) {
-            return 'translate(' + d.x + ',' + d.y + ')';
-        });
-        return rectWrapperList;
-    }
-
-    function __renderRect(animationEase, animationTime) {
-        var that = this;
-        var rectList = this.rectWrapperList
-            .selectAll('.xc-bar-rect')
-            .data(function (d) {
-                return d.rectsData;
-            });
-        rectList = rectList.enter()
-            .append('rect')
-            .classed('xc-bar-rect', true)
-            .attr('x', function (d) {
-                return d.x;
-            })
-            .attr('y', this.yRange)
-            .attr('width', function (d) {
-                return d.width;
-            })
-            .attr('height', 0)
-            .attr('fill', function (d) {
-                return d.color;
-            })
-            .attr('data-index', function (d) {
-                return d.idx;
-            })
-            // 没办法只控制rect的某一个角,暂时不用rx,ry,后期可以考虑用path来画
-            // 通过js设置rx和ry是因为
-            // .attr('rx', 5)
-            // .attr('ry', 5)
-            .merge(rectList);
-        var transition = rectList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('x', function (d) {
-                return d.x;
-            })
-            .attr('y', function (d) {
-                return d.y;
-            })
-            .attr('width', function (d) {
-                return d.width;
-            })
-            .attr('height', function (d) {
-                return d.height;
-            });
-        var flag = false;
-        transition.on('end.bar', function () {
-            if (flag === false) {
-                that.fire('drawBarEnd')
+    function funnelPath(serie) {
+        var width = serie.width, height = serie.height, data = serie.data, sort = serie.sort;
+        //塔尖向下，从大到小排序，塔尖向上，从小到大排序
+        data.sort(function (a, b) {
+            var ret = a.value - b.value;
+            if (sort == 'top') {
+                return ret;
             } else {
-                flag = true;
+                return -ret;
             }
         });
-        return rectList;
-    }
-
-    function __legendReady() {
-        __legendMouseenter.apply(this);
-        __legendMouseleave.apply(this);
-        __legendClick.apply(this);
-    }
-
-    function __legendMouseenter() {
-        var _this = this;
-        this.on('legendMouseenter.bar', function (name) {
-            // 取出对应rect的idx
-            var idx = 0;
-            for (var i = 0; i < _this.seriesList.length; i++) {
-                if (_this.seriesList[i].name == name) {
-                    idx = _this.seriesList[i].idx;
-                    break;
-                }
+        //计算还有多少区块需要显示
+        var length = data.length, maxValue = -Infinity;
+        data.forEach(function (d) {
+            if (d.show == false) length--;
+            maxValue = d3.max([maxValue, parseFloat(d.value)])
+        });
+        var sectionHeight = height / length;//每个区块的高度
+        //计算每个data对应的起点和终点
+        var index = sort == 'top' ? 1 : 0,//如果是塔尖向上，则第一个变量的y坐标不是0，而是一个sectionHeigth的高度,该变量是用来计算区块y坐标
+            position = [];
+        data.forEach(function (d, i) {
+            d.maxValue = maxValue;
+            d.percentage = parseFloat(d.value) / maxValue;
+            if (d.show == false) {
+                position[i] = undefined;
+                return
             }
-            // 把对应的矩形透明度设成0.5
-            _this.rectList._groups.forEach(function (rectArr) {
-
-                rectArr.forEach(function (rect) {
-                    if (rect.__data__.idx === idx) {
-                        d3.select(rect)
-                            .attr('fill-opacity', 0.5);
-                    }
-                });
-
-            });
+            ;
+            var sectionWidth = d.percentage * width;
+            d.sectionWidth = sectionWidth;
+            var xOffset = (width - sectionWidth) / 2;
+            position[i] = [];
+            position[i][0] = [xOffset, sectionHeight * index];
+            position[i][1] = [xOffset + sectionWidth, sectionHeight * index];
+            index++;
         });
-    }
 
-    function __legendMouseleave() {
-        var _this = this;
-        this.on('legendMouseleave.bar', function (name) {
-            // 取出对应rect的idx
-            var idx = 0;
-            for (var i = 0; i < _this.seriesList.length; i++) {
-                if (_this.seriesList[i].name == name) {
-                    idx = _this.seriesList[i].idx;
-                    break;
-                }
-            }
-            // 把对应的矩形透明度的属性去掉
-            _this.rectList._groups.forEach(function (rectArr) {
-
-                rectArr.forEach(function (rect) {
-                    if (rect.__data__.idx === idx) {
-                        d3.select(rect)
-                            .attr('fill-opacity', null);
-                    }
-                });
-
-
-            });
-        });
-    }
-
-    function __legendClick() {
-        var _this = this;
-        this.on('legendClick.bar', function (nameList) {
-            _this._reRenderBars(nameList);
-        });
-    }
-
-    function __tooltipReady() {
-        if (this.config.tooltip.trigger == 'axis') {
-            this._tooltipSectionChange();
+        //保证每个区块是由四个点组成，所以塔尖需要两个重复的点
+        if (sort == 'top') {
+            var topP = [width / 2, 0];
+            position.unshift([topP, topP]);
         } else {
-            //TODO 待添加trigger为 'item'时的tooltip事件
+            var bottomP = [width / 2, sectionHeight * index];
+            position.push([bottomP, bottomP]);
+        }
+        //在第一次计算区块坐标时会导致show=false的position位置为undefined，这里根据塔尖方向的不同进行补全
+        //主要是为了动画效果,show=false的时候，只是区块高度为0，并不代表没有这个区块
+        for (var i = 0, len = position.length; i < len; i++) {
+            var p = position[i];
+            if (p != undefined) continue;
+            var j = 1;
+            //防止偏移后还是undefined
+            while (position[i] === undefined) {
+                if (sort == 'top')
+                    position[i] = position[i - j];
+                else
+                    position[i] = position[i + j];
+
+                j++;
+            }
+
+        }
+        return function (idx) {
+            //传入一个区块index，获取区块的4个点，依次是左上，又上，右下，左下
+            if (idx < 0 || idx >= data.length) {
+                console.error('内部代码错误,漏斗图获取区块%d，最大值为%d', idx, data.length);
+            }
+            var pathPoints = [];
+            pathPoints[0] = position[idx][0], pathPoints[1] = position[idx][1];
+            pathPoints[2] = position[idx + 1][1], pathPoints[3] = position[idx + 1][0];
+            return pathPoints;
         }
     }
-
-    function defaultFormatter(name, value) {
-        var htmlStr = '';
-        htmlStr += "<div>" + name + "：" + value + "</div>";
-        return htmlStr;
-    }
-
 
     /**
-     * label对象转化为数据,和xAxis.data一一对应
-     * @param data
-     * @param label
+     * 计算每个漏斗图的宽高
+     * @param serie
+     * @param that
      */
-    function labelToArray(data, label) {
-        label = label || {};
-        var list = [];
-        var keys = Object.keys(label);
-        for (var i = 0; i < data.length; i++) {
-            list[i] = null;
-            for (var j = 0; j < keys.length; j++) {
-                var obj = label[keys[j]];
-                if (obj.xAxis == data[i]) {
-                    list[i] = obj;
-                    break;
-                }
+    function calcWidth(serie, that) {
+        var width = that.width, heigth = that.height, size = serie.size;
+        var fw = size[0];
+        if (typeof fw == 'string') {
+            if (fw.substr(-1) === '%') {
+                var percent = parseFloat(fw) / 100;
+                fw = percent * width;
+            } else if (fw.substr(-2) == 'px') {
+                fw = parseFloat(fw);
+            } else {
+                fw = parseFloat(fw);
+                if (isNaN(fw)) console.error("name:" + serie.name + " size[0] not support");
             }
+        } else if (typeof  fw != 'number') {
+            console.error("name:" + serie.name + " size[0] not support");
         }
-        return list;
+
+        var fh = size[1];
+
+        if (typeof fh == 'string') {
+            if (fh.substr(-1) === '%') {
+                var percent = parseFloat(fh) / 100;
+                fh = percent * heigth;
+            } else if (fh.substr(-2) == 'px') {
+                fh = parseFloat(fh);
+            } else {
+                fh = parseFloat(fh);
+                if (isNaN(fh)) console.error("name:" + serie.name + " size[1] not support");
+            }
+        } else if (typeof  fh != 'number') {
+            console.error("name:" + serie.name + " size[1] not support");
+        }
+        serie.width = fw;
+        serie.height = fh;
+    }
+
+    /**
+     * 计算漏斗图的起始位置
+     * @param series
+     * @param that
+     */
+    function calcPosition(serie, that) {
+        var width = that.width, height = that.height, x = serie.x, y = serie.y;
+        var xOffset = 0, yOffset = 0;
+        if (x == 'center') {
+            xOffset = (width - serie.width) / 2;
+        }
+        else if (x == 'right') {
+            xOffset = (width - serie.width);
+        }
+        else if (x.substr(-1) == '%') {
+            xOffset = parseFloat(x) / 100 * width;
+        } else {
+            x = parseFloat(x);
+            if (isNaN(x)) console.error("name:" + serie.name + " serie.x not support")
+            else xOffset = x;
+        }
+
+        if (y == 'middle') {
+            yOffset = (height - serie.height) / 2;
+        }
+        else if ('y' == 'bottom') {
+            yOffset = (height - serie.height);
+        }
+        else if (y.substr(-1) == '%') {
+            yOffset = parseFloat(y) / 100 * height;
+        } else {
+            y = parseFloat(y);
+            if (isNaN(y)) console.error("name:" + serie.name + " serie.y not support")
+            else yOffset = y;
+        }
+        serie.xOffset = xOffset;
+        serie.yOffset = yOffset;
+    }
+
+    funnel.defaultFormatter = defaultFormatter;
+    function defaultFormatter(name, value, percentage) {
+        return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
     }
 
     function defaultConfig() {
         /**
-         * @var bar
+         * @var funnel
          * @type Object
          * @extends xCharts.series
-         * @description 柱状图配置项
+         * @description 漏斗图配置项
          */
-        var config = {
-            /**
-             * @var type
-             * @type String
-             * @description 指定图表类型
-             * @values 'bar'
-             * @extends xCharts.series.bar
-             */
-            type: 'bar',
+        var funnel = {
             /**
              * @var name
              * @type String
-             * @description 数据项名称
-             * @extends xCharts.series.bar
+             * @extends xCharts.series.funnel
+             * @description 漏斗图代表的名字
              */
-            // name: '',
+            name: '漏斗图',
+            /**
+             * @var type
+             * @type String
+             * @extends xCharts.series.funnel
+             * @default funnel
+             * @description 漏斗图指定类型
+             */
+            type: 'funnel',
+            /**
+             * @var sort
+             * @type String
+             * @values 'top'|'down'
+             * @default 'down'
+             * @description 漏斗图尖角朝向
+             * @extends xCharts.series.funnel
+             */
+            sort: 'down',
+            /**
+             * @var size
+             * @extends xCharts.series.funnel
+             * @type Array
+             * @description 漏斗图大小
+             * @description 可以为百分比，也可以为具体数字，默认单位px
+             * @default ['50%', '50%']
+             * @example
+             *  size:['50%','50%']//百分比
+             *  size:[500,'300']//固定宽高
+             */
+            size: ['50%', '50%'],
+            /**
+             *  @var x
+             *  @extends xCharts.series.funnel
+             *  @type String|Number
+             *  @default 'center'
+             *  @values 'left'|'right'|'center'|Number(单位像素)|Percentage
+             *  @description 漏斗图左上角在x轴方向的偏移量
+             */
+            x: 'center',
+            /**
+             *  @var y
+             *  @extends xCharts.series.funnel
+             *  @type String|Number
+             *  @default 'center'
+             *  @values 'top'|'middle'|'bottom'|Number(单位像素)|Percentage
+             *  @description 漏斗图左上角在y轴方向的偏移量
+             */
+            y: 'middle',
             /**
              * @var data
              * @type Array
-             * @description 柱状图数据项对应的各项指标的值的集合
-             * @extends xCharts.series.bar
+             * @extends xCharts.series.funnel
+             * @description 一个装有漏斗图数据的二维数组
+             * @example
+             *   [
+             *      {name: '腾讯', value: '80'},
+             *      {name: '百度', value: '100'},
+             *      {name: '阿里巴巴', value: '60'},
+             *      {name: '京东', value: '40'},
+             *      {name: '淘宝', value: '20'},
+             *   ]
              */
-            // data: [],
+            data: [],
             /**
              * @var formatter
-             * @type function
-             * @description 数据项信息展示文本的格式化函数
-             * @extends xCharts.series.bar
-             */
-            // formatter: function(name, value) {},
-            /**
-             * @var stack
-             * @type Number|String
-             * @description 堆栈柱状图使用,相同stack会被堆叠为一个柱子
-             * @extends xCharts.series.bar
-             */
-            // stack: 'one',
-            /**
-             * @var label
-             * @type Array
-             * @description 添加左上角label
-             * @extends xCharts.series.bar
-             * @example
-             *  [{
-             *      xAxis: '语文',
-             *      value:'下降',
-             *       color:'#344c09'
-             *  }]
-             */
-            // label: [{
-                /**
-                 * @var xAxis
-                 * @type String
-                 * @description 与xAxis.data值对应
-                 * @extends xCharts.series.bar.label
-                 */
-                // xAxis: '语文',
-                /**
-                 * @var value
-                 * @type String
-                 * @description label的显示文本
-                 * @extends xCharts.series.bar.label
-                 */
-                // value: '语文',
-                /**
-                 * @var color
-                 * @type String
-                 * @description 文本的颜色
-                 * @extends xCharts.series.bar.label
-                 */
-                // color: '#fff',
-            // }]
-        };
-        return config;
-    }
-
-    // TODO 设置全局的bar变量,控制间隔啊之类的
-    function barDefaultConfig() {
-        /**
-         * @var bar
-         * @type Object
-         * @extends xCharts
-         * @description 柱状图通用配置项
-         */
-        var config = {
-            /**
-             * @var textShow
-             * @type Boolean
-             * @extends xCharts.bar
-             * @description 是否在柱状图中心显示文字
-             * @default false
-             */
-            textShow: false,
-            /**
-             * @var textFormat
+             * @extends xCharts.series.funnel
              * @type Function
-             * @extends xCharts.bar
-             * @description 格式化文字
+             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
              * @example
-             *  function (data, index) {
-             *       return value;
-             *   },
+             *  formatter: function (name,x,y) {
+             *      return '<p>'+name + ':&nbsp;' + value+' 占比:'+percentage+'%</p>';
+             *  }
              */
-            textFormat: function (data, index) {
-                return data;
-            },
+            //formatter:function(){},
             /**
-             * @var textStyle
+             * @var itemStyle
+             * @extends xCharts.series.funnel
              * @type Object
-             * @extends xCharts.bar
-             * @description 文字样式
+             * @description 每个漏斗图区块的样式
              */
-            textStyle: {
+            itemStyle: {
                 /**
-                 * @var fontSize
+                 * @var opacity
+                 * @extends xCharts.series.funnel.itemStyle
                  * @type Number
-                 * @extends xCharts.bar.textStyle
-                 * @description 文字大小
-                 * @default 14
+                 * @values 0-1
+                 * @description 鼠标移入时，变化的透明度
+                 * @default 0.5
                  */
-                fontSize: 14,
-                /**
-                 * @var color
-                 * @type String
-                 * @extends xCharts.bar.textStyle
-                 * @description 文字颜色
-                 * @default #fff
-                 */
-                color: '#fff'
-            },
-            /**
-             * @var hoverOpacity
-             * @type Number
-             * @extends xCharts.bar
-             * @description 鼠标响应legend透明度
-             * @default 0.5
-             */
-            hoverOpacity: 0.5
-        };
-
-        return config;
+                opacity: 0.5
+            }
+        }
+        return funnel;
     }
 
 }(xCharts, d3));
 /**
- * @file 柱状图(移动端)
- * @date 2016-05-30
- * @author chenxuan.cx@gmail.com
+ * Author liuyang46@meituan.com
+ * Date 16/5/27
+ * Describe 漏斗图,移动端适配
  */
-(function(xCharts, d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var charts = xCharts.charts;
-    var bar = charts.bar;
+    var funnel = charts.funnel;
 
-    bar.prototype.extend({
-        mobileReady: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendMobileReady.apply(this);
-            }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipMobileReady.apply(this);
-            }
+    funnel.prototype.extend({
+        mobileReady: function () {
+            this.funnelSection.on('touchstart.funnel', funnelSectionTrigger(this));
         }
     });
-    function __legendMobileReady() {
-        __legendTouch.apply(this);
-    }
-    function __legendTouch() {
-        var _this = this;
-        this.on('legendClick.bar', function(nameList) {
-            _this._reRenderBars(nameList);
-            _this.messageCenter.components.tooltip.hiddenTooltip();
-        });
-    }
-    function __tooltipMobileReady() {
-        if(this.config.tooltip.trigger == 'axis') {
-            this._tooltipSectionChange();
-        } else {
-            //TODO 待添加trigger为 'item'时的tooltip事件
+
+    var defaultFormatter = funnel.defaultFormatter;
+
+    function funnelSectionTrigger(ctx) {
+        var tooltip = ctx.messageCenter.components['tooltip'];
+        var tooltipFormatter = tooltip.tooltipConfig.formatter;
+
+        return function (data) {
+            ctx.funnelSection.attr('opacity', 1);
+            d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+            tooltip.showTooltip();
+
+            // 设置HTML
+            var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+
+            var title = "<p>" + data._serie.name + "</p>";
+            tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+
+            // 获取坐标
+            var position = d3.mouse(ctx.svg.node());
+            tooltip.setPosition(position);
+            
+
         }
     }
 }(xCharts, d3));

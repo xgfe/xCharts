@@ -29,6 +29,7 @@
 
                 // bar的全局配置
                 var globalBarConfig = utils.merage(barDefaultConfig(), this.config.bar);
+                this.globalBarConfig = globalBarConfig;
 
                 var barSeries = {};
                 var xAxisData = this.config.xAxis[0].data;
@@ -38,7 +39,7 @@
                     if (series[i].type == 'bar') {
                         var serie = __correctConfig(series[i], globalBarConfig);
                         var stack = serie.stack || ('%bar' + i);
-
+                        serie.isShow = serie.legendShow === false ? false : true;
                         // 转化为列表
                         serie.labelList = labelToArray(xAxisData, serie.label);
 
@@ -50,7 +51,6 @@
 
                         // 添加颜色值
                         serie.color = this.getColor(serie.idx);
-                        serie.isShow = true;
                         seriesList.push(serie);
                     }
                 }
@@ -195,6 +195,13 @@
             .attr('font-size', function (d) {
                 return d.text.fontSize;
             })
+            .attr('opacity', function (d) {
+                if (d.text.show === false) {
+                    return 0;
+                }
+
+                return 1;
+            })
             .text('');
         this.on('drawBarEnd.barText', function () {
             textList.text(function (d) {
@@ -231,7 +238,7 @@
         this.yRange = yRange[0] - yRange[1];
         var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
         // 定义同组矩形之间的间距
-        var rectMargin = 10;
+        var rectMargin = this.globalBarConfig.barGap;
         // 假设所有矩形均可见的情况下，计算矩形宽度
         var seriesKeys = Object.keys(this.barSeries);
         var seriesLength = seriesKeys.length;
@@ -302,8 +309,6 @@
                     }
 
 
-
-
                     if (labelObj) {
 
                         // 最小显示高度5
@@ -369,7 +374,7 @@
     function __changeRectsData() {
         var rangeBand = this.barXScale.bandwidth();
         // 定义同组矩形之间的间距
-        var rectMargin = 10;
+        var rectMargin = this.globalBarConfig.barGap;
         var stackGap = 2;
 
         // 根据矩形是否可见，求出实际的矩形宽度
@@ -533,7 +538,18 @@
                     }
 
                 }
-                rectX += realRectWidth + rectMargin;
+
+                var maxWidth = 0;
+                var maxMargin = 0;
+                for (var index = 0; index < rects.length; index++) {
+                    if (rects[index].width > 0) {
+                        maxWidth = rects[index].width;
+                        maxMargin = rectMargin;
+                        break;
+                    }
+                }
+
+                rectX += maxWidth + maxMargin;
                 rectsList = rectsList.concat(rects);
 
             }
@@ -852,27 +868,27 @@
              *  }]
              */
             // label: [{
-                /**
-                 * @var xAxis
-                 * @type String
-                 * @description 与xAxis.data值对应
-                 * @extends xCharts.series.bar.label
-                 */
-                // xAxis: '语文',
-                /**
-                 * @var value
-                 * @type String
-                 * @description label的显示文本
-                 * @extends xCharts.series.bar.label
-                 */
-                // value: '语文',
-                /**
-                 * @var color
-                 * @type String
-                 * @description 文本的颜色
-                 * @extends xCharts.series.bar.label
-                 */
-                // color: '#fff',
+            /**
+             * @var xAxis
+             * @type String
+             * @description 与xAxis.data值对应
+             * @extends xCharts.series.bar.label
+             */
+            // xAxis: '语文',
+            /**
+             * @var value
+             * @type String
+             * @description label的显示文本
+             * @extends xCharts.series.bar.label
+             */
+            // value: '语文',
+            /**
+             * @var color
+             * @type String
+             * @description 文本的颜色
+             * @extends xCharts.series.bar.label
+             */
+            // color: '#fff',
             // }]
         };
         return config;
@@ -939,7 +955,52 @@
              * @description 鼠标响应legend透明度
              * @default 0.5
              */
-            hoverOpacity: 0.5
+            hoverOpacity: 0.5,
+            /**
+             * @var label
+             * @type Array
+             * @extends xCharts.bar
+             * @description 类似于小tip
+             */
+            // label:[{
+            /**
+             * @var xAxis
+             * @type Any
+             * @extends xCharts.bar.label
+             * @description 和xAxis轴上的data对应
+             */
+            // xAxis: 1,
+            /**
+             * @var value
+             * @type Any
+             * @extends xCharts.bar.label
+             * @description 显示文字
+             */
+            // value: 1,
+            /**
+             * @var color
+             * @type Any
+             * @extends xCharts.bar.label
+             * @description 背景色
+             */
+            // color: #fff,
+            // }],
+            /**
+             * @var barGap
+             * @type Number
+             * @extends xCharts.bar
+             * @description 组内每个bar之间的间隔
+             * @default 10
+             */
+            barGap: 10,
+            /**
+             * @var legendShow
+             * @type Boolean
+             * @extends xCharts.bar
+             * @description 控制legend默认显示情况,false 默认不显示
+             * @default true
+             */
+            legendShow: true
         };
 
         return config;
