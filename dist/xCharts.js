@@ -1,7 +1,7 @@
 /**
  * xg-xcharts - charts base on d3.js
  * @version v0.2.2
- * @date 2016-12-19 15:17:05
+ * @date 2016-12-19 17:22:02
 */
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
@@ -4236,7 +4236,12 @@ var animationConfig = {
                         tempRect.text.show = false;
                     }
 
-
+                    // 特殊处理高度为0的且不堆积的情况,将0显示出来
+                    if (tempRect.height === 0 && series.length === 1) {
+                        tempRect.text.show = true;
+                        tempRect.text.y -= tempRect.text.fontSize/1.5;
+                    }
+                    
                     if (labelObj) {
 
                         // 最小显示高度5
