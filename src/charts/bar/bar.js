@@ -92,8 +92,14 @@
             }
         },
         render: function (animationEase, animationTime) {
+
             // 添加柱状图容器
             this.bar = __renderBarWrapper.apply(this);
+
+            // 添加背景对比
+            this.bgRect = __renderBgRect.apply(this);
+
+
             // 添加每组矩形的容器
             this.rectWrapperList = __renderRectWrapper.apply(this);
             // 添加柱状
@@ -171,6 +177,39 @@
         }
     });
 
+    function __renderBgRect() {
+        var that = this;
+        var bgRect = this.bar
+            .selectAll('.xc-bar-bg-rect')
+            .data(function () {
+                return that.backgroundRectList;
+            });
+        bgRect = bgRect.enter('rect')
+            .append('rect')
+            .classed('xc-bar-bg-rect', true)
+            .merge(bgRect);
+
+        bgRect.attr('x', function (d) {
+            return d.x;
+        })
+            .attr('y', function (d) {
+                return d.y;
+            })
+            .attr('width', function (d) {
+                return d.width;
+            })
+            .attr('height', function (d) {
+                return d.height;
+            })
+            .attr('fill', function (d) {
+                return d.fill;
+            })
+            .attr('opacity', function (d) {
+                return d.opacity;
+            })
+
+    }
+
     function __renderText() {
         var textList = this.rectWrapperList
             .selectAll('.xc-bar-text')
@@ -228,29 +267,61 @@
     }
 
     function __getDefaultData() {
+        var paddingOuter = this.globalBarConfig.paddingOuter;
+        var paddingInner = this.globalBarConfig.paddingInner;
+
+        this.barXScale.paddingOuter(paddingOuter);
+        this.barXScale.paddingInner(paddingInner);
         var rangeBand = this.barXScale.bandwidth(),
             rangeBandNum = this.barXScale.domain().length,
             xRange = this.barXScale.range(),
             yRange = this.barYScale.range();
 
         var stackGap = 2;
+
         this.xRange = xRange[1] - xRange[0];
         this.yRange = yRange[0] - yRange[1];
-        var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
+        var bgWidth = this.barXScale.step();
+        var outWidth = bgWidth * paddingOuter;
+        this.outWidth = outWidth;
+        var outPadding = (this.xRange - rangeBand * rangeBandNum) / 21;
         // 定义同组矩形之间的间距
         var rectMargin = this.globalBarConfig.barGap;
         // 假设所有矩形均可见的情况下，计算矩形宽度
         var seriesKeys = Object.keys(this.barSeries);
         var seriesLength = seriesKeys.length;
         var rectWidth = (rangeBand - (seriesLength + 1) * rectMargin) / seriesLength;
-
         var rectGroupData = [],
             tempX = outPadding;
+        var backgroundRectList = [];
+        var bgX = 0;
+
         for (var i = 0; i < rangeBandNum; i++) {
             // 假设所有矩形均可见的情况，求得矩形的坐标和宽高
             var rectsData = [];
             var labelData = [];
             var rectX = rectMargin;
+
+            backgroundRectList.push({
+                x: bgX,
+                y: 0,
+                height: this.yRange,
+                width: bgWidth,
+                opacity: i % 2 === 0 ? this.globalBarConfig.background.oddOpacity : this.globalBarConfig.background.evenOpacity,
+                fill: i % 2 === 0 ? this.globalBarConfig.background.oddColor : this.globalBarConfig.background.evenColor
+            });
+
+            if (i === 0) {
+                backgroundRectList[i].width += outWidth;
+                backgroundRectList[i].x -= outWidth;
+            }
+
+            if (i === rangeBandNum - 1) {
+                backgroundRectList[i].width += outWidth;
+            }
+
+            bgX += bgWidth;
+
             for (var k = 0; k < seriesLength; k++) {
 
                 // 处理每一个柱子的x,y坐标和宽度高度
@@ -368,6 +439,7 @@
             rectGroupData.push(tempData);
             tempX += rangeBand;
         }
+        this.backgroundRectList = backgroundRectList;
         return rectGroupData;
     }
 
@@ -632,12 +704,16 @@
     }
 
     function __renderBarWrapper() {
+        var that = this;
         var bar = this.main
             .selectAll('.xc-bar')
             .data([1]);
         bar = bar.enter()
             .append('g')
             .classed('xc-bar', true)
+            .attr('transform', function () {
+                return 'translate(' + that.outWidth + ',0)';
+            })
             .merge(bar);
         return bar;
     }
@@ -1000,7 +1076,73 @@
              * @description 控制legend默认显示情况,false 默认不显示
              * @default true
              */
-            legendShow: true
+            legendShow: true,
+            /**
+             * @var paddingOut
+             * @type Number
+             * @extends xCharts.bar
+             * @description 柱状图最左边和最右边距离Y坐标的间距,越大空白越大
+             * @default 0.05
+             * @value 0-1
+             */
+            paddingOuter: 0.05,
+            /**
+             * @var paddingInner
+             * @type Number
+             * @extends xCharts.bar
+             * @description 柱状图每组柱子与柱子之间的间距,越大距离越大,如果想控制组内柱子的间距请使用barGap
+             * @default 0
+             * @value 0-1
+             */
+            paddingInner: 0,
+            /**
+             * @var background
+             * @type Object
+             * @extends xCharts.bar
+             * @description 每一组柱子的背景
+             */
+            background: {
+                /**
+                 * @var enable
+                 * @type Boolean
+                 * @extends xCharts.bar.background
+                 * @description 是否显示背景区分
+                 * @default true
+                 */
+                enable: true,
+                /**
+                 * @var oddOpacity
+                 * @type Number
+                 * @extends xCharts.bar.background
+                 * @description 奇数列颜色透明度
+                 * @default 0.8
+                 */
+                oddOpacity: 0.8,
+                /**
+                 * @var oddColor
+                 * @type String
+                 * @extends xCharts.bar.background
+                 * @description 奇数列颜色
+                 * @default #eee
+                 */
+                oddColor: '#eee',
+                /**
+                 * @var evenOpacity
+                 * @type Number
+                 * @extends xCharts.bar.background
+                 * @description 偶数列颜色透明度
+                 * @default 0.4
+                 */
+                evenOpacity: 0.4,
+                /**
+                 * @var evenColor
+                 * @type String
+                 * @extends xCharts.bar.background
+                 * @description 偶数列颜色
+                 * @default #eee
+                 */
+                evenColor: '#eee'
+            }
         };
 
         return config;
