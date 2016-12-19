@@ -43,7 +43,7 @@
 
     resize.prototype.extend({
         init:function(messageCenter, config, type, series){
-            this.config = utils.merage(defaultConfig,config[type]);
+            this.config = utils.merage(defaultConfig(),config[type]);
 
             this.config.animationEase = utils.stringToD3Ease(this.config.animationEase);
 
@@ -87,38 +87,42 @@
         delete chartList[ctx.messageCenter.id];
     }
 
-    /**
-     * @var resize
-     * @type Object
-     * @description 当容器改变时，是否自动刷新当前图表
-     * @extends xCharts
-     * @default true
-     */
-    var defaultConfig = {
+    function defaultConfig() {
         /**
-         * @var refresh
-         * @type Boolean
+         * @var resize
+         * @type Object
          * @description 当容器改变时，是否自动刷新当前图表
-         * @extends xCharts.resize
-         * @default false
+         * @extends xCharts
+         * @default true
          */
-        enable:false,
-        /**
-         * @var animationEase
-         * @type String
-         * @description 当容器改变时，刷新动画
-         * @extends xCharts.resize
-         * @default 'easeLinear'
-         */
-        animationEase:'easeLinear',
-        /**
-         * @var animationEase
-         * @type Number
-         * @description 当容器改变时，刷新动画时间,单位ms
-         * @extends xCharts.resize
-         * @default 300
-         */
-        animationTime:300
+        var config = {
+            /**
+             * @var refresh
+             * @type Boolean
+             * @description 当容器改变时，是否自动刷新当前图表
+             * @extends xCharts.resize
+             * @default false
+             */
+            enable:false,
+            /**
+             * @var animationEase
+             * @type String
+             * @description 当容器改变时，刷新动画
+             * @extends xCharts.resize
+             * @default 'easeLinear'
+             */
+            animationEase:'easeLinear',
+            /**
+             * @var animationEase
+             * @type Number
+             * @description 当容器改变时，刷新动画时间,单位ms
+             * @extends xCharts.resize
+             * @default 300
+             */
+            animationTime:300
+        }
+        return config;
     }
+
 
 }(xCharts,d3));
