@@ -287,7 +287,11 @@
 
             sectionNumber += sectionObj.offset;
 
-            if (sectionNumber !== oldSectionNumber) {
+            if (sectionNumber !== oldSectionNumber || _this.messageCenter.lengendChange ) {
+
+                // tooltip已经响应过legend改变,不需要重复响应
+                _this.messageCenter.lengendChange = false;
+
                 //触发tooltipSectionChange事件，获取文本
                 var tooltipHtml = "";
 
