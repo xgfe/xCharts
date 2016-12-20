@@ -528,9 +528,13 @@
         line: function (series, type, idx) {
             var stacks = {}, values = [];
             d3.map(series, function (serie) {
-                if (serie.type != 'line' || serie[type + 'Index'] != idx || serie.show == false) {
+                if (serie.type !== 'line' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return false;
                 }
+
+
+
+
                 if (serie.stack) {
                     stacks[serie.stack] || (stacks[serie.stack] = [])
                     stacks[serie.stack].push(serie.data);
@@ -560,9 +564,15 @@
         bar: function (series, type, idx) {
             var stacks = {}, values = [];
             d3.map(series, function (serie) {
-                if (serie.type != 'bar' || serie[type + 'Index'] != idx || serie.show == false) {
+                if (serie.type !== 'bar' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return false;
                 }
+
+                if (serie.legendShow === false && serie.axisLegendShow === undefined) {
+                    serie.axisLegendShow = true;
+                    return false;
+                }
+
                 if (serie.stack) {
                     stacks[serie.stack] || (stacks[serie.stack] = [])
                     stacks[serie.stack].push(serie.data);
@@ -590,7 +600,7 @@
         scatter: function (series, type, idx) {
             var values = [];
             d3.map(series, function (serie) {
-                if (serie.type != 'scatter' || serie[type + 'Index'] != idx || serie.show == false) {
+                if (serie.type !== 'scatter' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return;
                 }
                 d3.map(serie.data, function (d) {

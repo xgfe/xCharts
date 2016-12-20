@@ -27,6 +27,9 @@
     legend.prototype.extend({
         init: function (messageCenter, config) {
 
+            // 配合tooltip显示
+            messageCenter.lengendChange = false;
+
             // 合并默认配置项
             this.legendConfig = utils.merage(defaultConfig(), config.legend);
 
@@ -213,6 +216,9 @@
             if (ctx.legendConfig.clickable === false) {
                 return true;
             }
+
+            // 通知tooltip,legend有操作
+            ctx.messageCenter.lengendChange = true;
 
             this.isChecked = !this.isChecked;
             if (multiple) {
