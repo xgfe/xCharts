@@ -1,7 +1,7 @@
 /**
  * xg-xcharts - charts base on d3.js
  * @version v0.2.2
- * @date 2016-12-19 17:43:30
+ * @date 2017-08-17 16:20:13
 */
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
@@ -98,6 +98,10 @@ xCharts.prototype.extend({
         var component, i = 0;
         this.components = {};
         this.charts = {};
+        if (!config.series) {
+            config.series = [];
+            console.error('series is required in configuration');
+        }
         while (component = componentsList[i++]) {
             if (!config[component] || this.components[component]) {
                 continue;
@@ -127,7 +131,6 @@ xCharts.prototype.extend({
         //mainGroup设置偏移量
         this.main.attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
         //调用图表
-        config.series || (config.series = []);
         for (var i = 0, s; s = config.series[i++];) {
             var type = s.type;
             if (this.charts[type]) {
@@ -651,7 +654,7 @@ var animationConfig = {
         list.forEach(function (text) {
 
             // 给span设置文字
-            textSpan.innerText === undefined ? textSpan.textContent = text : textSpan.innerText = text; //兼容firefox
+            textSpan.textContent = text;
 
             //获取实际宽度,并在实际宽度上加上偏移宽度
             var itemWidth = parseFloat(textSpan.offsetWidth) + offsetWidth;
@@ -840,7 +843,6 @@ var animationConfig = {
         components['Component'].call(this, messageCenter, config, type);
 
     }
-
     axis.prototype.extend = xCharts.extend;
     axis.prototype.extend({
         //一些初始化参数的计算
@@ -860,17 +862,19 @@ var animationConfig = {
                 // 计算比例尺scale
                 var scale = axisScale(config, i, this);
 
-                // 这里判断，如果domain是NAN证明是legend取消了所有显示，保持上一个不变
-                var doamin = scale.domain();
-                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType === 'value') scale = this.scales[i];
+                // 这里判断，如果domain是NAN证明是legend取消了所有显示或者传入的数据为空
+                var domain = scale.domain();
+                if (isNaN(domain[0]) && isNaN(domain[1]) && scale.scaleType === 'value') {
+                    if (series.length !== 0) {
+                        scale = this.scales[i];
+                    } else {
+                        return;
+                    }
+                }
 
                 if (!this.legendRefresh) {
                     calcAxisMargin(this, this.isXAxis, config, scale);
                 }
-
-
-                this.axisConfig[i] = config;
-
 
                 scales[i] = scale;
 
@@ -881,6 +885,7 @@ var animationConfig = {
             this.height = messageCenter.originalHeight - messageCenter.margin.top - messageCenter.margin.bottom;//计算剩余容器高
             this.range = this.isXAxis ? [0, this.width] : [this.height, 0];
 
+            //设置比例尺的值域
             setScaleRange(scales, this.range);
 
             // 判断x轴上面的文字是否重合
@@ -1236,6 +1241,24 @@ var animationConfig = {
             domain[0] > 0 ? domain[0] = 0 : domain[1] = 0;
         }
 
+        // 如果最大最小值超过可显示的范围,手动设置
+        if (domain[0] === -Infinity) {
+            if (domain[1] > 0) {
+                domain[0] = 0;
+            } else {
+                domain[1] = 0;
+                domain[0] = -10;
+            }
+        }
+        if (domain[1] === Infinity) {
+            if (domain[0] < 0) {
+                domain[1] = 0;
+            } else {
+                domain[0] = 0;
+                domain[1] = 10;
+            }
+        }
+
         // domain 上下添加0.1的偏移，参考至c3
         // var valueLength = domain[1] - domain[0];
         // domain[0] -= valueLength * 0.1;
@@ -1348,7 +1371,7 @@ var animationConfig = {
         line: function (series, type, idx) {
             var stacks = {}, values = [];
             d3.map(series, function (serie) {
-                if (serie.type != 'line' || serie[type + 'Index'] != idx || serie.show == false) {
+                if (serie.type !== 'line' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return false;
                 }
                 if (serie.stack) {
@@ -1364,7 +1387,7 @@ var animationConfig = {
                     stacks[k].forEach(function (data, i) {
                         data.forEach(function (d, i) {
                             maxData[i] = maxData[i] == null ? 0 : maxData[i];//默认为0
-                            maxData[i] += d;
+                            maxData[i] += parseFloat(d);
                         })
                     })
                     values = values.concat(maxData);
@@ -1380,9 +1403,15 @@ var animationConfig = {
         bar: function (series, type, idx) {
             var stacks = {}, values = [];
             d3.map(series, function (serie) {
-                if (serie.type != 'bar' || serie[type + 'Index'] != idx || serie.show == false) {
+                if (serie.type !== 'bar' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return false;
                 }
+
+                if (serie.legendShow === false && serie.axisLegendShow === undefined) {
+                    serie.axisLegendShow = true;
+                    return false;
+                }
+
                 if (serie.stack) {
                     stacks[serie.stack] || (stacks[serie.stack] = [])
                     stacks[serie.stack].push(serie.data);
@@ -1392,7 +1421,7 @@ var animationConfig = {
             for (var k in stacks) {
                 if (stacks.hasOwnProperty(k)) {
                     var maxData = [];
-                    stacks[k].forEach(function (data, i) {
+                    stacks[k].forEach(function (data) {
                         data.forEach(function (d, i) {
                             maxData[i] = maxData[i] == null ? 0 : maxData[i];//默认为0
                             maxData[i] += d;
@@ -1410,7 +1439,7 @@ var animationConfig = {
         scatter: function (series, type, idx) {
             var values = [];
             d3.map(series, function (serie) {
-                if (serie.type != 'scatter' || serie[type + 'Index'] != idx || serie.show == false) {
+                if (serie.type !== 'scatter' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return;
                 }
                 d3.map(serie.data, function (d) {
@@ -1697,6 +1726,221 @@ var animationConfig = {
         return axis;
     }
 
+
+}(xCharts, d3));
+/**
+ * Author mzefibp@163.com
+ * Date 16/6/23
+ * Describe 时间轴刷子
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var components = xCharts.components;
+    var Component = components['Component'];
+
+    utils.inherits(brush, Component);
+    components.extend({brush: brush});
+
+    function brush(messageCenter, config, type) {
+        //show=false时不做显示处理
+        // 不是坐标系不显示
+        if (config.brush.show === false) {
+            this._show = false;
+            return;
+        } else {
+            this._show = true;
+        }
+
+        //继承Component的属性
+        Component.call(this, messageCenter, config, type);
+    }
+
+    brush.prototype.extend = utils.extend;
+
+    brush.prototype.extend({
+        init: function (messageCenter, config) {
+            // 先占位,等坐标轴完成后再绘制时间刷
+
+            this.messageCenter.brush = true;
+
+            this.brushConfig = utils.merage(defaultConfig(), config.brush);
+
+            this.margin.bottom += this.brushConfig.brushHeight + 20;
+
+            var messageCenter = this.messageCenter;
+            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
+        },
+        render: function () {
+
+            var brush = d3.brushX();
+
+            brush.extent(initExtent(this));
+
+            // brush.handleSize(50)
+
+            var translateX = 0;
+            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
+            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
+            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
+
+            var group = this.main.selectAll('g.xc-brush').data([this]);
+            group = group.enter().append('g')
+                .attr('class', 'xc-brush')
+                .merge(group);
+
+            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
+                .call(brush);
+
+
+            brush.move(group, initMove(this));
+            // group.selectAll('rect.background')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#e0e0e0')
+            //     .attr('opacity', 0.5)
+            //
+            // group.selectAll('rect')
+            //     .attr('height', 25)
+            //     .attr('fill', '#e0e0e0');
+            //
+            // group.selectAll('.resize rect')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#a2a2a2')
+            //     .attr('width', 10);
+
+            group.selectAll('rect.overlay')
+                .attr('fill', '#e0e0e0')
+                .attr('opacity', 0.5);
+
+            group.selectAll('rect.handle')
+                .attr('fill', '#777');
+
+            this.brush = brush;
+
+            //添加clipath路径
+            var defGroup = this.svg.selectAll('defs').data([this]);
+            defGroup = defGroup.enter().append('defs').merge(defGroup);
+
+            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
+            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
+
+            var rect = clip.selectAll('rect').data([this]);
+            rect = rect.enter().append('rect').merge(rect);
+            rect.attr('width', width)
+                .attr('height', height);
+
+        },
+        ready: function () {
+            var brush = this.brush;
+            var brushChangeBind = brushChange(this);
+            this.brush.on('brush', brushChangeBind);
+
+            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
+            this.on('xAxisRender.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+
+            this.on('xAxisReady.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+        },
+        refresh:function(animationEase, animationTime){
+
+            // 关闭显示的组件不进行刷新
+            if (!this._show) return true;
+
+            //当容器改变时，刷新当前组件
+            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
+            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
+            this.originalWidth = this.messageCenter.originalWidth
+            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
+            this.render(animationEase, animationTime);//刷新
+            this.ready();
+        }
+    });
+
+    function initMove(ctx) {
+        var min = parseFloat(ctx.brushConfig.domain[0]);
+        var max = parseFloat(ctx.brushConfig.domain[1]);
+
+        if (isNaN(min) || isNaN(max)) {
+            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
+            return [0, 0];
+        }
+
+        var width = ctx.width;
+
+        var initMove = [
+            width * min / 100,
+            width * max / 100
+        ];
+
+        ctx.initBrushSelection = [
+            utils.toFixed(initMove[0] / width, 3),
+            utils.toFixed(initMove[1] / width, 3)
+        ];
+
+        return initMove;
+    }
+
+    function brushChange(ctx) {
+        var width = ctx.width;
+        return function () {
+            var domain = d3.event.selection;
+            var min = utils.toFixed(domain[0] / width, 3);
+            var max = utils.toFixed(domain[1] / width, 3);
+
+            ctx.fire('brushChange', [min, max]);
+        };
+
+        // console.log(domain)
+
+        // this.fire('brushChange',domain);
+    }
+
+
+    // 设置时间刷初始值
+    function initExtent(ctx) {
+        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
+    }
+
+    function defaultConfig() {
+
+        /**
+         * brush配置项
+         * @var brush
+         * @type Object
+         * @extends xCharts
+         * @description 时间轴特有的时间刷
+         */
+        return {
+            /**
+             * @var show
+             * @type Boolean
+             * @extends xCharts.brush
+             * @default true
+             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
+             */
+            show: true,
+            /**
+             * @var domain
+             * @type Array
+             * @extends xCharts.brush
+             * @default ['90%','100%']
+             * @description 设置时间刷的初始值,只支持百分比的形式
+             */
+            domain: ['90%', '100%'],
+            /**
+             * @var brushHeight
+             * @type Number
+             * @extends xCharts.brush
+             * @default 30
+             * @description 设置时间刷的高
+             */
+            brushHeight: 30
+        }
+    }
 
 }(xCharts, d3));
 /**
@@ -2001,221 +2245,6 @@ var animationConfig = {
 }(xCharts, d3));
 
 /**
- * Author mzefibp@163.com
- * Date 16/6/23
- * Describe 时间轴刷子
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var components = xCharts.components;
-    var Component = components['Component'];
-
-    utils.inherits(brush, Component);
-    components.extend({brush: brush});
-
-    function brush(messageCenter, config, type) {
-        //show=false时不做显示处理
-        // 不是坐标系不显示
-        if (config.brush.show === false) {
-            this._show = false;
-            return;
-        } else {
-            this._show = true;
-        }
-
-        //继承Component的属性
-        Component.call(this, messageCenter, config, type);
-    }
-
-    brush.prototype.extend = utils.extend;
-
-    brush.prototype.extend({
-        init: function (messageCenter, config) {
-            // 先占位,等坐标轴完成后再绘制时间刷
-
-            this.messageCenter.brush = true;
-
-            this.brushConfig = utils.merage(defaultConfig(), config.brush);
-
-            this.margin.bottom += this.brushConfig.brushHeight + 20;
-
-            var messageCenter = this.messageCenter;
-            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
-        },
-        render: function () {
-
-            var brush = d3.brushX();
-
-            brush.extent(initExtent(this));
-
-            // brush.handleSize(50)
-
-            var translateX = 0;
-            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
-            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
-            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
-
-            var group = this.main.selectAll('g.xc-brush').data([this]);
-            group = group.enter().append('g')
-                .attr('class', 'xc-brush')
-                .merge(group);
-
-            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
-                .call(brush);
-
-
-            brush.move(group, initMove(this));
-            // group.selectAll('rect.background')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#e0e0e0')
-            //     .attr('opacity', 0.5)
-            //
-            // group.selectAll('rect')
-            //     .attr('height', 25)
-            //     .attr('fill', '#e0e0e0');
-            //
-            // group.selectAll('.resize rect')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#a2a2a2')
-            //     .attr('width', 10);
-
-            group.selectAll('rect.overlay')
-                .attr('fill', '#e0e0e0')
-                .attr('opacity', 0.5);
-
-            group.selectAll('rect.handle')
-                .attr('fill', '#777');
-
-            this.brush = brush;
-
-            //添加clipath路径
-            var defGroup = this.svg.selectAll('defs').data([this]);
-            defGroup = defGroup.enter().append('defs').merge(defGroup);
-
-            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
-            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
-
-            var rect = clip.selectAll('rect').data([this]);
-            rect = rect.enter().append('rect').merge(rect);
-            rect.attr('width', width)
-                .attr('height', height);
-
-        },
-        ready: function () {
-            var brush = this.brush;
-            var brushChangeBind = brushChange(this);
-            this.brush.on('brush', brushChangeBind);
-
-            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
-            this.on('xAxisRender.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-
-            this.on('xAxisReady.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-        },
-        refresh:function(animationEase, animationTime){
-
-            // 关闭显示的组件不进行刷新
-            if (!this._show) return true;
-
-            //当容器改变时，刷新当前组件
-            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
-            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
-            this.originalWidth = this.messageCenter.originalWidth
-            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
-            this.render(animationEase, animationTime);//刷新
-            this.ready();
-        }
-    });
-
-    function initMove(ctx) {
-        var min = parseFloat(ctx.brushConfig.domain[0]);
-        var max = parseFloat(ctx.brushConfig.domain[1]);
-
-        if (isNaN(min) || isNaN(max)) {
-            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
-            return [0, 0];
-        }
-
-        var width = ctx.width;
-
-        var initMove = [
-            width * min / 100,
-            width * max / 100
-        ];
-
-        ctx.initBrushSelection = [
-            utils.toFixed(initMove[0] / width, 3),
-            utils.toFixed(initMove[1] / width, 3)
-        ];
-
-        return initMove;
-    }
-
-    function brushChange(ctx) {
-        var width = ctx.width;
-        return function () {
-            var domain = d3.event.selection;
-            var min = utils.toFixed(domain[0] / width, 3);
-            var max = utils.toFixed(domain[1] / width, 3);
-
-            ctx.fire('brushChange', [min, max]);
-        };
-
-        // console.log(domain)
-
-        // this.fire('brushChange',domain);
-    }
-
-
-    // 设置时间刷初始值
-    function initExtent(ctx) {
-        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
-    }
-
-    function defaultConfig() {
-
-        /**
-         * brush配置项
-         * @var brush
-         * @type Object
-         * @extends xCharts
-         * @description 时间轴特有的时间刷
-         */
-        return {
-            /**
-             * @var show
-             * @type Boolean
-             * @extends xCharts.brush
-             * @default true
-             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
-             */
-            show: true,
-            /**
-             * @var domain
-             * @type Array
-             * @extends xCharts.brush
-             * @default ['90%','100%']
-             * @description 设置时间刷的初始值,只支持百分比的形式
-             */
-            domain: ['90%', '100%'],
-            /**
-             * @var brushHeight
-             * @type Number
-             * @extends xCharts.brush
-             * @default 30
-             * @description 设置时间刷的高
-             */
-            brushHeight: 30
-        }
-    }
-
-}(xCharts, d3));
-/**
  * xCharts.legend
  * extends Component
  */
@@ -2243,6 +2272,9 @@ var animationConfig = {
     legend.prototype.extend = xCharts.extend;
     legend.prototype.extend({
         init: function (messageCenter, config) {
+
+            // 配合tooltip显示
+            messageCenter.lengendChange = false;
 
             // 合并默认配置项
             this.legendConfig = utils.merage(defaultConfig(), config.legend);
@@ -2430,6 +2462,9 @@ var animationConfig = {
             if (ctx.legendConfig.clickable === false) {
                 return true;
             }
+
+            // 通知tooltip,legend有操作
+            ctx.messageCenter.lengendChange = true;
 
             this.isChecked = !this.isChecked;
             if (multiple) {
@@ -3674,7 +3709,11 @@ var animationConfig = {
 
             sectionNumber += sectionObj.offset;
 
-            if (sectionNumber !== oldSectionNumber) {
+            if (sectionNumber !== oldSectionNumber || _this.messageCenter.lengendChange ) {
+
+                // tooltip已经响应过legend改变,不需要重复响应
+                _this.messageCenter.lengendChange = false;
+
                 //触发tooltipSectionChange事件，获取文本
                 var tooltipHtml = "";
 
@@ -3992,7 +4031,7 @@ var animationConfig = {
         _reRenderBars: function (nameList) {
             var animationConfig = this.config.animation;
             // 先把所有series的isShow属性设为false
-
+            this.barYScale = this.messageCenter.yAxisScale[0];
             var keys = Object.keys(this.barSeries);
 
             for (var i = 0; i < keys.length; i++) {
@@ -5681,7 +5720,7 @@ var animationConfig = {
                 .y(function (d) {
                     return d.y;
                 });
-            var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series)
+            var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series);
             linePath = linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none').merge(linePath);
             linePath.exit().remove();
             linePath.attr('stroke', function (d) {
@@ -5700,7 +5739,7 @@ var animationConfig = {
                     if (d.show === false) {
                         return 0;
                     } else {
-                        return 1;
+                        return 0.7;
                     }
                 });
 
@@ -5714,37 +5753,63 @@ var animationConfig = {
                         return ctx.linePath;
                     };
 
-
-                    var lineData = serie.data.map(function (dataItem) {
+                    var transitionData = serie.data.map(function (dataItem) {
                         return {
                             x: serie.xScale(dataItem.x),
                             y: serie.yScale(dataItem.y)
                         }
                     });
 
-                    if (this.lineData === undefined) {
+                    if (this.transitionData === undefined) {
                         var minValue = serie.yScale.range()[1];
-                        this.lineData = serie.data.map(function (dataItem) {
+                        this.transitionData = serie.data.map(function (dataItem) {
                             return {
                                 x: serie.xScale(dataItem.x),
                                 y: serie.yScale(minValue)
                             }
-                        })
+                        });
+                        // serie.data.map(function (dataItem) {
+                        //     return {
+                        //         x: serie.xScale(dataItem.x),
+                        //         y: serie.yScale(minValue)
+                        //     }
+                        // })
                     }
 
-                    // this.lineData = this.lineData === undefined ? lineData : this.lineData;
-                    var interpolate = d3.interpolate(this.lineData, lineData);
-                    this.lineData = lineData;
+                    var interpolate = d3.interpolate(this.transitionData, transitionData);
+                    this.transitionData = transitionData;
 
                     return function (t) {
                         var interpolateData = interpolate(t);
+                        var invalidIdxList = [], validDataList = [];
+                        serie.data.forEach(function (d, i) {
+                            if (d.justCircle) {
+                                invalidIdxList.push(i);
+                            }
+                        });
+                        if (invalidIdxList.length > 0) {
+                            var preIndex = 0;
+                            invalidIdxList.push(interpolateData.length);
+                            for (var index = 0; index <= invalidIdxList.length; index++) {
+                                var curIndex = invalidIdxList[index];
+                                if (curIndex - preIndex > 0) {
+                                    validDataList.push(interpolateData.slice(preIndex, curIndex));
+                                }
+                                preIndex = curIndex + 1;
+                            }
+                        } else {
+                            validDataList = [interpolateData];
+                        }
                         lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-                        var path = lineScale(interpolateData);
+                        var path = '';
+                        validDataList.forEach(function (lineData) {
+                            path += lineScale(lineData);
+                        });
                         if (t == 1) {
                             ctx.linePath = path;
                             _this.fire('lineAnimationEnd');
                         }
-                        return path
+                        return path;
                     }
                 });
 
@@ -5755,7 +5820,6 @@ var animationConfig = {
             // DONE 不用d3.svg.area，重写一个以满足需求
             var id = this.id, _this = this;
             var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
-
             var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
             areaGroup = areaGroup.enter().append('g').attr('class', 'xc-area-group').merge(areaGroup);
             areaGroup.exit().remove();
@@ -5829,7 +5893,29 @@ var animationConfig = {
 
                     return function (t) {
                         var data = interpolate(t);
-                        var areaPath = area(data, serie);
+                        var invalidIdxList = [], validDataList = [];
+                        serie.data.forEach(function (d, i) {
+                            if (d.justCircle) {
+                                invalidIdxList.push(i);
+                            }
+                        });
+                        if (invalidIdxList.length > 0) {
+                            var preIndex = 0;
+                            invalidIdxList.push(data.length);
+                            for (var index = 0; index <= invalidIdxList.length; index++) {
+                                var curIndex = invalidIdxList[index];
+                                if (curIndex - preIndex > 0) {
+                                    validDataList.push(data.slice(preIndex, curIndex));
+                                }
+                                preIndex = curIndex + 1;
+                            }
+                        } else {
+                            validDataList = [data];
+                        }
+                        var areaPath = '';
+                        validDataList.forEach(function (areaData) {
+                            areaPath += area(areaData, serie);
+                        });
                         if (t == 1) {
                             ctx.areaPath = areaPath;
                         }
@@ -5868,15 +5954,12 @@ var animationConfig = {
             }).merge(circle);
             circle.exit().remove();
 
-            // circle.exit().remove();
-
-
             circle.style("transition", transitionStr)
                 .style("opacity", function (d) {
                     if (typeof d !== 'object') {
                         return 0;
                     } else {
-                        return 1;
+                        return 0.7;
                     }
                 })
                 .style("display", function (d, idx) {
@@ -5894,7 +5977,7 @@ var animationConfig = {
                         this.circleRadius = d._serie.lineStyle.radius;
                     }
                     return this.circleRadius;
-                })
+                });
             // .attr('cx', function (data) {
             //     var ctx = this;
             //     if (typeof data !== 'object') {
@@ -6197,7 +6280,7 @@ var animationConfig = {
         //处理堆积情况
         var stackSeries = parseStacksSeries(ctx, stacks, config);
         //非堆积情况
-        lineSeries = parseNoramlSeries(ctx, lineSeries, config);
+        lineSeries = parseNormalSeries(ctx, lineSeries, config);
         return lineSeries.concat(stackSeries);//反转一下是为了解决堆积面积图时会产生重叠覆盖问题
     }
 
@@ -6228,14 +6311,41 @@ var animationConfig = {
                         serie.xScale = xScale;
                         serie.yScale = yScale;
                         oldInterpolate = serie.interpolate;
+                        if (serie.xScale.domain().length === 0) {
+                            serie.data = [];
+                        }
                         serie.data = serie.data.map(function (dataValue, idx) {
-                            var data = {};
+                            var data = {}, isStackPoint = true;
 
                             // TODO 这里好像只能满足category
                             if (xConfig.type != 'value') {
                                 data.x = xConfig.data[idx];
-                                data.y0 = oldData ? oldData[idx].y : yScale.domain()[0];
-                                data.y = parseFloat(dataValue) + (oldData ? oldData[idx].y : 0);
+                                if (data.x === undefined) {
+                                    console.error('The length of xAxis.data and series.data is not match!', idx);
+                                }
+                                var maxY = yScale.domain()[1];
+                                var minY = yScale.domain()[0];
+                                if (!oldData) {
+                                    data.y0 = minY;
+                                    data.y = parseFloat(dataValue);
+                                } else {
+                                    isStackPoint = oldData[idx] && !oldData[idx].justCircle;
+                                    data.y0 = isStackPoint ? oldData[idx].y : minY;
+                                    data.y = parseFloat(dataValue) + (isStackPoint ? oldData[idx].y : 0);
+                                }
+                                data.isStackPoint = isStackPoint;
+                                if (data.y > maxY) {
+                                    data.y = maxY;
+                                }
+                                if (data.y < minY) {
+                                    data.y = minY;
+                                }
+                                if (typeof data.y === 'number' && data.y !== data.y) {
+                                    data.justCircle = true;
+                                    dataValue = '-';
+                                    data.y = maxY;
+                                }
+                                data.x = xConfig.data[idx];
                             }
 
                             data.value = dataValue;
@@ -6260,8 +6370,8 @@ var animationConfig = {
      * @param config
      * @returns {*}
      */
-    function parseNoramlSeries(_this, lineSeries, config) {
-
+    function parseNormalSeries(_this, lineSeries, config) {
+        var invalidPoints = 0;
         lineSeries = lineSeries.map(function (serie) {
             if (serie.show !== false) {
 
@@ -6277,25 +6387,45 @@ var animationConfig = {
                 serie.y0Interpolate = 'linear';
                 serie.xScale = xScale;
                 serie.yScale = yScale;
-
+                if (serie.xScale.domain().length === 0) {
+                    console.error('xAxis.data is empty!');
+                    serie.data = [];
+                }
                 serie.data = serie.data.map(function (dataValue, idx) {
-
                     var data = {};
                     if (xConfig.type != 'value') {
                         data.x = xConfig.data[idx];
+                        if (data.x === undefined) {
+                            console.error('The length of xAxis.data and series.data is not match!', idx);
+                        }
+                        var maxY = yScale.domain()[1];
+                        var minY = yScale.domain()[0];
                         data.y = parseFloat(dataValue);
-                        data.y0 = yScale.domain()[0];
+                        if (data.y > maxY) {
+                            data.y = maxY;
+                        }
+                        if (data.y < minY) {
+                            data.y = minY;
+                        }
+                        if (typeof data.y === 'number' && data.y !== data.y) {
+                            data.justCircle = true;
+                            dataValue = '-';
+                            data.y = maxY;
+                        }
+                        data.y0 = minY;
                     }
 
                     data.value = dataValue;
                     data.idx = serieIdx;
                     data._serie = serie;
                     return data;
-                })
+                });
             }
             return serie;
+        }).filter(function (item) {
+            return item.data.length > 0;
         });
-        return lineSeries
+        return lineSeries;
     }
 
     /**
@@ -6323,9 +6453,31 @@ var animationConfig = {
         var path = lineScale(data);
         // line0Scale.interpolate(serie.line0Scale);
         line0Scale.curve(serie.y0Interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-        var path0 = line0Scale(data.reverse());
+        var stackIdxList = [], stackDataList = [];
+        serie.data.forEach(function (d, i) {
+            if (!d.isStackPoint) {
+                stackIdxList.push(i);
+            }
+        });
+        if (stackIdxList.length > 0) {
+            var preIndex = 0;
+            stackIdxList.push(data.length);
+            for (var index = 0; index <= stackIdxList.length; index++) {
+                var curIndex = stackIdxList[index];
+                if (curIndex - preIndex > 0) {
+                    stackDataList.push(data.slice(preIndex, curIndex));
+                }
+                preIndex = curIndex + 1;
+            }
+        } else {
+            stackDataList = [data];
+        }
+        var path0 = '';
+        stackDataList.forEach(function (data) {
+            path0 += line0Scale(data.reverse());
+        });
+        // var path0 = line0Scale(data.reverse());
         data.reverse()//再次翻转，恢复原状
-        //serie.areaPath = joinPath(serie);
         return joinPath(path, path0, data);
     }
 
@@ -7127,356 +7279,6 @@ var animationConfig = {
 }(xCharts, d3));
 
 /**
- *  scatter 散点图
- *  继承自 Chart
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var Chart = xCharts.charts.Chart;
-    xCharts.charts.extend({scatter: scatter});
-    utils.inherits(scatter, Chart);
-
-    function scatter(messageCenter, config) {
-        Chart.call(this, messageCenter, config, 'scatter');
-    }
-
-    scatter.prototype.extend = xCharts.extend;
-    scatter.prototype.extend({
-        init: function (messageCenter, config, type, series) {
-            var _this = this;
-            _this.xAxisScale = messageCenter.xAxisScale;
-            _this.yAxisScale = messageCenter.yAxisScale;
-            _this.series = parseSeries(series, _this.xAxisScale, _this.yAxisScale);
-            _this.data = getData(_this.series);
-
-        },
-        render: function (animationEase, animationTime) {
-
-            var _this = this;
-
-            // 手机模式下动画卡
-            if (_this.mobileMode) {
-                animationTime = 0;
-            }
-
-            var scatterGroup = _this.main.selectAll('.xc-scatter-group')
-                .data([1]);
-
-            scatterGroup = scatterGroup.enter().append('g')
-                .attr('class', 'xc-scatter-group')
-                .merge(scatterGroup);
-
-            var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
-                .data(_this.data);
-
-            var transitionStr = "r " + animationTime + "ms linear,cx " + animationTime + "ms linear,cy " + animationTime + "ms linear";
-
-            scatterItem = scatterItem.enter().append('circle').merge(scatterItem);
-            scatterItem.exit().remove();
-
-            scatterItem.style("transition", transitionStr)
-                .attr('cx', function (d) {
-                    return d._serie.xScale(d.data[0]);
-                })
-                .attr('cy', function (d) {
-                    return d._serie.yScale(d.data[1]);
-                })
-                .attr('r', function (d) {
-                    //这里如果是不显示的话，直接返回一个半径0
-                    if (d._serie.show != false)
-                        return d.radius;
-                    else
-                        return 0;
-                })
-                .attr('fill', function (d) {
-                    return _this.getColor(d._serie.idx);
-                })
-                .attr('opacity', function (d) {
-                    return d._serie.opacity;
-                })
-                .attr('class', function (d) {
-                    var classStr = 'xc-scatter-item';
-                    classStr += ' xc-scatter-group-' + d._serie.idx;
-                    return classStr;
-                });
-
-            // scatterItem.transition()
-            //     .duration(animationConfig.animationTime)
-            //     .ease(animationConfig.animationEase)
-            //     .attrTween('cx', function (d) {
-            //         var cx = d._serie.xScale(d.data[0]);
-            //         this.cxPosition = this.cxPosition === undefined ? cx : this.cxPosition;
-            //         var interpolate = d3.interpolate(this.cxPosition, cx);
-            //         this.cxPosition = cx;
-            //         return function (t) {
-            //             return interpolate(t);
-            //         }
-            //     })
-            //     .attrTween('cy', function (d) {
-            //         // return d._serie.yScale(d.data[1]);
-            //         var cy = d._serie.yScale(d.data[1]);
-            //         this.cyPosition = this.cyPosition === undefined ? cy : this.cyPosition;
-            //         var interpolate = d3.interpolate(this.cyPosition, cy);
-            //         this.cyPosition = cy;
-            //         return function (t) {
-            //             return interpolate(t);
-            //         }
-            //     })
-
-            _this.scatterItem = scatterItem;//暴露出去，为了tooltip事件
-        },
-        ready: function () {
-            this.__legendReady();
-            this.__tooltipReady();
-        },
-        __legendReady: function () {
-            var _this = this, selectGroup = null;
-            var animationConfig = _this.config.animation;
-
-            _this.on('legendMouseenter.scatter', function (name) {
-                var serie = getSeriesByName(_this.series, name);
-                selectGroup = _this.main.selectAll('.xc-scatter-group-' + serie.idx);
-                selectGroup.attr('opacity', 1);
-            });
-            _this.on('legendMouseleave.scatter', function (name) {
-                selectGroup.attr('opacity', function (d) {
-                    return d._serie.opacity;
-                });
-            });
-            this.on('legendClick.scatter', function (nameList) {
-                var series = _this.config.series;
-                _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render(animationConfig.animationEase, animationConfig.animationTime);
-            });
-        },
-        __tooltipReady: function () {
-            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
-            var _this = this;
-            var tooltip = _this.messageCenter.components['tooltip'];
-            var tooltipFormatter = tooltip.tooltipConfig.formatter;
-
-
-            // TODO 这里修改为轴触发方式和点击共存
-            // 移动端就不需要点击了
-            if (_this.mobileMode) {
-                _this.mobileReady();
-            } else {
-                // _this.div.on('mousemove.scatter', assitLineTrigger(_this));
-
-                _this.scatterItem.on('mouseenter.scatter', function (data) {
-
-                    d3.select(this).attr('opacity', 1);
-                    //设置tooltip
-                    var event = d3.event;
-                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-                    tooltip.showTooltip();
-                    tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
-                    tooltip.setPosition([x, y]);
-                })
-
-                _this.scatterItem.on('mouseleave.scatter', function (data) {
-                    d3.select(this).attr('opacity', function (d) {
-                        return d._serie.opacity;
-                    });
-                    tooltip.hiddenTooltip();
-                });
-            }
-
-
-        }
-    });
-
-    
-
-    // function
-
-    /**
-     * 通过name找到对应的serie
-     * @param series
-     * @param name
-     * @returns {*}
-     */
-    function getSeriesByName(series, name) {
-        for (var i = 0, s; s = series[i++];)
-            if (s.name == name) return s;
-    }
-
-    /**
-     * 处理sereies
-     * @param series 未处理的全部series
-     * @param xScale xAxisScale
-     * @param yScale yAxisScale
-     * @returns {Array}
-     */
-    function parseSeries(series, xScale, yScale) {
-        var scatterSeries = [];
-        for (var i = 0, s; s = series[i++];) {
-            //第一步，判断是否是type=scatter，不是，则直接跳过
-            if (s.type != 'scatter') continue;
-
-            //加入默认config
-            s = utils.merage(defaultConfig(), s);
-            var size = s.size;
-            s.idx = s.idx == null ? i - 1 : s.idx;//分配一个idx，用来获取颜色
-            s.xScale = xScale[s.xAxisIndex];
-            s.yScale = yScale[s.yAxisIndex];
-            //处理散点图的每个data,格式化成一个object对象，保存一些绘画数据
-            s.data = s.data.map(function (d, idx) {
-                var radius = typeof size == 'function' ? size(d) : size;
-                var obj = {};
-                obj.data = d;
-                obj.radius = radius;
-                obj._serie = s;
-                return obj;
-            })
-
-            scatterSeries.push(s);
-        }
-        return scatterSeries;
-    }
-
-    /**
-     * 将已经处理过的sereis里面data拿出来，合并按半径从大到小的顺序排序
-     * @param series
-     * @returns {Array} [object,object]
-     */
-    function getData(series) {
-        var data = [];
-        series.forEach(function (serie) {
-            data = data.concat(serie.data);
-        })
-        data = data.sort(function (a, b) {
-            //将每个点按半径从大到小的顺序排序，尽可能的避免小点被大点盖住，鼠标无法点击的情况
-            return b.radius - a.radius;
-        })
-        return data;
-    }
-
-    /**
-     * 默认散点图tooltip格式化函数
-     * @param name series.name
-     * @param x
-     * @param y
-     * @returns {string}
-     */
-    function defaultFormatter(name, x, y) {
-        var html = "<p>" + name + "</p>";
-        html += "<p>" + x + "," + y + "</p>";
-        return html;
-    }
-
-    function defaultConfig() {
-        /**
-         * @var scatter
-         * @type Object
-         * @extends xCharts.series
-         * @description 散点图(气泡图)配置项
-         */
-        var scatter = {
-            /**
-             * @var name
-             * @type String
-             * @extends xCharts.series.scatter
-             * @description 散点图(气泡图)代表的名字
-             */
-            name: '业绩',
-            /**
-             * @var type
-             * @type String
-             * @extends xCharts.series.scatter
-             * @description 散点图(气泡图)指定类型
-             */
-            type: 'scatter',
-            /**
-             * @var data
-             * @type Array
-             * @extends xCharts.series.scatter
-             * @description 一个装有散点图(气泡图)数据的二维数组,第一个为x轴数据，第二个为y轴数据
-             * @example
-             *   [
-             *      [161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
-             *      [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
-             *      [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0]
-             *   ]
-             */
-            data: [], //包含x，y值的数组,第一个为x，第二个为y
-            /**
-             * @var size
-             * @type Number|Function
-             * @extends xCharts.series.scatter
-             * @description 散点图(气泡图)的大小，数字表示所有气泡运用同一个大小，函数需计算返回一个表示气泡大小的数值
-             * @default 5
-             * @example
-             *  function(data){
-             *      //data是一个二维数组，和传入的series.data的值对应
-             *      return data[0];
-             *  }
-             */
-            size: 5,
-            /**
-             * @var xAxisIndex
-             * @type Number
-             * @description 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
-             * @default 0
-             * @extends xCharts.series.scatter
-             */
-            xAxisIndex: 0,
-            /**
-             * @var yAxisIndex
-             * @type Number
-             * @description 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
-             * @default 0
-             * @extends xCharts.series.scatter
-             */
-            yAxisIndex: 0,
-            /**
-             * @var opacity
-             * @type Number
-             * @values 0-1
-             * @description 散点（气泡）的透明程度
-             * @default 0.6
-             * @extends xCharts.series.scatter
-             */
-            opacity: 0.6,
-            /**
-             * @var formatter
-             * @extends xCharts.series.scatter
-             * @type Function
-             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
-             * @example
-             *  formatter: function (name,x,y) {
-             *      var html = "<p>"+name+"</p>";
-             *      html+="<p>"+x+","+y+"</p>";
-             *      return html;
-             *  }
-             */
-            //formatter:
-
-        }
-        return scatter;
-    }
-
-}(xCharts, d3));
-/**
- * Author liuyang46@meituan.com
- * Date 16/5/27
- * Describe 散点图,移动端适配
- */
-
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var charts = xCharts.charts;
-    var scatter = charts.scatter;
-
-    scatter.prototype.extend({
-        mobileReady:function(){
-            
-        }
-    });
-}(xCharts, d3));
-
-/**
  * @file 雷达图
  * @author chenwubai.cx@gmail.com
  */
@@ -8115,6 +7917,356 @@ var animationConfig = {
             _this._showTooltip(index, this);
         });
     }
+}(xCharts, d3));
+
+/**
+ *  scatter 散点图
+ *  继承自 Chart
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var Chart = xCharts.charts.Chart;
+    xCharts.charts.extend({scatter: scatter});
+    utils.inherits(scatter, Chart);
+
+    function scatter(messageCenter, config) {
+        Chart.call(this, messageCenter, config, 'scatter');
+    }
+
+    scatter.prototype.extend = xCharts.extend;
+    scatter.prototype.extend({
+        init: function (messageCenter, config, type, series) {
+            var _this = this;
+            _this.xAxisScale = messageCenter.xAxisScale;
+            _this.yAxisScale = messageCenter.yAxisScale;
+            _this.series = parseSeries(series, _this.xAxisScale, _this.yAxisScale);
+            _this.data = getData(_this.series);
+
+        },
+        render: function (animationEase, animationTime) {
+
+            var _this = this;
+
+            // 手机模式下动画卡
+            if (_this.mobileMode) {
+                animationTime = 0;
+            }
+
+            var scatterGroup = _this.main.selectAll('.xc-scatter-group')
+                .data([1]);
+
+            scatterGroup = scatterGroup.enter().append('g')
+                .attr('class', 'xc-scatter-group')
+                .merge(scatterGroup);
+
+            var scatterItem = scatterGroup.selectAll('.xc-scatter-item')
+                .data(_this.data);
+
+            var transitionStr = "r " + animationTime + "ms linear,cx " + animationTime + "ms linear,cy " + animationTime + "ms linear";
+
+            scatterItem = scatterItem.enter().append('circle').merge(scatterItem);
+            scatterItem.exit().remove();
+
+            scatterItem.style("transition", transitionStr)
+                .attr('cx', function (d) {
+                    return d._serie.xScale(d.data[0]);
+                })
+                .attr('cy', function (d) {
+                    return d._serie.yScale(d.data[1]);
+                })
+                .attr('r', function (d) {
+                    //这里如果是不显示的话，直接返回一个半径0
+                    if (d._serie.show != false)
+                        return d.radius;
+                    else
+                        return 0;
+                })
+                .attr('fill', function (d) {
+                    return _this.getColor(d._serie.idx);
+                })
+                .attr('opacity', function (d) {
+                    return d._serie.opacity;
+                })
+                .attr('class', function (d) {
+                    var classStr = 'xc-scatter-item';
+                    classStr += ' xc-scatter-group-' + d._serie.idx;
+                    return classStr;
+                });
+
+            // scatterItem.transition()
+            //     .duration(animationConfig.animationTime)
+            //     .ease(animationConfig.animationEase)
+            //     .attrTween('cx', function (d) {
+            //         var cx = d._serie.xScale(d.data[0]);
+            //         this.cxPosition = this.cxPosition === undefined ? cx : this.cxPosition;
+            //         var interpolate = d3.interpolate(this.cxPosition, cx);
+            //         this.cxPosition = cx;
+            //         return function (t) {
+            //             return interpolate(t);
+            //         }
+            //     })
+            //     .attrTween('cy', function (d) {
+            //         // return d._serie.yScale(d.data[1]);
+            //         var cy = d._serie.yScale(d.data[1]);
+            //         this.cyPosition = this.cyPosition === undefined ? cy : this.cyPosition;
+            //         var interpolate = d3.interpolate(this.cyPosition, cy);
+            //         this.cyPosition = cy;
+            //         return function (t) {
+            //             return interpolate(t);
+            //         }
+            //     })
+
+            _this.scatterItem = scatterItem;//暴露出去，为了tooltip事件
+        },
+        ready: function () {
+            this.__legendReady();
+            this.__tooltipReady();
+        },
+        __legendReady: function () {
+            var _this = this, selectGroup = null;
+            var animationConfig = _this.config.animation;
+
+            _this.on('legendMouseenter.scatter', function (name) {
+                var serie = getSeriesByName(_this.series, name);
+                selectGroup = _this.main.selectAll('.xc-scatter-group-' + serie.idx);
+                selectGroup.attr('opacity', 1);
+            });
+            _this.on('legendMouseleave.scatter', function (name) {
+                selectGroup.attr('opacity', function (d) {
+                    return d._serie.opacity;
+                });
+            });
+            this.on('legendClick.scatter', function (nameList) {
+                var series = _this.config.series;
+                _this.init(_this.messageCenter, _this.config, _this.type, series);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+            });
+        },
+        __tooltipReady: function () {
+            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
+            var _this = this;
+            var tooltip = _this.messageCenter.components['tooltip'];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter;
+
+
+            // TODO 这里修改为轴触发方式和点击共存
+            // 移动端就不需要点击了
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                // _this.div.on('mousemove.scatter', assitLineTrigger(_this));
+
+                _this.scatterItem.on('mouseenter.scatter', function (data) {
+
+                    d3.select(this).attr('opacity', 1);
+                    //设置tooltip
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+                    tooltip.showTooltip();
+                    tooltip.setTooltipHtml(formatter(data._serie.name, data.data[0], data.data[1]));
+                    tooltip.setPosition([x, y]);
+                })
+
+                _this.scatterItem.on('mouseleave.scatter', function (data) {
+                    d3.select(this).attr('opacity', function (d) {
+                        return d._serie.opacity;
+                    });
+                    tooltip.hiddenTooltip();
+                });
+            }
+
+
+        }
+    });
+
+    
+
+    // function
+
+    /**
+     * 通过name找到对应的serie
+     * @param series
+     * @param name
+     * @returns {*}
+     */
+    function getSeriesByName(series, name) {
+        for (var i = 0, s; s = series[i++];)
+            if (s.name == name) return s;
+    }
+
+    /**
+     * 处理sereies
+     * @param series 未处理的全部series
+     * @param xScale xAxisScale
+     * @param yScale yAxisScale
+     * @returns {Array}
+     */
+    function parseSeries(series, xScale, yScale) {
+        var scatterSeries = [];
+        for (var i = 0, s; s = series[i++];) {
+            //第一步，判断是否是type=scatter，不是，则直接跳过
+            if (s.type != 'scatter') continue;
+
+            //加入默认config
+            s = utils.merage(defaultConfig(), s);
+            var size = s.size;
+            s.idx = s.idx == null ? i - 1 : s.idx;//分配一个idx，用来获取颜色
+            s.xScale = xScale[s.xAxisIndex];
+            s.yScale = yScale[s.yAxisIndex];
+            //处理散点图的每个data,格式化成一个object对象，保存一些绘画数据
+            s.data = s.data.map(function (d, idx) {
+                var radius = typeof size == 'function' ? size(d) : size;
+                var obj = {};
+                obj.data = d;
+                obj.radius = radius;
+                obj._serie = s;
+                return obj;
+            })
+
+            scatterSeries.push(s);
+        }
+        return scatterSeries;
+    }
+
+    /**
+     * 将已经处理过的sereis里面data拿出来，合并按半径从大到小的顺序排序
+     * @param series
+     * @returns {Array} [object,object]
+     */
+    function getData(series) {
+        var data = [];
+        series.forEach(function (serie) {
+            data = data.concat(serie.data);
+        })
+        data = data.sort(function (a, b) {
+            //将每个点按半径从大到小的顺序排序，尽可能的避免小点被大点盖住，鼠标无法点击的情况
+            return b.radius - a.radius;
+        })
+        return data;
+    }
+
+    /**
+     * 默认散点图tooltip格式化函数
+     * @param name series.name
+     * @param x
+     * @param y
+     * @returns {string}
+     */
+    function defaultFormatter(name, x, y) {
+        var html = "<p>" + name + "</p>";
+        html += "<p>" + x + "," + y + "</p>";
+        return html;
+    }
+
+    function defaultConfig() {
+        /**
+         * @var scatter
+         * @type Object
+         * @extends xCharts.series
+         * @description 散点图(气泡图)配置项
+         */
+        var scatter = {
+            /**
+             * @var name
+             * @type String
+             * @extends xCharts.series.scatter
+             * @description 散点图(气泡图)代表的名字
+             */
+            name: '业绩',
+            /**
+             * @var type
+             * @type String
+             * @extends xCharts.series.scatter
+             * @description 散点图(气泡图)指定类型
+             */
+            type: 'scatter',
+            /**
+             * @var data
+             * @type Array
+             * @extends xCharts.series.scatter
+             * @description 一个装有散点图(气泡图)数据的二维数组,第一个为x轴数据，第二个为y轴数据
+             * @example
+             *   [
+             *      [161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
+             *      [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
+             *      [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0]
+             *   ]
+             */
+            data: [], //包含x，y值的数组,第一个为x，第二个为y
+            /**
+             * @var size
+             * @type Number|Function
+             * @extends xCharts.series.scatter
+             * @description 散点图(气泡图)的大小，数字表示所有气泡运用同一个大小，函数需计算返回一个表示气泡大小的数值
+             * @default 5
+             * @example
+             *  function(data){
+             *      //data是一个二维数组，和传入的series.data的值对应
+             *      return data[0];
+             *  }
+             */
+            size: 5,
+            /**
+             * @var xAxisIndex
+             * @type Number
+             * @description 使用哪一个x轴，从0开始，对应xAxis中的坐标轴
+             * @default 0
+             * @extends xCharts.series.scatter
+             */
+            xAxisIndex: 0,
+            /**
+             * @var yAxisIndex
+             * @type Number
+             * @description 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
+             * @default 0
+             * @extends xCharts.series.scatter
+             */
+            yAxisIndex: 0,
+            /**
+             * @var opacity
+             * @type Number
+             * @values 0-1
+             * @description 散点（气泡）的透明程度
+             * @default 0.6
+             * @extends xCharts.series.scatter
+             */
+            opacity: 0.6,
+            /**
+             * @var formatter
+             * @extends xCharts.series.scatter
+             * @type Function
+             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
+             * @example
+             *  formatter: function (name,x,y) {
+             *      var html = "<p>"+name+"</p>";
+             *      html+="<p>"+x+","+y+"</p>";
+             *      return html;
+             *  }
+             */
+            //formatter:
+
+        }
+        return scatter;
+    }
+
+}(xCharts, d3));
+/**
+ * Author liuyang46@meituan.com
+ * Date 16/5/27
+ * Describe 散点图,移动端适配
+ */
+
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var charts = xCharts.charts;
+    var scatter = charts.scatter;
+
+    scatter.prototype.extend({
+        mobileReady:function(){
+            
+        }
+    });
 }(xCharts, d3));
 
     return xCharts;

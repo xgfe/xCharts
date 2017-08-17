@@ -53,7 +53,7 @@
                 .y(function (d) {
                     return d.y;
                 });
-            var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series)
+            var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series);
             linePath = linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none').merge(linePath);
             linePath.exit().remove();
             linePath.attr('stroke', function (d) {
@@ -72,7 +72,7 @@
                     if (d.show === false) {
                         return 0;
                     } else {
-                        return 1;
+                        return 0.7;
                     }
                 });
 
@@ -86,37 +86,63 @@
                         return ctx.linePath;
                     };
 
-
-                    var lineData = serie.data.map(function (dataItem) {
+                    var transitionData = serie.data.map(function (dataItem) {
                         return {
                             x: serie.xScale(dataItem.x),
                             y: serie.yScale(dataItem.y)
                         }
                     });
 
-                    if (this.lineData === undefined) {
+                    if (this.transitionData === undefined) {
                         var minValue = serie.yScale.range()[1];
-                        this.lineData = serie.data.map(function (dataItem) {
+                        this.transitionData = serie.data.map(function (dataItem) {
                             return {
                                 x: serie.xScale(dataItem.x),
                                 y: serie.yScale(minValue)
                             }
-                        })
+                        });
+                        // serie.data.map(function (dataItem) {
+                        //     return {
+                        //         x: serie.xScale(dataItem.x),
+                        //         y: serie.yScale(minValue)
+                        //     }
+                        // })
                     }
 
-                    // this.lineData = this.lineData === undefined ? lineData : this.lineData;
-                    var interpolate = d3.interpolate(this.lineData, lineData);
-                    this.lineData = lineData;
+                    var interpolate = d3.interpolate(this.transitionData, transitionData);
+                    this.transitionData = transitionData;
 
                     return function (t) {
                         var interpolateData = interpolate(t);
+                        var invalidIdxList = [], validDataList = [];
+                        serie.data.forEach(function (d, i) {
+                            if (d.justCircle) {
+                                invalidIdxList.push(i);
+                            }
+                        });
+                        if (invalidIdxList.length > 0) {
+                            var preIndex = 0;
+                            invalidIdxList.push(interpolateData.length);
+                            for (var index = 0; index < invalidIdxList.length; index++) {
+                                var curIndex = invalidIdxList[index];
+                                if (curIndex - preIndex > 0) {
+                                    validDataList.push(interpolateData.slice(preIndex, curIndex));
+                                }
+                                preIndex = curIndex + 1;
+                            }
+                        } else {
+                            validDataList = [interpolateData];
+                        }
                         lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-                        var path = lineScale(interpolateData);
+                        var path = '';
+                        validDataList.forEach(function (lineData) {
+                            path += lineScale(lineData);
+                        });
                         if (t == 1) {
                             ctx.linePath = path;
                             _this.fire('lineAnimationEnd');
                         }
-                        return path
+                        return path;
                     }
                 });
 
@@ -127,7 +153,6 @@
             // DONE 不用d3.svg.area，重写一个以满足需求
             var id = this.id, _this = this;
             var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
-
             var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
             areaGroup = areaGroup.enter().append('g').attr('class', 'xc-area-group').merge(areaGroup);
             areaGroup.exit().remove();
@@ -201,7 +226,29 @@
 
                     return function (t) {
                         var data = interpolate(t);
-                        var areaPath = area(data, serie);
+                        var invalidIdxList = [], validDataList = [];
+                        serie.data.forEach(function (d, i) {
+                            if (d.justCircle) {
+                                invalidIdxList.push(i);
+                            }
+                        });
+                        if (invalidIdxList.length > 0) {
+                            var preIndex = 0;
+                            invalidIdxList.push(data.length);
+                            for (var index = 0; index <= invalidIdxList.length; index++) {
+                                var curIndex = invalidIdxList[index];
+                                if (curIndex - preIndex > 0) {
+                                    validDataList.push(data.slice(preIndex, curIndex));
+                                }
+                                preIndex = curIndex + 1;
+                            }
+                        } else {
+                            validDataList = [data];
+                        }
+                        var areaPath = '';
+                        validDataList.forEach(function (areaData) {
+                            areaPath += area(areaData, serie);
+                        });
                         if (t == 1) {
                             ctx.areaPath = areaPath;
                         }
@@ -240,15 +287,12 @@
             }).merge(circle);
             circle.exit().remove();
 
-            // circle.exit().remove();
-
-
             circle.style("transition", transitionStr)
                 .style("opacity", function (d) {
                     if (typeof d !== 'object') {
                         return 0;
                     } else {
-                        return 1;
+                        return 0.7;
                     }
                 })
                 .style("display", function (d, idx) {
@@ -266,7 +310,7 @@
                         this.circleRadius = d._serie.lineStyle.radius;
                     }
                     return this.circleRadius;
-                })
+                });
             // .attr('cx', function (data) {
             //     var ctx = this;
             //     if (typeof data !== 'object') {
@@ -569,7 +613,7 @@
         //处理堆积情况
         var stackSeries = parseStacksSeries(ctx, stacks, config);
         //非堆积情况
-        lineSeries = parseNoramlSeries(ctx, lineSeries, config);
+        lineSeries = parseNormalSeries(ctx, lineSeries, config);
         return lineSeries.concat(stackSeries);//反转一下是为了解决堆积面积图时会产生重叠覆盖问题
     }
 
@@ -600,14 +644,41 @@
                         serie.xScale = xScale;
                         serie.yScale = yScale;
                         oldInterpolate = serie.interpolate;
+                        if (serie.xScale.domain().length === 0) {
+                            serie.data = [];
+                        }
                         serie.data = serie.data.map(function (dataValue, idx) {
-                            var data = {};
+                            var data = {}, isStackPoint = true;
 
                             // TODO 这里好像只能满足category
                             if (xConfig.type != 'value') {
                                 data.x = xConfig.data[idx];
-                                data.y0 = oldData ? oldData[idx].y : yScale.domain()[0];
-                                data.y = parseFloat(dataValue) + (oldData ? oldData[idx].y : 0);
+                                if (data.x === undefined) {
+                                    console.error('The length of xAxis.data and series.data is not match!', idx);
+                                }
+                                var maxY = yScale.domain()[1];
+                                var minY = yScale.domain()[0];
+                                if (!oldData) {
+                                    data.y0 = minY;
+                                    data.y = parseFloat(dataValue);
+                                } else {
+                                    isStackPoint = oldData[idx] && !oldData[idx].justCircle;
+                                    data.y0 = isStackPoint ? oldData[idx].y : minY;
+                                    data.y = parseFloat(dataValue) + (isStackPoint ? oldData[idx].y : 0);
+                                }
+                                data.isStackPoint = isStackPoint;
+                                if (data.y > maxY) {
+                                    data.y = maxY;
+                                }
+                                if (data.y < minY) {
+                                    data.y = minY;
+                                }
+                                if (typeof data.y === 'number' && data.y !== data.y) {
+                                    data.justCircle = true;
+                                    dataValue = '-';
+                                    data.y = maxY;
+                                }
+                                data.x = xConfig.data[idx];
                             }
 
                             data.value = dataValue;
@@ -632,8 +703,8 @@
      * @param config
      * @returns {*}
      */
-    function parseNoramlSeries(_this, lineSeries, config) {
-
+    function parseNormalSeries(_this, lineSeries, config) {
+        var invalidPoints = 0;
         lineSeries = lineSeries.map(function (serie) {
             if (serie.show !== false) {
 
@@ -649,25 +720,45 @@
                 serie.y0Interpolate = 'linear';
                 serie.xScale = xScale;
                 serie.yScale = yScale;
-
+                if (serie.xScale.domain().length === 0) {
+                    console.error('xAxis.data is empty!');
+                    serie.data = [];
+                }
                 serie.data = serie.data.map(function (dataValue, idx) {
-
                     var data = {};
                     if (xConfig.type != 'value') {
                         data.x = xConfig.data[idx];
+                        if (data.x === undefined) {
+                            console.error('The length of xAxis.data and series.data is not match!', idx);
+                        }
+                        var maxY = yScale.domain()[1];
+                        var minY = yScale.domain()[0];
                         data.y = parseFloat(dataValue);
-                        data.y0 = yScale.domain()[0];
+                        if (data.y > maxY) {
+                            data.y = maxY;
+                        }
+                        if (data.y < minY) {
+                            data.y = minY;
+                        }
+                        if (typeof data.y === 'number' && data.y !== data.y) {
+                            data.justCircle = true;
+                            dataValue = '-';
+                            data.y = maxY;
+                        }
+                        data.y0 = minY;
                     }
 
                     data.value = dataValue;
                     data.idx = serieIdx;
                     data._serie = serie;
                     return data;
-                })
+                });
             }
             return serie;
+        }).filter(function (item) {
+            return item.data.length > 0;
         });
-        return lineSeries
+        return lineSeries;
     }
 
     /**
@@ -695,9 +786,31 @@
         var path = lineScale(data);
         // line0Scale.interpolate(serie.line0Scale);
         line0Scale.curve(serie.y0Interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-        var path0 = line0Scale(data.reverse());
+        var stackIdxList = [], stackDataList = [];
+        serie.data.forEach(function (d, i) {
+            if (!d.isStackPoint) {
+                stackIdxList.push(i);
+            }
+        });
+        if (stackIdxList.length > 0) {
+            var preIndex = 0;
+            stackIdxList.push(data.length);
+            for (var index = 0; index < stackIdxList.length; index++) {
+                var curIndex = stackIdxList[index];
+                if (curIndex - preIndex > 0) {
+                    stackDataList.push(data.slice(preIndex, curIndex));
+                }
+                preIndex = curIndex + 1;
+            }
+        } else {
+            stackDataList = [data];
+        }
+        var path0 = '';
+        stackDataList.forEach(function (data) {
+            path0 += line0Scale(data.reverse());
+        });
+        // var path0 = line0Scale(data.reverse());
         data.reverse()//再次翻转，恢复原状
-        //serie.areaPath = joinPath(serie);
         return joinPath(path, path0, data);
     }
 

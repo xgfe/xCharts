@@ -81,6 +81,10 @@ xCharts.prototype.extend({
         var component, i = 0;
         this.components = {};
         this.charts = {};
+        if (!config.series) {
+            config.series = [];
+            console.error('series is required in configuration');
+        }
         while (component = componentsList[i++]) {
             if (!config[component] || this.components[component]) {
                 continue;
@@ -110,7 +114,6 @@ xCharts.prototype.extend({
         //mainGroup设置偏移量
         this.main.attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
         //调用图表
-        config.series || (config.series = []);
         for (var i = 0, s; s = config.series[i++];) {
             var type = s.type;
             if (this.charts[type]) {
