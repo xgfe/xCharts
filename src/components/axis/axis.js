@@ -20,7 +20,6 @@
         components['Component'].call(this, messageCenter, config, type);
 
     }
-
     axis.prototype.extend = xCharts.extend;
     axis.prototype.extend({
         //一些初始化参数的计算
@@ -40,17 +39,19 @@
                 // 计算比例尺scale
                 var scale = axisScale(config, i, this);
 
-                // 这里判断，如果domain是NAN证明是legend取消了所有显示，保持上一个不变
-                var doamin = scale.domain();
-                if (isNaN(doamin[0]) && isNaN(doamin[1]) && scale.scaleType === 'value') scale = this.scales[i];
+                // 这里判断，如果domain是NAN证明是legend取消了所有显示或者传入的数据为空
+                var domain = scale.domain();
+                if (isNaN(domain[0]) && isNaN(domain[1]) && scale.scaleType === 'value') {
+                    if (series.length !== 0) {
+                        scale = this.scales[i];
+                    } else {
+                        return;
+                    }
+                }
 
                 if (!this.legendRefresh) {
                     calcAxisMargin(this, this.isXAxis, config, scale);
                 }
-
-
-                this.axisConfig[i] = config;
-
 
                 scales[i] = scale;
 
@@ -61,6 +62,7 @@
             this.height = messageCenter.originalHeight - messageCenter.margin.top - messageCenter.margin.bottom;//计算剩余容器高
             this.range = this.isXAxis ? [0, this.width] : [this.height, 0];
 
+            //设置比例尺的值域
             setScaleRange(scales, this.range);
 
             // 判断x轴上面的文字是否重合
@@ -416,6 +418,24 @@
             domain[0] > 0 ? domain[0] = 0 : domain[1] = 0;
         }
 
+        // 如果最大最小值超过可显示的范围,手动设置
+        if (domain[0] === -Infinity) {
+            if (domain[1] > 0) {
+                domain[0] = 0;
+            } else {
+                domain[1] = 0;
+                domain[0] = -10;
+            }
+        }
+        if (domain[1] === Infinity) {
+            if (domain[0] < 0) {
+                domain[1] = 0;
+            } else {
+                domain[0] = 0;
+                domain[1] = 10;
+            }
+        }
+
         // domain 上下添加0.1的偏移，参考至c3
         // var valueLength = domain[1] - domain[0];
         // domain[0] -= valueLength * 0.1;
@@ -531,10 +551,6 @@
                 if (serie.type !== 'line' || serie[type + 'Index'] !== idx || serie.show === false) {
                     return false;
                 }
-
-
-
-
                 if (serie.stack) {
                     stacks[serie.stack] || (stacks[serie.stack] = [])
                     stacks[serie.stack].push(serie.data);
@@ -548,7 +564,7 @@
                     stacks[k].forEach(function (data, i) {
                         data.forEach(function (d, i) {
                             maxData[i] = maxData[i] == null ? 0 : maxData[i];//默认为0
-                            maxData[i] += d;
+                            maxData[i] += parseFloat(d);
                         })
                     })
                     values = values.concat(maxData);
@@ -582,7 +598,7 @@
             for (var k in stacks) {
                 if (stacks.hasOwnProperty(k)) {
                     var maxData = [];
-                    stacks[k].forEach(function (data, i) {
+                    stacks[k].forEach(function (data) {
                         data.forEach(function (d, i) {
                             maxData[i] = maxData[i] == null ? 0 : maxData[i];//默认为0
                             maxData[i] += d;

@@ -178,7 +178,7 @@
         list.forEach(function (text) {
 
             // 给span设置文字
-            textSpan.innerText === undefined ? textSpan.textContent = text : textSpan.innerText = text; //兼容firefox
+            textSpan.textContent = text;
 
             //获取实际宽度,并在实际宽度上加上偏移宽度
             var itemWidth = parseFloat(textSpan.offsetWidth) + offsetWidth;
