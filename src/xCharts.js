@@ -26,14 +26,14 @@ xCharts.extend = xCharts.prototype.extend = function (obj) {
         if (obj.hasOwnProperty(k))
             this[k] = obj[k];
     }
-}
+};
 var chartsList = {};
 xCharts.prototype.extend({
     //初始化方法
     init: function (container) {
         container = d3.select(container);
 
-        var xcContainer = container.select(".xc-container")
+        var xcContainer = container.select(".xc-container");
         if (xcContainer.node()) {
             removeBind(xcContainer);
         }
@@ -388,6 +388,10 @@ function defaultConfigMerage(config) {
     } else {
         this.config.animation = utils.merage(utils.copy(animationConfig), this.config.animation);
     }
+    // 是否展示峰值点，只有折线图设置有效
+    if (!this.config.peekPoints || !this.config.peekPoints.enable) {
+        this.config.peekPoints = utils.copy(peekPoints);
+    }
     this.config.animation.animationEase = utils.stringToD3Ease(this.config.animation.animationEase);
 }
 
@@ -455,4 +459,21 @@ var animationConfig = {
      * @default easeLinear
      */
     animationEase: 'easeLinear'
+};
+/**
+ * @var peekPoints
+ * @type Object
+ * @description 峰值属性，暂时只在折线图中支持
+ * @default false
+ * @extends xCharts.peekPoints
+ */
+var peekPoints ={
+    /**
+     * @var enable
+     * @type boolean
+     * @description 是否绘制峰值点
+     * @extends xCharts.peekPoints.enable
+     * @default false
+     */
+    enable: false
 };

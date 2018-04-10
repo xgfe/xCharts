@@ -73,7 +73,7 @@
 
             titleText = titleText.enter().append('tspan')
                 .attr('class', 'xc-title-text')
-                .merge(titleText)
+                .merge(titleText);
 
             titleText.text(function (config) {
 
@@ -156,7 +156,7 @@
             y = '1em';
 
             // 只有在y==top时，文本不浮动，需要调整margin.top 防止和charts重叠
-            _this.margin.top += parseFloat(textFontSize) + parseFloat(subtextFontSize);
+            _this.margin.top += parseFloat(textFontSize) * 1.5 + parseFloat(subtextFontSize);
         } else if (y == 'center') {
             y = '50%';
         } else if (y == 'bottom') {

@@ -37,6 +37,7 @@
     utils['debounce'] = debounce;
     utils['toFixed'] = toFixed;
     utils['stringToD3Ease'] = stringToD3Ease;
+    utils['peekPointOfDrop'] = peekPointOfDrop;
 
     /**
      * 复制函数
@@ -153,11 +154,11 @@
         }
 
         if (offsetWidth === undefined) {
-            offsetWidth = 0;
+            offsetWidth = 2;
         }
 
         if (offsetHeight === undefined) {
-            offsetHeight = 0;
+            offsetHeight = 2;
         }
 
 
@@ -167,6 +168,9 @@
          */
         var textSpan = document.createElement('span');
         textSpan.style.fontSize = fontSize + 'px';
+
+        // 需要设置字体，以为d3中生成的坐标值是这种字体，否则获取不准确
+        textSpan.style.fontFamily = 'sans-serif';
         textSpan.style.margin = "0px";
         textSpan.style.padding = "0px";
         textSpan.style.border = "none";
@@ -268,4 +272,17 @@
         return d3Ease;
     }
 
+    /**
+     * 返回峰值图形
+     * @params x{data} y{data}
+     * @returns path {string}
+     */
+    function peekPointOfDrop(x, y) {
+        var path;
+            path = 'M' + x + ' ' + (y - 7) +
+                'L' + (x - 7) + ' ' + (y - 14) +
+                'A10 10, 0, 1, 1, ' + (x + 7) + ' ' + (y - 14) + 'Z';
+        return path;
+
+    }
 }(xCharts));

@@ -627,7 +627,7 @@
              * @description 水平布局时支持'left','center','right';垂直布局时支持'left','right'
              * @description 注：center只在图例只有一行有效，多行第二行开始会自动从最左边开始排
              */
-            x: 'left',
+            x: 'center',
             /**
              * @var y
              * @type String

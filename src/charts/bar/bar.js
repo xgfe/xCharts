@@ -125,13 +125,6 @@
                 }
             }
         },
-        getTooltipPosition: function (tickIndex) {
-            var rangeBand = this.barXScale.bandwidth(),
-                rangeBandNum = this.barXScale.domain().length,
-                xRange = this.barXScale.range();
-            var outPadding = (this.xRange - rangeBand * rangeBandNum) / 2;
-            return xRange[0] + outPadding + tickIndex * rangeBand + rangeBand / 2;
-        },
         _reRenderBars: function (nameList) {
             var animationConfig = this.config.animation;
             // 先把所有series的isShow属性设为false
@@ -333,10 +326,14 @@
                 for (var l = 0; l < series.length; l++) {
                     var serie = series[l];
                     var labelObj = serie.labelList[i];
+                    var parsedData = parseFloat(serie.data[i]);
+                    if (parsedData !== parsedData) {
+                        parsedData = 0;
+                    }
                     var tempRect = {
                         x: rectX,
                         width: rectWidth > 0 ? rectWidth : 0,
-                        height: this.yRange - this.barYScale(serie.data[i]),
+                        height: this.yRange - this.barYScale(parsedData),
                         color: serie.color,
                         idx: serie.idx
                     };
@@ -484,6 +481,10 @@
                 for (var l = 0; l < series.length; l++) {
                     var serie = series[l];
                     var labelObj = serie.labelList[i];
+                    var parsedData = parseFloat(serie.data[i]);
+                    if (parsedData !== parsedData) {
+                        parsedData = 0;
+                    }
 
                     if (serie.isShow) {
                         // tempRect[k].x = rectX;
@@ -495,7 +496,7 @@
                         var tempRect = {
                             x: rectX,
                             width: realRectWidth,
-                            height: this.yRange - this.barYScale(serie.data[i]),
+                            height: this.yRange - this.barYScale(parsedData),
                             color: serie.color,
                             idx: serie.idx
                         };
@@ -936,7 +937,7 @@
              */
             // formatter: function(name, value) {},
             /**
-             * @var stack
+             * @var
              * @type Number|String
              * @description 堆栈柱状图使用,相同stack会被堆叠为一个柱子
              * @extends xCharts.series.bar

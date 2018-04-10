@@ -41,7 +41,7 @@
     "moment": "^2.13.0"
   },
   "dependencies": {
-    "d3": ">=4.1.0"
+    "d3": ">=4.8.0"
   },
   "config": {
     "commitizen": {
