@@ -33,6 +33,7 @@
             this.__renderArea(animationEase, animationTime);
             this.__renderLine(animationEase, animationTime);
             if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
+            if (this.config.peekPoints.enable) this.__renderPeek(animationEase, animationTime);
             if (this.timeModel) this._brushRender();
         },
         __renderLine: function (animationEase, animationTime) {
@@ -45,7 +46,6 @@
                 .merge(lineGroup)
 
                 // .exit().remove().merage(lineGroup);
-
             var lineScale = d3.line()
                 .x(function (d) {
                     return d.x;
@@ -88,7 +88,7 @@
 
                     var transitionData = serie.data.map(function (dataItem) {
                         return {
-                            x: serie.xScale(dataItem.x),
+                            x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
                             y: serie.yScale(dataItem.y)
                         }
                     });
@@ -97,7 +97,7 @@
                         var minValue = serie.yScale.range()[1];
                         this.transitionData = serie.data.map(function (dataItem) {
                             return {
-                                x: serie.xScale(dataItem.x),
+                                x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
                                 y: serie.yScale(minValue)
                             }
                         });
@@ -202,9 +202,10 @@
                         }
                     }
 
+
                     var areaData = serie.data.map(function (dataItem) {
                         return {
-                            x: serie.xScale(dataItem.x),
+                            x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
                             y: serie.yScale(dataItem.y),
                             y0: serie.yScale(dataItem.y0)
                         }
@@ -255,7 +256,6 @@
                         return areaPath;
                     }
                 });
-
         },
         __renderCircle: function (animationEase, animationTime) {
             //画点
@@ -267,18 +267,14 @@
             circleGroup = circleGroup.enter().append('g').attr('class', function (serie) {
                 return 'xc-circle-group';
             }).merge(circleGroup);
-            circleGroup.exit().remove();
-
-            circleGroup.attr('id', function (d) {
+            circleGroup .attr('id', function (d) {
+                circleGroup.exit().remove();
                 return 'xc-circle-group-id' + id + '-' + d.idx;
-            })
-                .attr('fill', function (serie) {
+            }).attr('fill', function (serie) {
                     if (serie.lineStyle.color != 'auto')
                         return serie.lineStyle.color;
                     return _this.getColor(serie.idx);
-                })
-
-
+                });
             var circle = circleGroup.selectAll('circle').data(function (d) {
                 return d.data;
             });
@@ -300,10 +296,8 @@
                         this.circleDisplay = false;
                         return "none";
                     }
-
                     this.circleDisplay = true;
                     return "block";
-
                 })
                 .attr('r', function (d) {
                     if (typeof d === 'object') {
@@ -339,9 +333,7 @@
                             return ctx.circleCX
                         }
                     }
-
-
-                    var circleCX = d._serie.xScale(d.x);
+                    var circleCX = d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
                     ctx.circleCX = ctx.circleCX == undefined ? circleCX : ctx.circleCX;
                     var interpolate = d3.interpolate(ctx.circleCX, circleCX);
                     ctx.circleCX = circleCX;
@@ -357,14 +349,11 @@
                             return ctx.circleCY;
                         }
                     }
-
                     var circleCY = d._serie.yScale(d.y);
-
                     if (ctx.circleCY === undefined) {
                         var minValue = d._serie.yScale.range()[1];
                         ctx.circleCY = d._serie.yScale(minValue);
                     }
-
                     ctx.circleCY = ctx.circleCY == undefined ? circleCY : ctx.circleCY;
                     var interpolate = d3.interpolate(ctx.circleCY, circleCY);
                     ctx.circleCY = circleCY;
@@ -376,12 +365,88 @@
             _this.circle = circle;
             _this.circleGroup = circleGroup;
         },
+        __renderPeek: function (animationEase, animationTime) {
+
+            // 绘制峰值点
+            var id = this.id, _this = this;
+            var showDataList = _this.messageCenter.showDomainList[0];
+            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
+            var peekGroup = _this.main.selectAll('xc-peek-group').data(_this.series);
+            peekGroup = peekGroup.enter().append('g').attr('class', 'xc-peek-group').merge(peekGroup);
+            peekGroup.exit().remove();
+            peekGroup.attr('id', function (d) {
+                return 'xc-peek-group-id' + id + d.idx;
+            }).attr('fill', function (serie) {
+                if (serie.lineStyle.color != 'auto')
+                    return serie.lineStyle.color;
+                return _this.getColor(serie.idx);
+            });
+            var peekPoints = peekGroup.selectAll('path').data(function (d) {
+                return d.peekPoints;
+            });
+            peekPoints = peekPoints.enter().append('path').merge(peekPoints)
+                .attr('class', function (d, i) {
+                    return 'xc-peek-point xc-peek-point-' + i;
+                }).attr('d', function (d) {
+                    var startX = d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
+                    var startY = d._serie.yScale(d.y);
+                    return utils.peekPointOfDrop(startX, startY);
+                });
+            peekPoints.exit().remove();
+            peekPoints.style("transition", transitionStr)
+                .style("opacity", function (d) {
+                    if (typeof d !== 'object') {
+                        return 0;
+                    } else {
+                        return 0.7;
+                    }
+                })
+                .style("display", function (d, idx) {
+                    if (showDataList[idx] !== true) {
+                        this.circleDisplay = false;
+                        return "none";
+                    }
+                    this.circleDisplay = true;
+                    return "block";
+                });
+
+            // 添加峰值点文字
+            var peekText = peekGroup.selectAll('text').data(function (d) {
+                return d.peekPoints;
+            });
+            peekText = peekText.enter().append('text').merge(peekText)
+                .text(function (d) {
+                    return d.y;
+                })
+                .attr('fill', '#fff')
+                .attr('class', function (d, i) {
+                    return 'xc-peek-text xc-peek-text-' + i;
+                })
+                .attr('x', function (d) {
+                    return d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
+                })
+                .attr('y', function (d) {
+                    return d._serie.yScale(d.y) - 21;
+                })
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .style('font-size', '0.5em');
+            peekText.exit().remove();
+        },
         _brushRender: function () {
             this.lineGroup.attr('clip-path', 'url(#xc-clip-main-path)');
         },
         ready: function () {
-            this.__legendReady();
-            this.__tooltipReady();
+            if (this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if (this.config.legend && this.config.legend.show) {
+                    this.__legendReady();
+                }
+                if (this.config.tooltip && this.config.tooltip.show) {
+                    this.__tooltipReady();
+                }
+            }
             this._brushReady();
         },
         __legendReady: function () {
@@ -487,7 +552,7 @@
                         // 将其他circle都变小
                         _this.circle.attr('r', function () {
                             return this.circleRadius;
-                        })
+                        });
 
                         // 判断如果是 display:none; 显示为display:block;
                         var circle = _this.circleGroup.selectAll('circle:nth-child(' + (sectionNumber + 1) + ')');
@@ -498,7 +563,7 @@
                         })
                             .classed('xc-tooltip-circle', true)
                             .attr('r', function () {
-                                return this.circleRadius * 1.2;
+                                return this.circleRadius * 1.8;
                             });
                     }
 
@@ -590,7 +655,7 @@
 
 
             d3.select(this).attr('r', function () {
-                return this.circleRadius * 1.2;
+                return this.circleRadius * 1.8;
             });
         }
     }
@@ -598,7 +663,7 @@
     function parseSeries(ctx, series, config) {
         //先剔除不属于line的serie
         var stacks = {}, idx = 0, lineSeries = [];
-        series.map(function (serie) {
+        series.forEach(function (serie) {
             if (serie.type == 'line') {
                 serie = utils.merage(defaultConfig(), serie);//与默认参数合并
                 serie.idx = serie.idx == null ? idx++ : serie.idx;
@@ -684,6 +749,10 @@
                             data.value = dataValue;
                             data.idx = serieIdx;
                             data._serie = serie;
+                            if (config.xAxis.middleBand) {
+                                var rangeBand = xScale.bandwidth();
+                                data.adjustedX = xScale(data.x) + idx * rangeBand / 2;
+                            }
                             return data;
                         });
                         oldData = serie.data;
@@ -751,8 +820,25 @@
                     data.value = dataValue;
                     data.idx = serieIdx;
                     data._serie = serie;
+                    if (xConfig.middleBand) {
+                        var rangeBand = xScale.bandwidth();
+                        data.adjustedX = xScale(data.x) + rangeBand / 2;
+                    }
                     return data;
                 });
+                if (config.peekPoints.enable) {
+                    var sortedData = utils.copy(serie.data);
+                    sortedData.sort(function (pre, cur) {
+                        if (pre.y < cur.y) {
+                            return -1;
+                        } else if (pre.y === cur.y) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    });
+                    serie.peekPoints = [sortedData[0], sortedData[sortedData.length - 1]];
+                }
             }
             return serie;
         }).filter(function (item) {
@@ -908,10 +994,10 @@
                  * @var radius
                  * @type Number
                  * @description 折线上圆点的大小，数字越大，圆点越大
-                 * @default 5
+                 * @default 3
                  * @extends xCharts.series.line.lineStyle
                  */
-                radius: 5
+                radius: 3
             },
             /**
              * @var areaStyle
@@ -965,7 +1051,7 @@
              * @example
              * units: '%'
              */
-            units: '',
+            units: ''
             /**
              * @var formatter
              * @extends xCharts.series.line
@@ -979,7 +1065,7 @@
             //formatter:function(name,value){
             //    return name+':&nbsp;'+data;
             //}
-        }
+        };
         return config;
     }
 

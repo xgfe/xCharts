@@ -51,6 +51,7 @@
             //没有x轴，多x轴，x轴type==value 将会改成item触发方式
             if (!this.config.xAxis || this.config.xAxis.length > 1 || this.config.xAxis[0].type == 'value') this.config.tooltip.trigger = 'item';
             this.tooltipConfig = utils.merage(defaultConfig(), config.tooltip);
+            config.tooltip = this.tooltipConfig;
 
         },
         render: function () {
@@ -301,8 +302,8 @@
                 }, _this.tooltipConfig.formatter);
 
                 //如果是柱状图的话，需要使用bar上提供的接口来获取x坐标
-                if (_this.messageCenter.charts['bar']) {
-                    tooltipX = _this.messageCenter.charts['bar'].getTooltipPosition(sectionNumber);
+                if (_this.messageCenter.charts['bar'] || _this.config.xAxis[0].middleBand) {
+                    tooltipX = adjustTooltipX(xScale, sectionNumber);
                 } else {
                     tooltipX = xScale(xAxisData[sectionNumber]);
                 }
@@ -315,6 +316,15 @@
 
             _this.setPosition([tooltipX, mouseY]);
         }
+    }
+
+    // 柱状图或者x轴的middleBand==true的折线图，tooltip的x轴需要重新计算
+    function adjustTooltipX(xScale, sectionNumber) {
+        var rangeBand = xScale.bandwidth(),
+            rangeBandNum = xScale.domain().length,
+            xRange = xScale.range();
+        var outPadding = (xRange[1] - xRange[0] - rangeBand * rangeBandNum) / 2;
+        return xRange[0] + outPadding + sectionNumber * rangeBand + rangeBand / 2;
     }
 
     function getSectionLength(data) {
@@ -395,7 +405,7 @@
              * @description 在trigger='axis'时有效
              * @description 竖直线的颜色
              */
-            lineColor: '#008ACD',
+            lineColor: '#CCC',
             /**
              * @var lineWidth
              * @extends xCharts.tooltip
@@ -405,7 +415,7 @@
              * @description 竖直线的宽度
              */
             lineWidth: 2
-        }
+        };
         return tooltip;
     }
 }(xCharts, d3));

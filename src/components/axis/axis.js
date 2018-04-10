@@ -171,8 +171,6 @@
                             return config.grid.opacity;
                         }
                         return 0;
-
-
                     })
                     .attr('stroke', function (line, index) {
                         if (index !== 0) {
@@ -256,7 +254,7 @@
 
         scales.forEach(function (scale) {
             if (scale.scaleType === "value" || scale.scaleType === "time") scale.range(range);
-            else if (scale.scaleType === "barCategory") {
+            else if (scale.scaleType === "barCategory" || scale.scaleType === 'middleCategory') {
                 scale.range(range);
                 scale.paddingOuter(0.1);
                 /*scale.rangeRoundBands(range, 0, 0.1);*/
@@ -274,7 +272,7 @@
      * @param config
      * @param scale
      */
-    function calcAxisMargin(ctx, isXAxis, config, scale) {
+    function calcAxisMargin(ctx, isXAxis, config, scale, zeroOffset) {
 
 
         if (isXAxis) {
@@ -297,6 +295,7 @@
             if (firstTickWidth / 2 > marginLeft) {
                 ctx.margin.left += Math.round(firstTickWidth / 2) - marginLeft;
             }
+            // ctx.margin.bottom = zeroOffset;
 
         } else {
 
@@ -359,12 +358,12 @@
             return;
         }
 
-        if (isBar(this.config.series)) {
+        if (isBar(this.config.series) || this.config.xAxis[idx].middleBand) {
             var scale = d3.scaleBand()
                 .domain(singleConfig.data);
 
 
-            scale.scaleType = "barCategory";
+            scale.scaleType = isBar(this.config.series) ? 'barCategory' : 'middleCategory';
 
         } else {
             var scale = d3.scalePoint()
@@ -413,9 +412,13 @@
         });
 
 
-        // 如果最大最小值是相等的,手动将domain的一个值设为0
+        // 如果最大最小值是相等的,手动将domain的一个值设为0，如果两者都为零，设置最大值为1
         if (domain[0] === domain[1] && domain[0] != null && domain[1] != null) {
-            domain[0] > 0 ? domain[0] = 0 : domain[1] = 0;
+            if (!domain[0]) {
+                domain[1] = 1;
+            } else {
+                domain[0] > 0 ? domain[0] = 0 : domain[1] = 0;
+            }
         }
 
         // 如果最大最小值超过可显示的范围,手动设置
@@ -566,7 +569,7 @@
                             maxData[i] = maxData[i] == null ? 0 : maxData[i];//默认为0
                             maxData[i] += parseFloat(d);
                         })
-                    })
+                    });
                     values = values.concat(maxData);
 
                 }
@@ -601,7 +604,7 @@
                     stacks[k].forEach(function (data) {
                         data.forEach(function (d, i) {
                             maxData[i] = maxData[i] == null ? 0 : maxData[i];//默认为0
-                            maxData[i] += d;
+                            maxData[i] += parseFloat(d);
                         })
                     })
                     values = values.concat(maxData);
@@ -644,36 +647,35 @@
             var scale = scales[i];
 
             // 只支持category类型
-            if (scale.scaleType !== 'category' && scale.scaleType !== 'barCategory') {
+            if (scale.scaleType !== 'category' && scale.scaleType !== 'barCategory' &&
+                scale.scaleType !== 'middleCategory') {
                 continue;
             }
 
             var domain = utils.copy(scale.domain());
             var range = scale.range();
-            var config = configs[i]
+            var config = configs[i];
             var ticksTextList = domain.map(function (tickText) {
                 return config.tickFormat(tickText);
             });
             var widthList = utils.calcTextWidth(ticksTextList, 14).widthList;
 
             // 每个tick的大小取最大的一个来进行判断
-            var maxWidtList = d3.max(widthList);
+            var maxWidth = d3.max(widthList);
 
             // tick与tick之间的距离
-            var rangeWidth = parseInt((range[range.length - 1] - range[0]) / (domain.length - 1));
+            var rangeWidth = Math.ceil((range[range.length - 1] - range[0]) / (domain.length - 1));
 
             var preIdx = 0;
-            var nowIdx = 1;
-            for (var j = 1; j < widthList.length; j++) {
-                var preWidth = maxWidtList;
-                var nowWidth = maxWidtList;
+            for (var nowIdx = 1; nowIdx < widthList.length; nowIdx++) {
+                var preWidth = maxWidth;
+                var nowWidth = maxWidth;
 
                 //两个tick挤在一起了
-                if ((preWidth + nowWidth) / 2 > rangeWidth * (j - preIdx)) {
-                    domain[j] = null;
+                if ((preWidth + nowWidth) / 2 > rangeWidth * (nowIdx - preIdx)) {
+                    domain[nowIdx] = null;
                 } else {
-                    nowIdx = j + 1;
-                    preIdx = j;
+                    preIdx = nowIdx;
                 }
             }
 
@@ -703,7 +705,6 @@
             xy = [0, this.height];
         return 'translate(' + xy + ')';
     }
-
 
     function isBar(series) {
         for (var i = 0, s; s = series[i++];)
@@ -785,6 +786,13 @@
              */
             tickFormat: utils.loop,
             /**
+             * @var middleTick
+             * @extends xCharts.axis
+             * @type Boolean
+             * @description 定义坐标轴类型为category时，标签和数据点是否会两个刻度之间的带(band)中间
+             */
+            middleBand: false,
+            /**
              * @var ticks
              * @extends xCharts.axis
              * @type Number
@@ -840,6 +848,15 @@
              *  注意: 如果设置不合理,内部会自动重新计算
              */
             //minValue: 0, //type=value有效，手动设置最大最小值,
+            /**
+             * @var hasNegativeAxis
+             * @extends xCharts.axis
+             * @type Number
+             * @description
+             *  控制是否将坐标轴分为正坐标轴和负坐标轴
+             *  默认不区分
+             */
+            // hasNegativeAxis: false,
             /**
              * @var show
              * @extends xCharts.axis
@@ -899,7 +916,7 @@
                     return true;
                 }
             }
-        }
+        };
         return axis;
     }
 
