@@ -1,0 +1,28 @@
+{
+  "name": "xg-xcharts",
+  "description": "charts base on d3.js",
+  "main": "dist/xCharts.js",
+  "authors": [
+    "xgfe"
+  ],
+  "license": "ISC",
+  "keywords": [
+    "d3",
+    "charts"
+  ],
+  "dependencies": {
+    "d3": "4.8.0"
+  },
+  "homepage": "https://github.com/xgfe/xCharts",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "doc",
+    "test",
+    "tests",
+    ".gitignore",
+    ".npmignore",
+    "gulpfile.js"
+  ]
+}
