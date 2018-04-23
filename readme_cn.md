@@ -108,3 +108,4 @@ var xCharts = require('xCharts');
 
 - @scliuyang&emsp;(mzefibp@163.com)  
 - @chenwubai&emsp;(chenwubai.cx@gmail.com)
+- @young&emsp;(854394897@qq.com)

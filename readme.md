@@ -108,3 +108,4 @@ You can access [http://xgfe.github.io/xCharts/](http://xgfe.github.io/xCharts/) 
 
 - @scliuyang&emsp;(mzefibp@163.com)  
 - @chenwubai&emsp;(chenwubai.cx@gmail.com)
+- @young&emsp;(854394897@qq.com)
