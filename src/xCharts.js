@@ -29,6 +29,7 @@ xCharts.extend = xCharts.prototype.extend = function (obj) {
 };
 var chartsList = {};
 xCharts.prototype.extend({
+
     //初始化方法
     init: function (container) {
         container = d3.select(container);
@@ -150,47 +151,53 @@ xCharts.prototype.extend({
             _this.svg.attr("clip-path", "");
         }, this.config.animation.animationTime + 100);*/
     },
-    refresh: function () {
+    refresh: function (chartList, k) {
         //console.time("refresh time");
         //刷新产生的条件,预知
         //1 容器大小发生了改变，修正
-        this.originalWidth = getWidth(this.container.node());
-        this.originalHeight = getHeight(this.container.node());
 
-        // 找不到容器
-        if (isNaN(this.originalWidth) || isNaN(this.originalHeight)) {
-            throw "container not found";
-        }
+        try {
+            this.originalWidth = getWidth(this.container.node());
+            this.originalHeight = getHeight(this.container.node());
 
-        this.margin = xCharts.utils.copy(this.originMargin);
+            // 找不到容器
+            if (isNaN(this.originalWidth) || isNaN(this.originalHeight)) {
+                throw "container not found";
+            }
+            this.margin = xCharts.utils.copy(this.originMargin);
 
-        this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
+            this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
 
-        var animationTime = this.refreshAnimationTime;
-        var animationEase = this.refreshAnimationEase;
-        // var animationEase = d3.easeLinear;
+            var animationTime = this.refreshAnimationTime;
+            var animationEase = this.refreshAnimationEase;
+            // var animationEase = d3.easeLinear;
 
-        //第二步 通知已有组件刷新
-        var components = this.components, charts = this.charts;
-        for (var k in components) {
-            if (components.hasOwnProperty(k)) {
-                var component = components[k];
-                component.refresh(animationEase, animationTime);
+            //第二步 通知已有组件刷新
+            var components = this.components, charts = this.charts;
+            for (var k in components) {
+                if (components.hasOwnProperty(k)) {
+                    var component = components[k];
+                    component.refresh(animationEase, animationTime);
+                }
+            }
+
+            this.width = this.originalWidth - this.margin.left - this.margin.right;
+            this.height = this.originalHeight - this.margin.top - this.margin.bottom;
+
+            //第三步 通知已有图表刷新
+            for (var k in charts) {
+                if (charts.hasOwnProperty(k)) {
+                    var chart = charts[k];
+                    chart.refresh(animationEase, animationTime);
+                }
+            }
+        } catch(error) {
+            if (typeof error === 'string'){
+                delete chartList[k];
+            } else{
+                console.error(error.stack);
             }
         }
-
-        this.width = this.originalWidth - this.margin.left - this.margin.right;
-        this.height = this.originalHeight - this.margin.top - this.margin.bottom;
-
-        //第三步 通知已有图表刷新
-        for (var k in charts) {
-            if (charts.hasOwnProperty(k)) {
-                var chart = charts[k];
-                chart.refresh(animationEase, animationTime);
-            }
-        }
-
-        //console.timeEnd("refresh time");
 
     },
     _updateSeries: function (series) {

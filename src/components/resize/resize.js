@@ -15,22 +15,10 @@
 
     var chartList={};
 
-    d3.select(window).on('resize.refresh',function(){
-
+    d3.select(window).on('resize.refresh', function () {
         for(var k in chartList){
             if(chartList.hasOwnProperty(k)){
-
-                try {
-                    chartList[k].resize();
-                } catch (error) {
-                    // 在angular router切换时,会导致不能正常退出,
-                    // 报错证明已经不存在页面当中,清除此chart
-                    if(typeof error === 'string'){
-                        delete chartList[k];
-                    }else{
-                        console.error(error.stack);
-                    }
-                }
+                chartList[k].resize(chartList, k);
             }
         }
     });
@@ -60,8 +48,8 @@
                 animationTime = _this.config.animationTime;
 
 
-            var resizeFn = utils.debounce(function(){
-                _this.messageCenter.refresh();
+            var resizeFn = utils.debounce(function(chartList, k){
+                _this.messageCenter.refresh(chartList, k);
             },animationTime+300,true);
 
             _this.resize = resizeFn;

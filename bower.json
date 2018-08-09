@@ -1,5 +1,6 @@
 {
   "name": "xg-xcharts",
+  "version": "0.3.2",
   "description": "charts base on d3.js",
   "main": "dist/xCharts.js",
   "authors": [
@@ -21,6 +22,7 @@
     "doc",
     "test",
     "tests",
+    "src",
     ".gitignore",
     ".npmignore",
     "gulpfile.js"

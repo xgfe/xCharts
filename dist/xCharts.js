@@ -1,7 +1,7 @@
 /**
  * xg-xcharts - charts base on d3.js
- * @version v0.2.2
- * @date 2018-04-10 20:36:08
+ * @version v0.3.2
+ * @date 2018-08-09 21:58:57
 */
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
@@ -46,6 +46,7 @@ xCharts.extend = xCharts.prototype.extend = function (obj) {
 };
 var chartsList = {};
 xCharts.prototype.extend({
+
     //初始化方法
     init: function (container) {
         container = d3.select(container);
@@ -167,47 +168,53 @@ xCharts.prototype.extend({
             _this.svg.attr("clip-path", "");
         }, this.config.animation.animationTime + 100);*/
     },
-    refresh: function () {
+    refresh: function (chartList, k) {
         //console.time("refresh time");
         //刷新产生的条件,预知
         //1 容器大小发生了改变，修正
-        this.originalWidth = getWidth(this.container.node());
-        this.originalHeight = getHeight(this.container.node());
 
-        // 找不到容器
-        if (isNaN(this.originalWidth) || isNaN(this.originalHeight)) {
-            throw "container not found";
-        }
+        try {
+            this.originalWidth = getWidth(this.container.node());
+            this.originalHeight = getHeight(this.container.node());
 
-        this.margin = xCharts.utils.copy(this.originMargin);
+            // 找不到容器
+            if (isNaN(this.originalWidth) || isNaN(this.originalHeight)) {
+                throw "container not found";
+            }
+            this.margin = xCharts.utils.copy(this.originMargin);
 
-        this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
+            this.svg.attr('width', this.originalWidth).attr('height', this.originalHeight);
 
-        var animationTime = this.refreshAnimationTime;
-        var animationEase = this.refreshAnimationEase;
-        // var animationEase = d3.easeLinear;
+            var animationTime = this.refreshAnimationTime;
+            var animationEase = this.refreshAnimationEase;
+            // var animationEase = d3.easeLinear;
 
-        //第二步 通知已有组件刷新
-        var components = this.components, charts = this.charts;
-        for (var k in components) {
-            if (components.hasOwnProperty(k)) {
-                var component = components[k];
-                component.refresh(animationEase, animationTime);
+            //第二步 通知已有组件刷新
+            var components = this.components, charts = this.charts;
+            for (var k in components) {
+                if (components.hasOwnProperty(k)) {
+                    var component = components[k];
+                    component.refresh(animationEase, animationTime);
+                }
+            }
+
+            this.width = this.originalWidth - this.margin.left - this.margin.right;
+            this.height = this.originalHeight - this.margin.top - this.margin.bottom;
+
+            //第三步 通知已有图表刷新
+            for (var k in charts) {
+                if (charts.hasOwnProperty(k)) {
+                    var chart = charts[k];
+                    chart.refresh(animationEase, animationTime);
+                }
+            }
+        } catch(error) {
+            if (typeof error === 'string'){
+                delete chartList[k];
+            } else{
+                console.error(error.stack);
             }
         }
-
-        this.width = this.originalWidth - this.margin.left - this.margin.right;
-        this.height = this.originalHeight - this.margin.top - this.margin.bottom;
-
-        //第三步 通知已有图表刷新
-        for (var k in charts) {
-            if (charts.hasOwnProperty(k)) {
-                var chart = charts[k];
-                chart.refresh(animationEase, animationTime);
-            }
-        }
-
-        //console.timeEnd("refresh time");
 
     },
     _updateSeries: function (series) {
@@ -859,221 +866,6 @@ var peekPoints ={
     xCharts.components.extend({Component: Component});
 
 }(xCharts));
-/**
- * Author mzefibp@163.com
- * Date 16/6/23
- * Describe 时间轴刷子
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var components = xCharts.components;
-    var Component = components['Component'];
-
-    utils.inherits(brush, Component);
-    components.extend({brush: brush});
-
-    function brush(messageCenter, config, type) {
-        //show=false时不做显示处理
-        // 不是坐标系不显示
-        if (config.brush.show === false) {
-            this._show = false;
-            return;
-        } else {
-            this._show = true;
-        }
-
-        //继承Component的属性
-        Component.call(this, messageCenter, config, type);
-    }
-
-    brush.prototype.extend = utils.extend;
-
-    brush.prototype.extend({
-        init: function (messageCenter, config) {
-            // 先占位,等坐标轴完成后再绘制时间刷
-
-            this.messageCenter.brush = true;
-
-            this.brushConfig = utils.merage(defaultConfig(), config.brush);
-
-            this.margin.bottom += this.brushConfig.brushHeight + 20;
-
-            var messageCenter = this.messageCenter;
-            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
-        },
-        render: function () {
-
-            var brush = d3.brushX();
-
-            brush.extent(initExtent(this));
-
-            // brush.handleSize(50)
-
-            var translateX = 0;
-            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
-            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
-            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
-
-            var group = this.main.selectAll('g.xc-brush').data([this]);
-            group = group.enter().append('g')
-                .attr('class', 'xc-brush')
-                .merge(group);
-
-            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
-                .call(brush);
-
-
-            brush.move(group, initMove(this));
-            // group.selectAll('rect.background')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#e0e0e0')
-            //     .attr('opacity', 0.5)
-            //
-            // group.selectAll('rect')
-            //     .attr('height', 25)
-            //     .attr('fill', '#e0e0e0');
-            //
-            // group.selectAll('.resize rect')
-            //     .style('visibility', 'visible')
-            //     .attr('fill', '#a2a2a2')
-            //     .attr('width', 10);
-
-            group.selectAll('rect.overlay')
-                .attr('fill', '#e0e0e0')
-                .attr('opacity', 0.5);
-
-            group.selectAll('rect.handle')
-                .attr('fill', '#777');
-
-            this.brush = brush;
-
-            //添加clipath路径
-            var defGroup = this.svg.selectAll('defs').data([this]);
-            defGroup = defGroup.enter().append('defs').merge(defGroup);
-
-            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
-            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
-
-            var rect = clip.selectAll('rect').data([this]);
-            rect = rect.enter().append('rect').merge(rect);
-            rect.attr('width', width)
-                .attr('height', height);
-
-        },
-        ready: function () {
-            var brush = this.brush;
-            var brushChangeBind = brushChange(this);
-            this.brush.on('brush', brushChangeBind);
-
-            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
-            this.on('xAxisRender.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-
-            this.on('xAxisReady.brush', function () {
-                // 手动通知别人刷新一次
-                this.fire('brushChange', this.initBrushSelection);
-            }.bind(this));
-        },
-        refresh:function(animationEase, animationTime){
-
-            // 关闭显示的组件不进行刷新
-            if (!this._show) return true;
-
-            //当容器改变时，刷新当前组件
-            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
-            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
-            this.originalWidth = this.messageCenter.originalWidth
-            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
-            this.render(animationEase, animationTime);//刷新
-            this.ready();
-        }
-    });
-
-    function initMove(ctx) {
-        var min = parseFloat(ctx.brushConfig.domain[0]);
-        var max = parseFloat(ctx.brushConfig.domain[1]);
-
-        if (isNaN(min) || isNaN(max)) {
-            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
-            return [0, 0];
-        }
-
-        var width = ctx.width;
-
-        var initMove = [
-            width * min / 100,
-            width * max / 100
-        ];
-
-        ctx.initBrushSelection = [
-            utils.toFixed(initMove[0] / width, 3),
-            utils.toFixed(initMove[1] / width, 3)
-        ];
-
-        return initMove;
-    }
-
-    function brushChange(ctx) {
-        var width = ctx.width;
-        return function () {
-            var domain = d3.event.selection;
-            var min = utils.toFixed(domain[0] / width, 3);
-            var max = utils.toFixed(domain[1] / width, 3);
-
-            ctx.fire('brushChange', [min, max]);
-        };
-
-        // console.log(domain)
-
-        // this.fire('brushChange',domain);
-    }
-
-
-    // 设置时间刷初始值
-    function initExtent(ctx) {
-        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
-    }
-
-    function defaultConfig() {
-
-        /**
-         * brush配置项
-         * @var brush
-         * @type Object
-         * @extends xCharts
-         * @description 时间轴特有的时间刷
-         */
-        return {
-            /**
-             * @var show
-             * @type Boolean
-             * @extends xCharts.brush
-             * @default true
-             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
-             */
-            show: true,
-            /**
-             * @var domain
-             * @type Array
-             * @extends xCharts.brush
-             * @default ['90%','100%']
-             * @description 设置时间刷的初始值,只支持百分比的形式
-             */
-            domain: ['90%', '100%'],
-            /**
-             * @var brushHeight
-             * @type Number
-             * @extends xCharts.brush
-             * @default 30
-             * @description 设置时间刷的高
-             */
-            brushHeight: 30
-        }
-    }
-
-}(xCharts, d3));
 /**
  * xCharts.axis
  * 坐标系绘制函数
@@ -2300,6 +2092,337 @@ var peekPoints ={
 }(xCharts, d3));
 
 /**
+ * Author liuyang46@meituan.com
+ * Date 16/3/9
+ * Describe
+ */
+
+
+(function(xCharts,d3){
+
+
+    var utils = xCharts.utils;
+    var components = xCharts.components;
+    utils.inherits(resize, components['Component']);
+    components.extend({resize: resize});
+
+    var chartList={};
+
+    d3.select(window).on('resize.refresh', function () {
+        for(var k in chartList){
+            if(chartList.hasOwnProperty(k)){
+                chartList[k].resize(chartList, k);
+            }
+        }
+    });
+
+    function resize(messageCenter, config, type) {
+        if(config.resize.enable) components['Component'].call(this, messageCenter, config, type);
+    }
+
+    resize.prototype.extend = xCharts.extend;
+
+    resize.prototype.extend({
+        init:function(messageCenter, config, type, series){
+            this.config = utils.merage(defaultConfig(),config[type]);
+
+            this.config.animationEase = utils.stringToD3Ease(this.config.animationEase);
+
+            messageCenter.refreshAnimationEase = this.config.animationEase;
+            messageCenter.refreshAnimationTime = this.config.animationTime;
+        },
+        ready:function(){
+
+            // 绑定刷新事件
+            d3.select(window)
+
+            // 比动画时间多1S
+            var _this = this,
+                animationTime = _this.config.animationTime;
+
+
+            var resizeFn = utils.debounce(function(chartList, k){
+                _this.messageCenter.refresh(chartList, k);
+            },animationTime+300,true);
+
+            _this.resize = resizeFn;
+
+            add(_this);
+
+            _this.on("chartRemoveBind",function(){
+                _this.unBind();
+            })
+        },
+        unBind:function(){
+            remove(this);
+        },
+        refresh:function(){},
+        updateSeries:function(){}
+    });
+
+    function add(ctx){
+        chartList[ctx.messageCenter.id] = ctx;
+    }
+
+    function remove(ctx){
+        delete chartList[ctx.messageCenter.id];
+    }
+
+    function defaultConfig() {
+        /**
+         * @var resize
+         * @type Object
+         * @description 当容器改变时，是否自动刷新当前图表
+         * @extends xCharts
+         * @default true
+         */
+        var config = {
+            /**
+             * @var refresh
+             * @type Boolean
+             * @description 当容器改变时，是否自动刷新当前图表
+             * @extends xCharts.resize
+             * @default false
+             */
+            enable:false,
+            /**
+             * @var animationEase
+             * @type String
+             * @description 当容器改变时，刷新动画
+             * @extends xCharts.resize
+             * @default 'easeLinear'
+             */
+            animationEase:'easeLinear',
+            /**
+             * @var animationEase
+             * @type Number
+             * @description 当容器改变时，刷新动画时间,单位ms
+             * @extends xCharts.resize
+             * @default 300
+             */
+            animationTime:300
+        }
+        return config;
+    }
+
+
+}(xCharts,d3));
+/**
+ * Author mzefibp@163.com
+ * Date 16/6/23
+ * Describe 时间轴刷子
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var components = xCharts.components;
+    var Component = components['Component'];
+
+    utils.inherits(brush, Component);
+    components.extend({brush: brush});
+
+    function brush(messageCenter, config, type) {
+        //show=false时不做显示处理
+        // 不是坐标系不显示
+        if (config.brush.show === false) {
+            this._show = false;
+            return;
+        } else {
+            this._show = true;
+        }
+
+        //继承Component的属性
+        Component.call(this, messageCenter, config, type);
+    }
+
+    brush.prototype.extend = utils.extend;
+
+    brush.prototype.extend({
+        init: function (messageCenter, config) {
+            // 先占位,等坐标轴完成后再绘制时间刷
+
+            this.messageCenter.brush = true;
+
+            this.brushConfig = utils.merage(defaultConfig(), config.brush);
+
+            this.margin.bottom += this.brushConfig.brushHeight + 20;
+
+            var messageCenter = this.messageCenter;
+            this.width = messageCenter.originalWidth - messageCenter.margin.left - messageCenter.margin.right; //计算剩余容器宽
+        },
+        render: function () {
+
+            var brush = d3.brushX();
+
+            brush.extent(initExtent(this));
+
+            // brush.handleSize(50)
+
+            var translateX = 0;
+            var translateY = this.messageCenter.originalHeight - this.margin.bottom;
+            var width = this.messageCenter.originalWidth - this.margin.left - this.margin.right;
+            var height = this.messageCenter.originalHeight - this.margin.top - this.margin.bottom;
+
+            var group = this.main.selectAll('g.xc-brush').data([this]);
+            group = group.enter().append('g')
+                .attr('class', 'xc-brush')
+                .merge(group);
+
+            group.attr('transform', 'translate(' + translateX + ',' + translateY + ')')
+                .call(brush);
+
+
+            brush.move(group, initMove(this));
+            // group.selectAll('rect.background')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#e0e0e0')
+            //     .attr('opacity', 0.5)
+            //
+            // group.selectAll('rect')
+            //     .attr('height', 25)
+            //     .attr('fill', '#e0e0e0');
+            //
+            // group.selectAll('.resize rect')
+            //     .style('visibility', 'visible')
+            //     .attr('fill', '#a2a2a2')
+            //     .attr('width', 10);
+
+            group.selectAll('rect.overlay')
+                .attr('fill', '#e0e0e0')
+                .attr('opacity', 0.5);
+
+            group.selectAll('rect.handle')
+                .attr('fill', '#777');
+
+            this.brush = brush;
+
+            //添加clipath路径
+            var defGroup = this.svg.selectAll('defs').data([this]);
+            defGroup = defGroup.enter().append('defs').merge(defGroup);
+
+            var clip = defGroup.selectAll('clipPath#xc-clip-main-path').data([this]);
+            clip = clip.enter().append("clipPath").attr('id', 'xc-clip-main-path').merge(clip);
+
+            var rect = clip.selectAll('rect').data([this]);
+            rect = rect.enter().append('rect').merge(rect);
+            rect.attr('width', width)
+                .attr('height', height);
+
+        },
+        ready: function () {
+            var brush = this.brush;
+            var brushChangeBind = brushChange(this);
+            this.brush.on('brush', brushChangeBind);
+
+            // TODO 这里有问题,需要监听两个axis事件,什么时候梳理一下
+            this.on('xAxisRender.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+
+            this.on('xAxisReady.brush', function () {
+                // 手动通知别人刷新一次
+                this.fire('brushChange', this.initBrushSelection);
+            }.bind(this));
+        },
+        refresh:function(animationEase, animationTime){
+
+            // 关闭显示的组件不进行刷新
+            if (!this._show) return true;
+
+            //当容器改变时，刷新当前组件
+            this.margin = this.messageCenter.margin;//每次刷新时，重置margin
+            this.originalHeight = this.messageCenter.originalHeight; //将变化后的宽高重新赋值
+            this.originalWidth = this.messageCenter.originalWidth
+            this.init(this.messageCenter, this.config, this.type, this.config.series);//初始化
+            this.render(animationEase, animationTime);//刷新
+            this.ready();
+        }
+    });
+
+    function initMove(ctx) {
+        var min = parseFloat(ctx.brushConfig.domain[0]);
+        var max = parseFloat(ctx.brushConfig.domain[1]);
+
+        if (isNaN(min) || isNaN(max)) {
+            console.warn('brush.domain is not percentage value', ctx.brushConfig.domain);
+            return [0, 0];
+        }
+
+        var width = ctx.width;
+
+        var initMove = [
+            width * min / 100,
+            width * max / 100
+        ];
+
+        ctx.initBrushSelection = [
+            utils.toFixed(initMove[0] / width, 3),
+            utils.toFixed(initMove[1] / width, 3)
+        ];
+
+        return initMove;
+    }
+
+    function brushChange(ctx) {
+        var width = ctx.width;
+        return function () {
+            var domain = d3.event.selection;
+            var min = utils.toFixed(domain[0] / width, 3);
+            var max = utils.toFixed(domain[1] / width, 3);
+
+            ctx.fire('brushChange', [min, max]);
+        };
+
+        // console.log(domain)
+
+        // this.fire('brushChange',domain);
+    }
+
+
+    // 设置时间刷初始值
+    function initExtent(ctx) {
+        return [[0, 0], [ctx.width, ctx.brushConfig.brushHeight]]
+    }
+
+    function defaultConfig() {
+
+        /**
+         * brush配置项
+         * @var brush
+         * @type Object
+         * @extends xCharts
+         * @description 时间轴特有的时间刷
+         */
+        return {
+            /**
+             * @var show
+             * @type Boolean
+             * @extends xCharts.brush
+             * @default true
+             * @description 控制时间刷是否显示。注意时间刷只会在axis.type=time的情况下才会起作用
+             */
+            show: true,
+            /**
+             * @var domain
+             * @type Array
+             * @extends xCharts.brush
+             * @default ['90%','100%']
+             * @description 设置时间刷的初始值,只支持百分比的形式
+             */
+            domain: ['90%', '100%'],
+            /**
+             * @var brushHeight
+             * @type Number
+             * @extends xCharts.brush
+             * @default 30
+             * @description 设置时间刷的高
+             */
+            brushHeight: 30
+        }
+    }
+
+}(xCharts, d3));
+/**
  * xCharts.legend
  * extends Component
  */
@@ -3054,134 +3177,6 @@ var peekPoints ={
         }
     });
 }(xCharts, d3));
-/**
- * Author liuyang46@meituan.com
- * Date 16/3/9
- * Describe
- */
-
-
-(function(xCharts,d3){
-
-
-    var utils = xCharts.utils;
-    var components = xCharts.components;
-    utils.inherits(resize, components['Component']);
-    components.extend({resize: resize});
-
-    var chartList={};
-
-    d3.select(window).on('resize.refresh',function(){
-
-        for(var k in chartList){
-            if(chartList.hasOwnProperty(k)){
-
-                try {
-                    chartList[k].resize();
-                } catch (error) {
-                    // 在angular router切换时,会导致不能正常退出,
-                    // 报错证明已经不存在页面当中,清除此chart
-                    if(typeof error === 'string'){
-                        delete chartList[k];
-                    }else{
-                        console.error(error.stack);
-                    }
-                }
-            }
-        }
-    });
-
-    function resize(messageCenter, config, type) {
-        if(config.resize.enable) components['Component'].call(this, messageCenter, config, type);
-    }
-
-    resize.prototype.extend = xCharts.extend;
-
-    resize.prototype.extend({
-        init:function(messageCenter, config, type, series){
-            this.config = utils.merage(defaultConfig(),config[type]);
-
-            this.config.animationEase = utils.stringToD3Ease(this.config.animationEase);
-
-            messageCenter.refreshAnimationEase = this.config.animationEase;
-            messageCenter.refreshAnimationTime = this.config.animationTime;
-        },
-        ready:function(){
-
-            // 绑定刷新事件
-            d3.select(window)
-
-            // 比动画时间多1S
-            var _this = this,
-                animationTime = _this.config.animationTime;
-
-
-            var resizeFn = utils.debounce(function(){
-                _this.messageCenter.refresh();
-            },animationTime+300,true);
-
-            _this.resize = resizeFn;
-
-            add(_this);
-
-            _this.on("chartRemoveBind",function(){
-                _this.unBind();
-            })
-        },
-        unBind:function(){
-            remove(this);
-        },
-        refresh:function(){},
-        updateSeries:function(){}
-    });
-
-    function add(ctx){
-        chartList[ctx.messageCenter.id] = ctx;
-    }
-
-    function remove(ctx){
-        delete chartList[ctx.messageCenter.id];
-    }
-
-    function defaultConfig() {
-        /**
-         * @var resize
-         * @type Object
-         * @description 当容器改变时，是否自动刷新当前图表
-         * @extends xCharts
-         * @default true
-         */
-        var config = {
-            /**
-             * @var refresh
-             * @type Boolean
-             * @description 当容器改变时，是否自动刷新当前图表
-             * @extends xCharts.resize
-             * @default false
-             */
-            enable:false,
-            /**
-             * @var animationEase
-             * @type String
-             * @description 当容器改变时，刷新动画
-             * @extends xCharts.resize
-             * @default 'easeLinear'
-             */
-            animationEase:'easeLinear',
-            /**
-             * @var animationEase
-             * @type Number
-             * @description 当容器改变时，刷新动画时间,单位ms
-             * @extends xCharts.resize
-             * @default 300
-             */
-            animationTime:300
-        }
-        return config;
-    }
-
-
-}(xCharts,d3));
 /**
  * xCharts.title
  * extends Component
@@ -3959,6 +3954,1735 @@ var peekPoints ={
     xCharts.charts.extend({Chart:Chart});
 
 }(xCharts,d3));
+/**
+ * Created by liuyang on 15/10/27.
+ * 折线图
+ *
+ * TODO 动画效果
+ * TODO 折线图鼠标hover影藏点出现
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var Chart = xCharts.charts.Chart;
+
+    xCharts.charts.extend({line: line});
+    utils.inherits(line, Chart);
+    function line(messageCenter, config) {
+        Chart.call(this, messageCenter, config, 'line');
+    }
+
+    line.prototype.extend = xCharts.extend;
+    line.prototype.extend({
+        init: function (messageCenter, config, type, series) {
+
+            this.xAxisScale = messageCenter.xAxisScale;
+            this.yAxisScale = messageCenter.yAxisScale;
+
+            // 处理折线图数据
+            this.series = parseSeries(this, series, config);
+
+            // 判断是否是时间轴
+            this.timeModel = config.xAxis[0].type == 'time';
+        },
+        render: function (animationEase, animationTime) {
+
+            this.__renderArea(animationEase, animationTime);
+            this.__renderLine(animationEase, animationTime);
+            if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
+            if (this.config.peekPoints.enable) this.__renderPeek(animationEase, animationTime);
+            if (this.timeModel) this._brushRender();
+        },
+        __renderLine: function (animationEase, animationTime) {
+            var id = this.id, _this = this;
+
+            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
+
+            var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
+            lineGroup = lineGroup.enter().append('g').attr('class', 'xc-line-group')
+                .merge(lineGroup)
+
+                // .exit().remove().merage(lineGroup);
+            var lineScale = d3.line()
+                .x(function (d) {
+                    return d.x;
+                })
+                .y(function (d) {
+                    return d.y;
+                });
+            var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series);
+            linePath = linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none').merge(linePath);
+            linePath.exit().remove();
+            linePath.attr('stroke', function (d) {
+                if (d.lineStyle.color != 'auto')
+                    return d.lineStyle.color;
+                return _this.getColor(d.idx);
+            })
+                .attr('stroke-width', function (d) {
+                    return d.lineStyle.width;
+                })
+                .attr('id', function (d) {
+                    return 'xc-line-path-id' + id + "-" + d.idx;
+                })
+                .style("transition", transitionStr)
+                .style("opacity", function (d) {
+                    if (d.show === false) {
+                        return 0;
+                    } else {
+                        return 0.7;
+                    }
+                });
+
+            linePath.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attrTween("d", function (serie) {
+
+                    var ctx = this;
+                    if (serie.show === false) return function () {
+                        return ctx.linePath;
+                    };
+
+                    var transitionData = serie.data.map(function (dataItem) {
+                        return {
+                            x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
+                            y: serie.yScale(dataItem.y)
+                        }
+                    });
+
+                    if (this.transitionData === undefined) {
+                        var minValue = serie.yScale.range()[1];
+                        this.transitionData = serie.data.map(function (dataItem) {
+                            return {
+                                x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
+                                y: serie.yScale(minValue)
+                            }
+                        });
+                        // serie.data.map(function (dataItem) {
+                        //     return {
+                        //         x: serie.xScale(dataItem.x),
+                        //         y: serie.yScale(minValue)
+                        //     }
+                        // })
+                    }
+
+                    var interpolate = d3.interpolate(this.transitionData, transitionData);
+                    this.transitionData = transitionData;
+
+                    return function (t) {
+                        var interpolateData = interpolate(t);
+                        var invalidIdxList = [], validDataList = [];
+                        serie.data.forEach(function (d, i) {
+                            if (d.justCircle) {
+                                invalidIdxList.push(i);
+                            }
+                        });
+                        if (invalidIdxList.length > 0) {
+                            var preIndex = 0;
+                            invalidIdxList.push(interpolateData.length);
+                            for (var index = 0; index < invalidIdxList.length; index++) {
+                                var curIndex = invalidIdxList[index];
+                                if (curIndex - preIndex > 0) {
+                                    validDataList.push(interpolateData.slice(preIndex, curIndex));
+                                }
+                                preIndex = curIndex + 1;
+                            }
+                        } else {
+                            validDataList = [interpolateData];
+                        }
+                        lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
+                        var path = '';
+                        validDataList.forEach(function (lineData) {
+                            path += lineScale(lineData);
+                        });
+                        if (t == 1) {
+                            ctx.linePath = path;
+                            _this.fire('lineAnimationEnd');
+                        }
+                        return path;
+                    }
+                });
+
+            this.lineGroup = lineGroup;
+        },
+        __renderArea: function (animationEase, animationTime) {
+            //面积
+            // DONE 不用d3.svg.area，重写一个以满足需求
+            var id = this.id, _this = this;
+            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
+            var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
+            areaGroup = areaGroup.enter().append('g').attr('class', 'xc-area-group').merge(areaGroup);
+            areaGroup.exit().remove();
+            var areaPath = areaGroup.selectAll('.xc-line-area-path').data(_this.series);
+            areaPath = areaPath.enter().append('path').attr('class', 'xc-line-area-path').attr('stroke', 'none').merge(areaPath);
+            areaPath.exit().remove();
+            areaPath.attr('fill', function (d) {
+                if (d.areaStyle.color == 'auto') {
+                    //当面积的颜色为auto时，和折线保持一致
+                    if (d.lineStyle.color == 'auto')
+                        return _this.getColor(d.idx);
+                    else
+                        return d.lineStyle.color
+                }
+                else
+                    return d.areaStyle.color;
+            })
+                .attr('id', function (d) {
+                    return 'xc-line-area-path-id' + id + "-" + d.idx;
+                })
+                .style("transition", transitionStr)
+                .style("opacity", function (d) {
+                    if (d.show === false) {
+                        return 0;
+                    } else {
+                        return d.areaStyle.opacity;
+                    }
+                });
+
+
+            // 动画
+            areaPath.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attrTween("d", function (serie) {
+                    var ctx = this;
+
+                    if (serie.show === false) {
+                        return function () {
+                            return ctx.areaPath == null ? "" : ctx.areaPath;
+                        }
+                    }
+
+                    if (serie.areaStyle.show === false) {
+                        return function () {
+                            return "";
+                        }
+                    }
+
+
+                    var areaData = serie.data.map(function (dataItem) {
+                        return {
+                            x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
+                            y: serie.yScale(dataItem.y),
+                            y0: serie.yScale(dataItem.y0)
+                        }
+                    });
+
+                    if (ctx.areaData === undefined) {
+                        ctx.areaData = serie.data.map(function (dataItem) {
+                            return {
+                                x: serie.xScale(dataItem.x),
+                                y: serie.yScale(dataItem.y0),
+                                y0: serie.yScale(dataItem.y0)
+                            }
+                        });
+                    }
+
+                    // ctx.areaData = ctx.areaData == undefined ? areaData : ctx.areaData;
+                    var interpolate = d3.interpolate(this.areaData, areaData);
+                    ctx.areaData = areaData;
+
+                    return function (t) {
+                        var data = interpolate(t);
+                        var invalidIdxList = [], validDataList = [];
+                        serie.data.forEach(function (d, i) {
+                            if (d.justCircle) {
+                                invalidIdxList.push(i);
+                            }
+                        });
+                        if (invalidIdxList.length > 0) {
+                            var preIndex = 0;
+                            invalidIdxList.push(data.length);
+                            for (var index = 0; index <= invalidIdxList.length; index++) {
+                                var curIndex = invalidIdxList[index];
+                                if (curIndex - preIndex > 0) {
+                                    validDataList.push(data.slice(preIndex, curIndex));
+                                }
+                                preIndex = curIndex + 1;
+                            }
+                        } else {
+                            validDataList = [data];
+                        }
+                        var areaPath = '';
+                        validDataList.forEach(function (areaData) {
+                            areaPath += area(areaData, serie);
+                        });
+                        if (t == 1) {
+                            ctx.areaPath = areaPath;
+                        }
+                        return areaPath;
+                    }
+                });
+        },
+        __renderCircle: function (animationEase, animationTime) {
+            //画点
+            //最后画点，防止面积遮盖
+            var id = this.id, _this = this;
+            var showDataList = _this.messageCenter.showDomainList[0];
+            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
+            var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
+            circleGroup = circleGroup.enter().append('g').attr('class', function (serie) {
+                return 'xc-circle-group';
+            }).merge(circleGroup);
+            circleGroup .attr('id', function (d) {
+                circleGroup.exit().remove();
+                return 'xc-circle-group-id' + id + '-' + d.idx;
+            }).attr('fill', function (serie) {
+                    if (serie.lineStyle.color != 'auto')
+                        return serie.lineStyle.color;
+                    return _this.getColor(serie.idx);
+                });
+            var circle = circleGroup.selectAll('circle').data(function (d) {
+                return d.data;
+            });
+            circle = circle.enter().append('circle').attr('class', function (d, i) {
+                return 'xc-point xc-point-' + i;
+            }).merge(circle);
+            circle.exit().remove();
+
+            circle.style("transition", transitionStr)
+                .style("opacity", function (d) {
+                    if (typeof d !== 'object') {
+                        return 0;
+                    } else {
+                        return 0.7;
+                    }
+                })
+                .style("display", function (d, idx) {
+                    if (showDataList[idx] !== true) {
+                        this.circleDisplay = false;
+                        return "none";
+                    }
+                    this.circleDisplay = true;
+                    return "block";
+                })
+                .attr('r', function (d) {
+                    if (typeof d === 'object') {
+                        this.circleRadius = d._serie.lineStyle.radius;
+                    }
+                    return this.circleRadius;
+                });
+            // .attr('cx', function (data) {
+            //     var ctx = this;
+            //     if (typeof data !== 'object') {
+            //         return ctx.circleCX;
+            //     }
+            //     ctx.circleCX = data._serie.xScale(data.x);
+            //     return ctx.circleCX;
+            // })
+            // .attr('cy', function (data) {
+            //     var ctx = this;
+            //     if (typeof data !== 'object') {
+            //         return ctx.circleCY;
+            //     }
+            //     ctx.circleCY = data._serie.yScale(data.y);
+            //     return ctx.circleCY;
+            // })
+
+            //动画
+            circle.transition()
+                .duration(animationTime)
+                .ease(animationEase)
+                .attrTween("cx", function (d) {
+                    var ctx = this;
+                    if (typeof d !== 'object') {
+                        return function () {
+                            return ctx.circleCX
+                        }
+                    }
+                    var circleCX = d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
+                    ctx.circleCX = ctx.circleCX == undefined ? circleCX : ctx.circleCX;
+                    var interpolate = d3.interpolate(ctx.circleCX, circleCX);
+                    ctx.circleCX = circleCX;
+                    return function (t) {
+                        return interpolate(t);
+                    }
+                })
+                .attrTween("cy", function (d) {
+                    var ctx = this;
+
+                    if (typeof d !== 'object') {
+                        return function () {
+                            return ctx.circleCY;
+                        }
+                    }
+                    var circleCY = d._serie.yScale(d.y);
+                    if (ctx.circleCY === undefined) {
+                        var minValue = d._serie.yScale.range()[1];
+                        ctx.circleCY = d._serie.yScale(minValue);
+                    }
+                    ctx.circleCY = ctx.circleCY == undefined ? circleCY : ctx.circleCY;
+                    var interpolate = d3.interpolate(ctx.circleCY, circleCY);
+                    ctx.circleCY = circleCY;
+                    return function (t) {
+                        return interpolate(t);
+                    }
+                });
+
+            _this.circle = circle;
+            _this.circleGroup = circleGroup;
+        },
+        __renderPeek: function (animationEase, animationTime) {
+
+            // 绘制峰值点
+            var id = this.id, _this = this;
+            var showDataList = _this.messageCenter.showDomainList[0];
+            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
+            var peekGroup = _this.main.selectAll('xc-peek-group').data(_this.series);
+            peekGroup = peekGroup.enter().append('g').attr('class', 'xc-peek-group').merge(peekGroup);
+            peekGroup.exit().remove();
+            peekGroup.attr('id', function (d) {
+                return 'xc-peek-group-id' + id + d.idx;
+            }).attr('fill', function (serie) {
+                if (serie.lineStyle.color != 'auto')
+                    return serie.lineStyle.color;
+                return _this.getColor(serie.idx);
+            });
+            var peekPoints = peekGroup.selectAll('path').data(function (d) {
+                return d.peekPoints;
+            });
+            peekPoints = peekPoints.enter().append('path').merge(peekPoints)
+                .attr('class', function (d, i) {
+                    return 'xc-peek-point xc-peek-point-' + i;
+                }).attr('d', function (d) {
+                    var startX = d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
+                    var startY = d._serie.yScale(d.y);
+                    return utils.peekPointOfDrop(startX, startY);
+                });
+            peekPoints.exit().remove();
+            peekPoints.style("transition", transitionStr)
+                .style("opacity", function (d) {
+                    if (typeof d !== 'object') {
+                        return 0;
+                    } else {
+                        return 0.7;
+                    }
+                })
+                .style("display", function (d, idx) {
+                    if (showDataList[idx] !== true) {
+                        this.circleDisplay = false;
+                        return "none";
+                    }
+                    this.circleDisplay = true;
+                    return "block";
+                });
+
+            // 添加峰值点文字
+            var peekText = peekGroup.selectAll('text').data(function (d) {
+                return d.peekPoints;
+            });
+            peekText = peekText.enter().append('text').merge(peekText)
+                .text(function (d) {
+                    return d.y;
+                })
+                .attr('fill', '#fff')
+                .attr('class', function (d, i) {
+                    return 'xc-peek-text xc-peek-text-' + i;
+                })
+                .attr('x', function (d) {
+                    return d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
+                })
+                .attr('y', function (d) {
+                    return d._serie.yScale(d.y) - 21;
+                })
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .style('font-size', '0.5em');
+            peekText.exit().remove();
+        },
+        _brushRender: function () {
+            this.lineGroup.attr('clip-path', 'url(#xc-clip-main-path)');
+        },
+        ready: function () {
+            if (this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if (this.config.legend && this.config.legend.show) {
+                    this.__legendReady();
+                }
+                if (this.config.tooltip && this.config.tooltip.show) {
+                    this.__tooltipReady();
+                }
+            }
+            this._brushReady();
+        },
+        __legendReady: function () {
+            var lineUse, areaUse, circleUse, _this = this, id = _this.id;
+            this.on('legendMouseenter.line', function (name) {
+                lineUse = _this.main.selectAll('.xc-line-use').data([_this]);
+                areaUse = _this.main.selectAll('.xc-line-area-use').data([_this]);
+                circleUse = _this.main.selectAll('.xc-circle-use').data([_this]);
+                lineUse.enter().append('use').attr('class', "xc-line-use").attr('clip-path', 'url(#xc-clip-main-path)');
+                areaUse.enter().append('use').attr('class', "xc-line-area-use").attr('clip-path', 'url(#xc-clip-main-path)');
+                circleUse.enter().append('use').attr('class', "xc-circle-use").attr('clip-path', 'url(#xc-clip-main-path)');
+
+                var serie = getSeries(name);
+                if (!serie) return;
+                var lineId = "#xc-line-path-id" + id + "-" + serie.idx,
+                    areaId = "#xc-line-area-path-id" + id + "-" + serie.idx,
+                    circleId = "#xc-circle-group-id" + id + "-" + serie.idx;
+
+                lineUse.attr('xlink:href', lineId);
+                areaUse.attr('xlink:href', areaId);
+                circleUse.attr('xlink:href', circleId);
+                d3.select(lineId).attr('stroke-width', serie.lineStyle.width + 1);
+                //d3.select(circleId).attr('fill', 'yellow');
+            });
+
+            this.on('legendMouseleave.line', function (name) {
+
+                var serie = getSeries(name);
+                if (!serie) return;
+                var lineId = "#xc-line-path-id" + id + "-" + serie.idx,
+                    areaId = "#xc-line-area-path-id" + id + "-" + serie.idx,
+                    circleId = "#xc-circle-group-id" + id + "-" + serie.idx;
+
+                lineUse.attr('xlink:href', "");
+                areaUse.attr('xlink:href', "");
+                circleUse.attr('xlink:href', "");
+                d3.select(lineId).attr('stroke', serie.color).attr('stroke-width', serie.lineStyle.width);
+                d3.select(circleId).attr('fill', serie.color);
+            });
+
+
+            /**
+             * 根据name 取得对应的serie
+             * @param name
+             * @returns {*}
+             */
+            function getSeries(name) {
+                var series = _this.series;
+                for (var i = 0, s; s = series[i++];)
+                    if (s.name == name) return s;
+            }
+
+            this.on('legendClick.line', function (nameList) {
+                var series = _this.config.series;
+                var animationConfig = _this.config.animation;
+                _this.init(_this.messageCenter, _this.config, _this.type, series);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+                // _this.render(d3.easeLinear, animationConfig.animationTime);
+            });
+        },
+        __tooltipReady: function () {
+            var _this = this;
+
+            if (!this.config.tooltip || this.config.tooltip.show === false) return;//未开启tooltip
+
+            if (this.config.tooltip.trigger === 'axis' || this.config.tooltip.trigger === undefined) {
+
+                this.on('tooltipSectionChange.line', function (sectionNumber, callback, format) {
+
+                    var html = "", series = _this.series;
+
+                    if (_this.timeModel) {
+                        //时间轴时，鼠标地方会出现圆点
+                        _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
+                        _this.series.forEach(function (serie) {
+
+                            var data = serie.data[sectionNumber];
+                            _this.main.append('circle').datum(data)
+                                .attr('class', "xc-tooltip-circle")
+                                .attr('r', function (d) {
+                                    return d._serie.lineStyle.radius;
+                                })
+                                .attr('cx', function (d) {
+                                    return d._serie.xScale(d.x);
+                                })
+                                .attr('cy', function (d) {
+                                    return d._serie.yScale(d.y);
+                                })
+                                .attr('fill', function (d) {
+                                    return d._serie.color;
+                                })
+                        });
+
+                    } else {
+                        // 首先将不显示的圆点全部隐藏
+                        _this.circle.style('display', function () {
+                            if (!this.circleDisplay) {
+                                return 'none';
+                            }
+                        })
+                            .classed('xc-tooltip-circle', false);
+
+                        // 将其他circle都变小
+                        _this.circle.attr('r', function () {
+                            return this.circleRadius;
+                        });
+
+                        // 判断如果是 display:none; 显示为display:block;
+                        var circle = _this.circleGroup.selectAll('circle:nth-child(' + (sectionNumber + 1) + ')');
+                        circle.style('display', function () {
+                            if (!this.circleDisplay) {
+                                return 'block';
+                            }
+                        })
+                            .classed('xc-tooltip-circle', true)
+                            .attr('r', function () {
+                                return this.circleRadius * 1.8;
+                            });
+                    }
+
+                    series.forEach(function (serie) {
+                        if (serie.show === false) return;
+                        var data = serie.data[sectionNumber] === undefined ? "" : serie.data[sectionNumber].value;
+
+                        var serieFormat = serie.formatter || format || defaultFormatter;
+                        html += serieFormat(serie.name, data);
+                    });
+
+                    callback(html);
+                });
+
+                this.on('tooltipHidden', function () {
+                    //当tooltip滑出区域时，需要清理圆点
+                    if (_this.timeModel) {
+                        _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
+                    } else {
+                        _this.circle.style('display', function () {
+                            if (!this.circleDisplay) {
+                                return 'none';
+                            }
+                        })
+                            .classed('xc-tooltip-circle', false);
+                    }
+                })
+            } else if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                //trigger='item'
+                var tooltip = _this.messageCenter.components['tooltip'];
+
+                _this.circle.on('mouseenter', tooltipTriggerItem(_this));
+                _this.circle.on('mouseleave', function () {
+                    _this.circle.attr('r', function () {
+                        return this.circleRadius;
+                    });
+                    tooltip.hiddenTooltip();
+                });
+
+            }
+
+        },
+        _brushReady: function () {
+            this.on('brushChange.line', function (domain) {
+                // scale.domain(domain);
+                this.render(d3.easeLinear, 0);
+            }.bind(this));
+        }
+
+    });
+
+    line.tooltipTriggerItem = tooltipTriggerItem;
+
+
+    function tooltipTriggerItem(ctx) {
+
+        return function () {
+            var tooltip = ctx.messageCenter.components['tooltip'];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter;
+            var axisConfig = ctx.messageCenter.components['xAxis'].axisConfig;
+
+            var target = d3.event.srcElement || d3.event.target;
+            target = d3.select(target);
+            var data = target.data()[0];
+            var value = data.value;
+            var name = data._serie.name;
+            var serieFormatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+            var html = serieFormatter(name, value);
+
+            var xData = data.x;
+            xData = axisConfig[data._serie.xAxisIndex].tickFormat(xData);
+            var title = "<p>" + xData + "</p>";
+            tooltip.showTooltip();
+            tooltip.setTooltipHtml(title + html);
+
+            var position = d3.mouse(ctx.svg.node());
+
+            tooltip.setPosition(position);
+
+            // 处理圆变大
+
+            if (ctx.mobileMode) {
+                ctx.circle.attr('r', function () {
+                    return this.circleRadius;
+                });
+            }
+
+
+            d3.select(this).attr('r', function () {
+                return this.circleRadius * 1.8;
+            });
+        }
+    }
+
+    function parseSeries(ctx, series, config) {
+        //先剔除不属于line的serie
+        var stacks = {}, idx = 0, lineSeries = [];
+        series.forEach(function (serie) {
+            if (serie.type == 'line') {
+                serie = utils.merage(defaultConfig(), serie);//与默认参数合并
+                serie.idx = serie.idx == null ? idx++ : serie.idx;
+                if (!serie.stack) {
+                    lineSeries.push(serie);
+                    return;
+                }
+                stacks[serie.stack] || ( stacks[serie.stack] = []);
+                stacks[serie.stack].push(serie);
+            }
+        });
+        //处理堆积情况
+        var stackSeries = parseStacksSeries(ctx, stacks, config);
+        //非堆积情况
+        lineSeries = parseNormalSeries(ctx, lineSeries, config);
+        return lineSeries.concat(stackSeries);//反转一下是为了解决堆积面积图时会产生重叠覆盖问题
+    }
+
+    /**
+     *
+     * 处理堆积状态下的series
+     * @param _this
+     * @param stacks
+     * @param config
+     * @returns {Array}
+     */
+    function parseStacksSeries(ctx, stacksSeries, config) {
+        var stackSeries = [];
+        for (var k in stacksSeries) {
+            if (stacksSeries.hasOwnProperty(k)) {
+                var oldData = null, oldInterpolate = 'linear';
+                stacksSeries[k].forEach(function (serie) {
+                    if (serie.show !== false) {
+                        var xAxisIndex = serie.xAxisIndex,
+                            yAxisIndex = serie.yAxisIndex;
+                        var xConfig = config['xAxis'][xAxisIndex];
+                        var yConfig = config['yAxis'][yAxisIndex];
+                        var xScale = ctx.xAxisScale[xAxisIndex];
+                        var yScale = ctx.yAxisScale[yAxisIndex];
+                        var serieIdx = serie.idx;
+                        serie.interpolate = serie.smooth ? 'monotone' : 'linear';
+                        serie.y0Interpolate = oldInterpolate;
+                        serie.xScale = xScale;
+                        serie.yScale = yScale;
+                        oldInterpolate = serie.interpolate;
+                        if (serie.xScale.domain().length === 0) {
+                            serie.data = [];
+                        }
+                        serie.data = serie.data.map(function (dataValue, idx) {
+                            var data = {}, isStackPoint = true;
+
+                            // TODO 这里好像只能满足category
+                            if (xConfig.type != 'value') {
+                                data.x = xConfig.data[idx];
+                                if (data.x === undefined) {
+                                    console.error('The length of xAxis.data and series.data is not match!', idx);
+                                }
+                                var maxY = yScale.domain()[1];
+                                var minY = yScale.domain()[0];
+                                if (!oldData) {
+                                    data.y0 = minY;
+                                    data.y = parseFloat(dataValue);
+                                } else {
+                                    isStackPoint = oldData[idx] && !oldData[idx].justCircle;
+                                    data.y0 = isStackPoint ? oldData[idx].y : minY;
+                                    data.y = parseFloat(dataValue) + (isStackPoint ? oldData[idx].y : 0);
+                                }
+                                data.isStackPoint = isStackPoint;
+                                if (data.y > maxY) {
+                                    data.y = maxY;
+                                }
+                                if (data.y < minY) {
+                                    data.y = minY;
+                                }
+                                if (typeof data.y === 'number' && data.y !== data.y) {
+                                    data.justCircle = true;
+                                    dataValue = '-';
+                                    data.y = maxY;
+                                }
+                                data.x = xConfig.data[idx];
+                            }
+
+                            data.value = dataValue;
+                            data.idx = serieIdx;
+                            data._serie = serie;
+                            if (config.xAxis.middleBand) {
+                                var rangeBand = xScale.bandwidth();
+                                data.adjustedX = xScale(data.x) + idx * rangeBand / 2;
+                            }
+                            return data;
+                        });
+                        oldData = serie.data;
+                    }
+                    stackSeries.push(serie);
+                });
+
+            }
+        }
+        return stackSeries;
+    }
+
+    /**
+     * 处理非堆积状态的series
+     * @param _this
+     * @param lineSeries
+     * @param config
+     * @returns {*}
+     */
+    function parseNormalSeries(_this, lineSeries, config) {
+        var invalidPoints = 0;
+        lineSeries = lineSeries.map(function (serie) {
+            if (serie.show !== false) {
+
+                var xAxisIndex = serie.xAxisIndex,
+                    yAxisIndex = serie.yAxisIndex;
+
+                var xConfig = config['xAxis'][xAxisIndex];
+                var yConfig = config['yAxis'][yAxisIndex];
+                var xScale = _this.xAxisScale[xAxisIndex];
+                var yScale = _this.yAxisScale[yAxisIndex];
+                var serieIdx = serie.idx;
+                serie.interpolate = serie.smooth ? 'monotone' : 'linear';
+                serie.y0Interpolate = 'linear';
+                serie.xScale = xScale;
+                serie.yScale = yScale;
+                if (serie.xScale.domain().length === 0) {
+                    console.error('xAxis.data is empty!');
+                    serie.data = [];
+                }
+                serie.data = serie.data.map(function (dataValue, idx) {
+                    var data = {};
+                    if (xConfig.type != 'value') {
+                        data.x = xConfig.data[idx];
+                        if (data.x === undefined) {
+                            console.error('The length of xAxis.data and series.data is not match!', idx);
+                        }
+                        var maxY = yScale.domain()[1];
+                        var minY = yScale.domain()[0];
+                        data.y = parseFloat(dataValue);
+                        if (data.y > maxY) {
+                            data.y = maxY;
+                        }
+                        if (data.y < minY) {
+                            data.y = minY;
+                        }
+                        if (typeof data.y === 'number' && data.y !== data.y) {
+                            data.justCircle = true;
+                            dataValue = '-';
+                            data.y = maxY;
+                        }
+                        data.y0 = minY;
+                    }
+
+                    data.value = dataValue;
+                    data.idx = serieIdx;
+                    data._serie = serie;
+                    if (xConfig.middleBand) {
+                        var rangeBand = xScale.bandwidth();
+                        data.adjustedX = xScale(data.x) + rangeBand / 2;
+                    }
+                    return data;
+                });
+                if (config.peekPoints.enable) {
+                    var sortedData = utils.copy(serie.data);
+                    sortedData.sort(function (pre, cur) {
+                        if (pre.y < cur.y) {
+                            return -1;
+                        } else if (pre.y === cur.y) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    });
+                    serie.peekPoints = [sortedData[0], sortedData[sortedData.length - 1]];
+                }
+            }
+            return serie;
+        }).filter(function (item) {
+            return item.data.length > 0;
+        });
+        return lineSeries;
+    }
+
+    /**
+     * 替换d3.svg.area函数
+     * @param data
+     */
+    function area(data, serie) {
+        var lineScale = d3.line()
+            .x(function (d) {
+                return d.x;
+            })
+            .y(function (d) {
+                return d.y;
+            });
+        var line0Scale = d3.line()
+            .x(function (d) {
+                return d.x;
+            })
+            .y(function (d) {
+                return d.y0;
+            });
+
+
+        lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
+        var path = lineScale(data);
+        // line0Scale.interpolate(serie.line0Scale);
+        line0Scale.curve(serie.y0Interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
+        var stackIdxList = [], stackDataList = [];
+        serie.data.forEach(function (d, i) {
+            if (!d.isStackPoint) {
+                stackIdxList.push(i);
+            }
+        });
+        if (stackIdxList.length > 0) {
+            var preIndex = 0;
+            stackIdxList.push(data.length);
+            for (var index = 0; index < stackIdxList.length; index++) {
+                var curIndex = stackIdxList[index];
+                if (curIndex - preIndex > 0) {
+                    stackDataList.push(data.slice(preIndex, curIndex));
+                }
+                preIndex = curIndex + 1;
+            }
+        } else {
+            stackDataList = [data];
+        }
+        var path0 = '';
+        stackDataList.forEach(function (data) {
+            path0 += line0Scale(data.reverse());
+        });
+        // var path0 = line0Scale(data.reverse());
+        data.reverse()//再次翻转，恢复原状
+        return joinPath(path, path0, data);
+    }
+
+    /**
+     * 将path和path0拼接成一个areaPath
+     * @param serie
+     */
+    function joinPath(path, path0, data) {
+        var firstData = data[0], lastData = data[data.length - 1];
+        var leftTop = [firstData.x, firstData.y],
+            rightBottom = [lastData.x, lastData.y0];
+
+        return path + 'L' + rightBottom + path0 + 'L' + leftTop;
+    }
+
+    /**
+     * 折线图tooltip默认格式化函数
+     * @param name x轴值
+     * @param value y轴值
+     * @returns {string} 一段html文本
+     */
+    function defaultFormatter(name, value) {
+        if (value !== '') {
+            return '<p>' + name + ':&nbsp;' + value + '</p>';
+        }
+        return '';
+    }
+
+    function defaultConfig() {
+        /**
+         * @var line
+         * @type Object
+         * @extends xCharts.series
+         * @description 折线图配置项
+         */
+        var config = {
+            /**
+             * @var name
+             * @type String
+             * @description 线条名字
+             * @extends xCharts.series.line
+             */
+            name: '',
+            /**
+             * 定义图表类型是折线图
+             * @var type
+             * @type String
+             * @description 指定图表类型
+             * @values 'line'
+             * @extends xCharts.series.line
+             */
+            type: 'line',
+            xAxisIndex: 0,
+            /**
+             * @var yAxisIndex
+             * @type Number
+             * @description 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
+             * @default 0
+             * @extends xCharts.series.line
+             */
+            yAxisIndex: 0,
+            /**
+             * @var smooth
+             * @type Boolean
+             * @description 折线是否开启平滑曲线,默认开启
+             * @default true
+             * @extends xCharts.series.line
+             */
+            smooth: true,
+            /**
+             * @var lineStyle
+             * @type Object
+             * @description 线条样式控制
+             * @extends xCharts.series.line
+             */
+            lineStyle: {
+                /**
+                 * @var color
+                 * @type String
+                 * @description 折线颜色控制，不设或者设置为'auto',则由系统默认分配一个颜色
+                 * @default 'auto'
+                 * @values 'auto'|css颜色值
+                 * @extends xCharts.series.line.lineStyle
+                 */
+                color: 'auto',
+                /**
+                 * @var width
+                 * @type Number
+                 * @description 折线宽度控制，数字越大折线越粗，不允许负值
+                 * @default 2
+                 * @extends xCharts.series.line.lineStyle
+                 */
+                width: 2,
+                /**
+                 * @var radius
+                 * @type Number
+                 * @description 折线上圆点的大小，数字越大，圆点越大
+                 * @default 3
+                 * @extends xCharts.series.line.lineStyle
+                 */
+                radius: 3
+            },
+            /**
+             * @var areaStyle
+             * @type Object
+             * @description 面积图样式控制
+             * @extends xCharts.series.line
+             */
+            areaStyle: {
+                /**
+                 * @var show
+                 * @type Boolean
+                 * @description 开启面积图，默认不开启
+                 * @default false
+                 * @extends xCharts.series.line.areaStyle
+                 */
+                show: false,
+                /**
+                 * @var color
+                 * @type String
+                 * @description 面积图颜色值,不设或者设置为'auto'，颜色和折线一致
+                 * @default 'auto'
+                 * @values 'auto'|css颜色值
+                 * @extends xCharts.series.line.areaStyle
+                 */
+                color: 'auto',
+                /**
+                 * @var opacity
+                 * @type Number
+                 * @description 面积图颜色透明度控制
+                 * @default 0.3
+                 * @values 0-1
+                 * @extends xCharts.series.line.areaStyle
+                 */
+                opacity: 0.3
+            },
+            /**
+             * @var data
+             * @type Array
+             * @description 折线图数据，提供给type=value的坐标轴使用
+             * @extends xCharts.series.line
+             * @example
+             * data: ['11%', 11, 15, 70, 12, 40, 60]
+             * //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，如果需要单位需要配置units选项
+             */
+            data: [],
+            /**
+             * @var units
+             * @type String
+             * @description 补全数据的单位配合data使用，提供给tooltip使用,也可以在tooltip里的formatter里自己配置格式化结果
+             * @extends xCharts.series.line
+             * @example
+             * units: '%'
+             */
+            units: ''
+            /**
+             * @var formatter
+             * @extends xCharts.series.line
+             * @type Function
+             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
+             * @example
+             *  formatter: function (name,data) {
+                 *   return '<p>'+name + ':&nbsp;' + data+'</p>';
+                 *  }
+             */
+            //formatter:function(name,value){
+            //    return name+':&nbsp;'+data;
+            //}
+        };
+        return config;
+    }
+
+}(xCharts, d3));
+/**
+ * Author liuyang46@meituan.com
+ * Date 16/5/26
+ * Describe 折线图,移动端适配
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var charts = xCharts.charts;
+    var line = charts.line;
+
+    line.prototype.extend({
+        mobileReady: function () {
+            this.circle.on('touchstart', line.tooltipTriggerItem(this));
+        }
+    });
+}(xCharts, d3));
+/**
+ * @file 雷达图
+ * @author chenwubai.cx@gmail.com
+ */
+(function(xCharts, d3) {
+    var utils = xCharts.utils;
+    var Chart = xCharts.charts.Chart;
+    // 创建radar构造函数
+    function radar(messageCenter, config) {
+        // 调用这一步的原因是为了继承属性
+        Chart.call(this, messageCenter, config, 'radar');
+    }
+
+    // 在xCharts中注册radar构造函数
+    xCharts.charts.extend({ radar: radar });
+    // 从父类Chart里继承一系列的方法
+    utils.inherits(radar, Chart);
+
+    radar.prototype.extend = xCharts.extend;
+    radar.prototype.extend({
+        init: function(messageCenter, config, type, series) {
+
+            // 提取雷达图配置项(目前不支持多图,直接忽略其他图表配置项)
+            for(var i = 0, length = series.length; i < length; i++) {
+                if(series[i].type === 'radar') {
+                    this.radarConfig = utils.copy(series[i], true);
+                    break;
+                }
+            }
+
+            // 合并默认值,转换百分比为数值等
+            __correctConfig.apply(this);
+
+            // 计算网轴点坐标
+            this.polygonWebs = __getPolygonWebs.apply(this);
+            // 计算雷达图形的点坐标
+            this.areas = __getAreas.apply(this);
+            // 计算文字标签的点
+            this.textPoints = __getTextPoints.apply(this);
+            // 计算覆盖整个网轴的多边形的点坐标
+            this.coverPolygons = __getCoverPolygons.apply(this);
+        },
+        render: function(animationEase, animationTime) {
+            // 添加雷达图的g容器
+            this.radar = __renderRadarWrapper.apply(this);
+            // 添加网轴
+            this.webList = __renderWebs.apply(this);
+            // 添加网轴线
+            this.lineList = __renderLines.apply(this);
+            // 添加雷达图形
+            this.areaList = __renderAreas.apply(this, [animationEase, animationTime]);
+            // 添加文字标签
+            this.textList = __renderText.apply(this);
+            // 添加覆盖的多边形
+            this.coverPolygonList = __renderCoverPolygons.apply(this);
+        },
+        ready: function() {
+            if(this.mobileMode) {
+                this.mobileReady();
+            } else {
+                if(this.config.legend && this.config.legend.show) {
+                    __legendReady.apply(this);
+                }
+                if(this.config.tooltip && this.config.tooltip.show) {
+                    __tooltipReady.apply(this);
+                }
+            }
+        },
+        _reRenderAreas: function(nameList) {
+            for(var i=0;i<this.areas.length;i++) {
+                this.areas[i].isShow = false;
+            }
+            for(var i=0;i<nameList.length;i++) {
+                for(var k=0;k<this.areas.length;k++) {
+                    if(nameList[i] == this.areas[k].originalData.name) {
+                        this.areas[k].isShow = true;
+                        break;
+                    }
+                }
+            }
+            for(var i=0;i<this.areas.length;i++) {
+                d3.select(this.areaList._groups[0][i]).classed('hidden', !this.areas[i].isShow);
+            }
+        },
+        _showTooltip: function(index, ele) {
+            var tooltip = this.messageCenter.components.tooltip;
+            var tooltipFormatter = tooltip.tooltipConfig.formatter,
+                radarFormatter = this.radarConfig.formatter;
+            var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
+            var position = d3.mouse(this.svg.node());
+            position = [
+                position[0] + 40,
+                position[1] + 40
+            ];
+            var indicator = this.radarConfig.indicator[index].text;
+            var valueList = [];
+            for(var i=0;i<this.radarConfig.data.length;i++) {
+                if(this.areas[i].isShow) {
+                    valueList.push({
+                        name: this.radarConfig.data[i].name,
+                        value: this.radarConfig.data[i].value[index]
+                    });
+                }
+            }
+            tooltip.setTooltipHtml(formatter(indicator, valueList));
+            tooltip.showTooltip();
+            tooltip.setPosition(position);
+            var areaPointsList = this.areaList.selectAll('.xc-radar-area-point');
+            for(var i=0;i<areaPointsList.length;i++) {
+                var areaPoints = areaPointsList[i];
+                d3.select(areaPoints[index]).style('stroke-width', 5);
+            }
+            this.lineList.classed('xc-radar-tooltip-line', false);
+            d3.select(this.lineList._groups[0][index]).classed('xc-radar-tooltip-line', true);
+        }
+    });
+    function __correctConfig() {
+
+        // 合并默认值
+        this.radarConfig = utils.merage(defaultConfig(), this.radarConfig);
+
+        // 计算图的中心坐标
+        var center = this.radarConfig.center;
+        if(typeof center[0] === 'string') {
+            center[0] = parseFloat(center[0]) * 0.01 * this.width;
+        }
+        if(typeof center[1] === 'string') {
+            center[1] = parseFloat(center[1]) * 0.01 * this.height;
+        }
+        // 计算最大的多边形的半径
+        if(typeof this.radarConfig.radius === 'string') {
+            this.radarConfig.radius = parseFloat(this.radarConfig.radius) * 0.01 * this.width;
+        }
+        // 添加对雷达图大小的处理,如果半径太大,自动把半径保持在可控的最大值
+        var minLength = this.width < this.height ? this.width : this.height;
+        // 减20是考虑到还有文字标签占着位置
+        if(this.radarConfig.radius * 2 + 20 > minLength) {
+            this.radarConfig.radius = (minLength - 20)/2 ;
+        }
+    }
+    function __getPolygonWebs() {
+
+        // 计算网轴多边形的点
+        this.radarConfig.total = this.radarConfig.data[0].value.length;
+        var onePiece = 2 * Math.PI/this.radarConfig.total;
+        var polygonWebs = [];
+        for(var k=this.radarConfig.levels;k>0;k--) {
+            var web = '',
+                points = [];
+            var r = this.radarConfig.radius/this.radarConfig.levels * k;
+            for(var i=0;i<this.radarConfig.total;i++) {
+                var x = r * Math.sin(i * onePiece),
+                    y = r * Math.cos(i * onePiece);
+                web += x + ',' + y + ' ';
+                points.push({ x: x, y: y });
+            }
+            polygonWebs.push({
+                webString: web,
+                webPoints: points
+            });
+        }
+        return polygonWebs;
+    }
+    function __getAreas() {
+        // 计算雷达图形的点
+        var areas = [];
+        for(var i=0; i<this.radarConfig.data.length;i++) {
+            var d = this.radarConfig.data[i],
+                max = this.radarConfig.indicator[i].max,
+                min = this.radarConfig.indicator[i].min,
+                area = '',
+                points = [];
+            for(var k=0;k< d.value.length;k++) {
+                var x = this.polygonWebs[0].webPoints[k].x * d.value[k]/(max - min),
+                    y = this.polygonWebs[0].webPoints[k].y * d.value[k]/(max - min);
+                area += x + ',' + y + ' ';
+                points.push({
+                    x: x,
+                    y: y,
+                    // 增加一个属性存放原始属性,方便后面设置颜色
+                    originalData: d
+                });
+            }
+            areas.push({
+                areaString: area,
+                areaPoints: points,
+                originalData: d,
+                isShow: true
+            });
+        }
+        return areas;
+    }
+    function __getTextPoints() {
+        // 计算文字标签的点
+        // TODO 优化文字标签分布
+        var textPoints = [];
+        var textRadius = this.radarConfig.radius + 20;
+        for(var i=0;i<this.radarConfig.total;i++) {
+            textPoints.push({
+                x: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].x,
+                y: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].y + 8
+            });
+        }
+        return textPoints;
+    }
+    function __getCoverPolygons() {
+        // 计算覆盖整个多边形网轴的多边形的坐标
+        var webPoints = this.polygonWebs[0].webPoints;
+        var coverPolygons = [];
+        var length = webPoints.length;
+        for(var i=0;i<length;i++) {
+            var lastPoint = i==0 ? webPoints[length-1] : webPoints[i-1],
+                currentPoint = webPoints[i],
+                nextPoint = webPoints[(i+1)%length];
+            var pointsStr = '0,0',
+                points = [ {x:0, y:0} ];
+            pointsStr += ' ' + (lastPoint.x+currentPoint.x)/2 + ',' + (lastPoint.y+currentPoint.y)/2;
+            points.push({
+                x: (lastPoint.x+currentPoint.x)/2,
+                y: (lastPoint.y+currentPoint.y)/2
+            });
+            pointsStr += ' ' + currentPoint.x + ',' + currentPoint.y;
+            points.push({
+                x: currentPoint.x,
+                y: currentPoint.y
+            });
+            pointsStr += ' ' + (currentPoint.x+nextPoint.x)/2 + ',' + (currentPoint.y+nextPoint.y)/2;
+            points.push({
+                x: (currentPoint.x+nextPoint.x)/2,
+                y: (currentPoint.y+nextPoint.y)/2
+            });
+            coverPolygons.push({
+                pointsStr: pointsStr,
+                points: points,
+                index: i
+            });
+        }
+        return coverPolygons;
+    }
+    function __renderRadarWrapper() {
+        var radar = this.main
+            .selectAll('.xc-radar')
+            .data([1]);
+        radar = radar.enter()
+            .append('g')
+            .classed('xc-radar', true)
+            .merge(radar);
+        radar.attr('transform', 'translate(' + this.radarConfig.center[0] + ',' + this.radarConfig.center[1] + ')');
+        return radar;
+    }
+    function __renderWebs() {
+        var webs = this.radar
+            .selectAll('.xc-radar-webs')
+            .data([1]);
+        webs = webs.enter()
+            .append('g')
+            .classed('xc-radar-webs', true)
+            .merge(webs);
+        var webList = webs.selectAll('.xc-radar-web')
+            .data(this.polygonWebs);
+        webList = webList.enter()
+            .append('polygon')
+            .classed('xc-radar-web', true)
+            .merge(webList);
+        webList.attr('points', function(d) { return d.webString; });
+        return webList;
+    }
+    function __renderLines() {
+        var lines = this.radar
+            .selectAll('.xc-radar-lines')
+            .data([1]);
+        lines = lines.enter()
+            .append('g')
+            .classed('xc-radar-lines', true)
+            .merge(lines);
+        var lineList = lines.selectAll('.xc-radar-line')
+            .data(this.polygonWebs[0].webPoints);
+        lineList = lineList.enter()
+            .append('line')
+            .classed('xc-radar-line', true)
+            .merge(lineList);
+        lineList.attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', function(d) {
+                return d.x;
+            })
+            .attr('y2', function(d) {
+                return d.y;
+            });
+        return lineList;
+    }
+    function __renderAreas(animationEase, animationTime) {
+        var _self = this;
+        var areas = this.radar
+            .selectAll('.xc-radar-areas')
+            .data([1]);
+        areas = areas.enter()
+            .append('g')
+            .classed('xc-radar-areas', true)
+            .merge(areas);
+        var areaList = areas.selectAll('.xc-radar-area')
+            .data(this.areas);
+        areaList = areaList.enter()
+            .append('g')
+            .attr('class', function(d, i) {
+                return 'xc-radar-area xc-radar-area' + d.originalData.idx;
+            })
+            .merge(areaList);
+        var polygonList = areaList.selectAll('polygon')
+            .data(function(d) {
+                return [d];
+            });
+        polygonList = polygonList.enter()
+            .append('polygon')
+            .attr('points', function(d) {
+                return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
+                    return '0,0';
+                }).join(' ');
+            })
+            .style('stroke', function (d) {
+                if(!d.originalData.color) {
+                    d.originalData.color = _self.getColor(d.originalData.idx);
+                }
+                return d.originalData.color;
+            })
+            .style('fill', function(d) {
+                if(_self.radarConfig.fill) {
+                    return d.originalData.color;
+                }
+                return '';
+            })
+            .merge(polygonList);
+        polygonList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('points', function(d) {
+                return d.areaString;
+            });
+        var pointsList = areaList.selectAll('.xc-radar-area-point')
+            .data(function(d) {
+                return d.areaPoints;
+            });
+        pointsList = pointsList.enter()
+            .append('circle')
+            .classed('xc-radar-area-point', true)
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .merge(pointsList);
+        pointsList.style('stroke', function(d){
+            return d.originalData.color;
+        });
+        pointsList.transition()
+            .duration(animationTime)
+            .ease(animationEase)
+            .attr('cx', function(d) {
+                return d.x;
+            })
+            .attr('cy', function(d) {
+                return d.y;
+            });
+        return areaList;
+    }
+    function __renderText() {
+        var _self = this;
+        var texts = this.radar
+            .selectAll('.xc-radar-texts')
+            .data([1]);
+        texts = texts.enter()
+            .append('g')
+            .classed('xc-radar-texts', true)
+            .merge(texts);
+        var textList = texts.selectAll('.xc-radar-text')
+            .data(this.textPoints);
+        textList = textList.enter()
+            .append('text')
+            .classed('xc-radar-text', true)
+            .text(function(d, i) {
+                return _self.radarConfig.indicator[i].text;
+            })
+            .attr('text-anchor', 'middle')
+            .merge(textList);
+        textList.attr('x', function(d) {
+            return d.x;
+        })
+            .attr('y', function(d) {
+                return d.y;
+            });
+        return textList;
+    }
+    function __renderCoverPolygons() {
+        var coverPolygons = this.radar
+            .selectAll('.xc-radar-coverPolygons')
+            .data([1]);
+        coverPolygons = coverPolygons.enter()
+            .append('g')
+            .classed('xc-radar-coverPolygons', true)
+            .merge(coverPolygons);
+        var coverPolygonList = coverPolygons.selectAll('.xc-radar-coverPolygon')
+            .data(this.coverPolygons);
+        coverPolygonList = coverPolygonList.enter()
+            .append('polygon')
+            .classed('xc-radar-coverPolygon', true)
+            .merge(coverPolygonList);
+        coverPolygonList.attr('points', function(d) {
+            return d.pointsStr;
+        });
+        return coverPolygonList;
+    }
+    function __legendReady() {
+        __legendMouseEnter.apply(this);
+        __legendMouseOut.apply(this);
+        __legendClick.apply(this);
+    }
+    function __legendMouseEnter() {
+        var _this = this;
+        var areas = this.areas;
+        this.on('legendMouseenter.radar', function (name) {
+            var areaData = {};
+            for(var i=0;i<areas.length;i++) {
+                if(name == areas[i].originalData.name) {
+                    areaData = areas[i];
+                    break;
+                }
+            }
+            for(var i=0;i<_this.areaList._groups[0].length;i++) {
+                var areaEle = d3.select(_this.areaList._groups[0][i]);
+                if(areaEle.datum() == areaData) {
+                    areaEle.selectAll('.xc-radar-area-point')
+                        .style('stroke-width', 5);
+                    break;
+                }
+            }
+        });
+    }
+    function __legendMouseOut() {
+        var _this = this;
+        var areas = this.areas;
+        this.on('legendMouseleave.radar', function(name) {
+            var areaData = {};
+            for(var i=0;i<areas.length;i++) {
+                if(name == areas[i].originalData.name) {
+                    areaData = areas[i];
+                    break;
+                }
+            }
+            for(var i=0;i<_this.areaList._groups[0].length;i++) {
+                var areaEle = d3.select(_this.areaList._groups[0][i]);
+                if(areaEle.datum() == areaData) {
+                    areaEle.selectAll('.xc-radar-area-point')
+                        .style('stroke-width', 3);
+                    break;
+                }
+            }
+        });
+    }
+    function __legendClick() {
+        var _this = this;
+        this.on('legendClick.radar', function(nameList) {
+            _this._reRenderAreas(nameList);
+        });
+    }
+    function __tooltipReady() {
+        __tooltipMouseMove.apply(this);
+        __tooltipMouseOut.apply(this);
+    }
+    function __tooltipMouseMove() {
+        var _this = this;
+        this.coverPolygonList.on('mousemove.radar', function () {
+            var index = d3.select(this).datum().index;
+            _this._showTooltip(index, this);
+        });
+    }
+    function __tooltipMouseOut() {
+        var _this = this;
+        this.coverPolygonList.on('mouseout.radar', function () {
+            var tooltip = _this.messageCenter.components.tooltip;
+            tooltip.hiddenTooltip();
+            var areaPointsList = _this.areaList.selectAll('.xc-radar-area-point');
+            areaPointsList.style('stroke-width', 3);
+            _this.lineList.classed('xc-radar-tooltip-line', false);
+        });
+    }
+
+    function defaultFormatter(indicator, valueList) {
+        var htmlStr = '';
+        htmlStr += "<h3>" + indicator + "</h3>";
+        for(var i=0;i<valueList.length;i++) {
+            htmlStr += "<div>" + valueList[i].name + "：" + valueList[i].value + "</div>";
+        }
+        return htmlStr;
+    }
+    function defaultConfig() {
+        /**
+         * @var radar
+         * @type Object
+         * @extends xCharts.series
+         * @description 雷达图配置项
+         */
+        var config = {
+            /**
+             * @var type
+             * @type String
+             * @description 指定图表类型
+             * @values 'radar'
+             * @extends xCharts.series.radar
+             */
+            type: 'radar',
+            /**
+             * @var levels
+             * @type Number
+             * @description 标记雷达图网轴有几层，取值必须为大于0的整数
+             * @default 4
+             * @extends xCharts.series.radar
+             */
+            levels: 4,
+            /**
+             * @var radius
+             * @type Number|String
+             * @description 定义雷达图的半径
+             * @default '15%'
+             * @extends xCharts.series.radar
+             */
+            radius: '15%',
+            /**
+             * @var fill
+             * @type Boolean
+             * @description 定义雷达图的区域是否填充，true为填充，false为不填充
+             * @default false
+             * @extends xCharts.series.radar
+             */
+            fill: false,
+            /**
+             * @var center
+             * @type Array
+             * @description 雷达图中心位置，可为百分比或数值。若为百分比则center[0]（中心x坐标）参照容器宽度，center[1]（中心y坐标）参照容器高度。
+             * @default ['50%','50%']
+             * @extends xCharts.series.radar
+             */
+            center: ['50%', '50%'],
+            /**
+             * @var indicator
+             * @type Array
+             * @description 雷达图各项指标
+             * @extends xCharts.series.radar
+             */
+            indicator: [
+                {
+                    /**
+                     * @var text
+                     * @type String
+                     * @description 指标名称
+                     * @extends xCharts.series.radar.indicator
+                     */
+                    // text: '',
+                    /**
+                     * @var max
+                     * @type Number
+                     * @description 指标取值范围的最大值
+                     * @extends xCharts.series.radar.indicator
+                     */
+                    max: 100,
+                    /**
+                     * @var min
+                     * @type Number
+                     * @description 指标取值范围的最大值
+                     * @extends xCharts.series.radar.indicator
+                     */
+                    min: 0
+                }
+            ],
+            /**
+             * @var data
+             * @type Array
+             * @description 雷达图数据
+             * @extends xCharts.series.radar
+             */
+            data: [
+                {
+                    /**
+                     * @var name
+                     * @type String
+                     * @description 数据项名称
+                     * @extends xCharts.series.radar.data
+                     */
+                    // name: '',
+                    /**
+                     * @var value
+                     * @type Array
+                     * @description 数据项对应所有指标的值的集合，其中的顺序必须和indicator中指标的顺序相对应。
+                     * @extends xCharts.series.radar.data
+                     */
+                    // value: []
+                }
+            ]
+        }
+        return config;
+    }
+}(xCharts, d3));
+/**
+ * @file 雷达图(移动端)
+ * @date 2016-05-30
+ * @author chenxuan.cx@gmail.com
+ */
+(function (xCharts, d3) {
+    var utils = xCharts.utils;
+    var charts = xCharts.charts;
+    var radar = charts.radar;
+
+    radar.prototype.extend({
+        mobileReady: function() {
+            if(this.config.legend && this.config.legend.show) {
+                __legendMobileReady.apply(this);
+            }
+            if(this.config.tooltip && this.config.tooltip.show) {
+                __tooltipMobileReady.apply(this);
+            }
+        }
+    });
+    function __legendMobileReady() {
+        __legendTouch.apply(this);
+    }
+    function __legendTouch() {
+        var _this = this;
+        this.on('legendClick.radar', function(nameList) {
+            _this._reRenderAreas(nameList);
+            _this.messageCenter.components.tooltip.hiddenTooltip();
+        });
+    }
+    function __tooltipMobileReady() {
+        __tooltipTouch.apply(this);
+    }
+    function __tooltipTouch() {
+        var _this = this;
+        this.coverPolygonList.on('touchstart.radar', function () {
+            var index = d3.select(this).datum().index;
+            _this.areaList.selectAll('.xc-radar-area-point').style('stroke-width', 3);
+            _this._showTooltip(index, this);
+        });
+    }
+}(xCharts, d3));
+
 /**
  * @file 柱状图
  * @author chenwubai.cx@gmail.com
@@ -5161,1665 +6885,6 @@ var peekPoints ={
     }
 }(xCharts, d3));
 /**
- * 漏斗图
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var Chart = xCharts.charts.Chart;
-    xCharts.charts.extend({funnel: funnel});
-    utils.inherits(funnel, Chart);
-
-    function funnel(messageCenter, config) {
-        Chart.call(this, messageCenter, config, 'funnel');
-    }
-
-    funnel.prototype.extend = xCharts.extend;
-    funnel.prototype.extend({
-        init: function (messageCenter, config, type, series) {
-            var _this = this;
-            _this.series = parseSeries(series, _this);
-        },
-        render: function (animationEase, animationTime) {
-            //注意一个serie就是一个图
-            var _this = this;
-            var animationConfig = _this.config.animation;
-
-            var funnelGroup = _this.main.selectAll('.xc-funnel-group')
-                .data(_this.series);
-
-            funnelGroup = funnelGroup.enter().append('g')
-                .attr('class', 'xc-funnel-group')
-                .merge(funnelGroup);
-
-            funnelGroup.exit().remove();//updateSeries时，删除多余的组
-
-            funnelGroup.attr('transform', function (serie) {
-                return 'translate(' + serie.xOffset + ',' + serie.yOffset + ')';
-            })
-            //画区块
-            var funnelSection = funnelGroup.selectAll('.xc-funnel-section').data(function (serie) {
-                return serie.data;
-            });
-            funnelSection = funnelSection.enter().append('path')
-                .attr('class', 'xc-funnel-section')
-                .merge(funnelSection)
-
-            funnelSection.attr('fill', function (d) {
-                    return _this.getColor(d.idx);
-                })
-                .transition()
-                .ease(animationEase)
-                .duration(animationTime)
-                .attrTween('d', function (d) {
-
-                    if (this.pathArr === undefined) {
-                        var pathArr = utils.copy(d.pathArr, true);
-                        pathArr[2][1] = pathArr[2][1] * 0.95;
-                        pathArr[3][1] = pathArr[3][1] * 0.95;
-                        this.pathArr = pathArr;
-                    }
-
-                    // this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
-                    var interpolate = d3.interpolate(this.pathArr, d.pathArr);
-                    this.pathArr = d.pathArr;
-                    return function (t) {
-                        return buildFunnelPath(interpolate(t));
-                    }
-                });
-
-            //画label
-            var funnelLabel = funnelGroup.selectAll('.xc-funnel-label')
-                .data(function (serie) {
-                    return serie.data;
-                });
-
-            var transitionStr = "opacity " + animationConfig.animationTime + "ms linear";
-
-            funnelLabel = funnelLabel.enter().append('g')
-                .attr('class', 'xc-funnel-label')
-                .style("transition", transitionStr)
-                .merge(funnelLabel);
-
-            funnelLabel.exit().remove();
-            funnelLabel.attr('opacity', function (d) {
-                    if (d.show == false)
-                        return 0;
-                    else
-                        return 1;
-                })
-                .transition()
-                .ease(animationEase)
-                .duration(animationTime)
-                .attrTween('transform', function (d) {
-
-                    if (this.labelPosition === undefined) {
-                        this.labelPosition = [d.labelPosition[0] * 1.1, d.labelPosition[1]];
-                    }
-
-                    // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
-                    var interpolate = d3.interpolate(this.labelPosition, d.labelPosition);
-                    this.labelPosition = d.labelPosition;
-                    return function (t) {
-                        return 'translate(' + interpolate(t) + ')';
-                    }
-
-                })
-
-            var labelLine = funnelLabel.selectAll('.xc-funnel-label-line')
-                .data(function (d) {
-                    if (d.show != false)
-                        return [d]
-                    else
-                        return [];
-                });
-
-            labelLine = labelLine.enter().append('path')
-                .attr('class', 'xc-funnel-label-line')
-                .merge(labelLine);
-
-            labelLine.attr('d', function (d) {
-                    return 'M0,0 L' + d.labelWidth + ',0';
-                })
-                .attr('stroke', function (d) {
-                    return _this.getColor(d.idx);
-                });
-
-            var labelText = funnelLabel.selectAll('.xc-funnel-label-text')
-                .data(function (d) {
-                    if (d.show != false)
-                        return [d]
-                    else
-                        return [];
-                });
-
-            labelText = labelText.enter().append('text')
-                .attr('class', 'xc-funnel-label-text')
-                .merge(labelText);
-            labelText.text(function (d) {
-                    return d.name
-                })
-                .attr('font-size', 14)
-                .attr('x', function (d) {
-                    return d.labelWidth + 5;
-                })
-                .attr('y', '0.2em');
-
-            _this.funnelSection = funnelSection;
-        },
-        ready: function () {
-            this.__legendReady();
-            this.__tooltipReady();
-        },
-        __legendReady: function () {
-            var _this = this;
-            _this.on('legendMouseenter.funnel', function (name) {
-                _this.funnelSection.attr('opacity', function (d) {
-                    var op = 1;
-                    if (d.name == name) op = d._serie.itemStyle.opacity
-                    return op;
-                });
-            });
-            _this.on('legendMouseleave.funnel', function () {
-                _this.funnelSection.attr('opacity', 1);
-            });
-            _this.on('legendClick.funnel', function (nameList) {
-                var series = legendClickSeries(_this.config.series, nameList);
-                var animationConfig = _this.config.animation;
-                _this.init(_this.series, _this.config, _this.type, series);
-                _this.render(animationConfig.animationEase, animationConfig.animationTime);
-            });
-        },
-        __tooltipReady: function () {
-            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
-            var _this = this;
-            var tooltip = _this.messageCenter.components['tooltip'];
-            var tooltipFormatter = tooltip.tooltipConfig.formatter;
-
-            if (_this.mobileMode) {
-                _this.mobileReady();
-            } else {
-                _this.funnelSection.on('mousemove.funnel', function (data) {
-                    var event = d3.event;
-                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
-                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-
-                    var title = "<p>" + data._serie.name + "</p>";
-                    tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
-                    tooltip.setPosition([x, y]);
-                });
-
-                _this.funnelSection.on('mouseenter.funnel', function (data) {
-                    d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
-                    tooltip.showTooltip();
-                })
-
-                _this.funnelSection.on('mouseleave.funnel', function () {
-                    d3.select(this).attr('opacity', 1);
-                    tooltip.hiddenTooltip();
-                });
-            }
-        }
-    });
-
-
-    function legendClickSeries(series, nameList) {
-        series.forEach(function (serie) {
-
-            if (serie.type != 'funnel') return;
-
-            serie.data.forEach(function (d) {
-                if (inNameList(d.name, nameList)) d.show = true;
-                else d.show = false;
-            })
-        })
-        return series;
-    }
-
-    function inNameList(name, nameList) {
-        for (var i = 0, n; n = nameList[i++];) {
-            if (name == n)
-                return true;
-        }
-        return false;
-    }
-
-    function buildFunnelPath(pathArr) {
-        var dStr = 'M';
-        dStr += pathArr[0];
-        dStr += 'L' + pathArr[1];
-        dStr += 'L' + pathArr[2];
-        dStr += 'L' + pathArr[3];
-        return dStr;
-    }
-
-    function parseSeries(series, that) {
-        var funnelSeries = []
-        for (var i = 0, s; s = series[i++];) {
-            //第一步判断是否是漏斗图
-            if (s.type != 'funnel') return;
-            s = utils.merage(defaultConfig(), s);
-            calcWidth(s, that);
-            calcPosition(s, that);
-            s.funnelPath = funnelPath(s);
-            s.data.forEach(function (d, idx) {
-                d.idx = d.idx == null ? idx : d.idx;
-                d._serie = s;
-                d.pathArr = s.funnelPath(idx);
-
-                //计算label的位置
-                var labelX = (d.pathArr[0][0] + d.pathArr[1][0]) / 2;
-                var labelY = (d.pathArr[0][1] + d.pathArr[2][1]) / 2;
-                d.labelPosition = [labelX, labelY];
-                //计算label线的长度
-                d.labelWidth = d.sectionWidth / 2 + 30;//30是突出多少
-            });
-
-            funnelSeries.push(s);
-        }
-        return funnelSeries;
-    }
-
-
-    function funnelPath(serie) {
-        var width = serie.width, height = serie.height, data = serie.data, sort = serie.sort;
-        //塔尖向下，从大到小排序，塔尖向上，从小到大排序
-        data.sort(function (a, b) {
-            var ret = a.value - b.value;
-            if (sort == 'top') {
-                return ret;
-            } else {
-                return -ret;
-            }
-        });
-        //计算还有多少区块需要显示
-        var length = data.length, maxValue = -Infinity;
-        data.forEach(function (d) {
-            if (d.show == false) length--;
-            maxValue = d3.max([maxValue, parseFloat(d.value)])
-        });
-        var sectionHeight = height / length;//每个区块的高度
-        //计算每个data对应的起点和终点
-        var index = sort == 'top' ? 1 : 0,//如果是塔尖向上，则第一个变量的y坐标不是0，而是一个sectionHeigth的高度,该变量是用来计算区块y坐标
-            position = [];
-        data.forEach(function (d, i) {
-            d.maxValue = maxValue;
-            d.percentage = parseFloat(d.value) / maxValue;
-            if (d.show == false) {
-                position[i] = undefined;
-                return
-            }
-            ;
-            var sectionWidth = d.percentage * width;
-            d.sectionWidth = sectionWidth;
-            var xOffset = (width - sectionWidth) / 2;
-            position[i] = [];
-            position[i][0] = [xOffset, sectionHeight * index];
-            position[i][1] = [xOffset + sectionWidth, sectionHeight * index];
-            index++;
-        });
-
-        //保证每个区块是由四个点组成，所以塔尖需要两个重复的点
-        if (sort == 'top') {
-            var topP = [width / 2, 0];
-            position.unshift([topP, topP]);
-        } else {
-            var bottomP = [width / 2, sectionHeight * index];
-            position.push([bottomP, bottomP]);
-        }
-        //在第一次计算区块坐标时会导致show=false的position位置为undefined，这里根据塔尖方向的不同进行补全
-        //主要是为了动画效果,show=false的时候，只是区块高度为0，并不代表没有这个区块
-        for (var i = 0, len = position.length; i < len; i++) {
-            var p = position[i];
-            if (p != undefined) continue;
-            var j = 1;
-            //防止偏移后还是undefined
-            while (position[i] === undefined) {
-                if (sort == 'top')
-                    position[i] = position[i - j];
-                else
-                    position[i] = position[i + j];
-
-                j++;
-            }
-
-        }
-        return function (idx) {
-            //传入一个区块index，获取区块的4个点，依次是左上，又上，右下，左下
-            if (idx < 0 || idx >= data.length) {
-                console.error('内部代码错误,漏斗图获取区块%d，最大值为%d', idx, data.length);
-            }
-            var pathPoints = [];
-            pathPoints[0] = position[idx][0], pathPoints[1] = position[idx][1];
-            pathPoints[2] = position[idx + 1][1], pathPoints[3] = position[idx + 1][0];
-            return pathPoints;
-        }
-    }
-
-    /**
-     * 计算每个漏斗图的宽高
-     * @param serie
-     * @param that
-     */
-    function calcWidth(serie, that) {
-        var width = that.width, heigth = that.height, size = serie.size;
-        var fw = size[0];
-        if (typeof fw == 'string') {
-            if (fw.substr(-1) === '%') {
-                var percent = parseFloat(fw) / 100;
-                fw = percent * width;
-            } else if (fw.substr(-2) == 'px') {
-                fw = parseFloat(fw);
-            } else {
-                fw = parseFloat(fw);
-                if (isNaN(fw)) console.error("name:" + serie.name + " size[0] not support");
-            }
-        } else if (typeof  fw != 'number') {
-            console.error("name:" + serie.name + " size[0] not support");
-        }
-
-        var fh = size[1];
-
-        if (typeof fh == 'string') {
-            if (fh.substr(-1) === '%') {
-                var percent = parseFloat(fh) / 100;
-                fh = percent * heigth;
-            } else if (fh.substr(-2) == 'px') {
-                fh = parseFloat(fh);
-            } else {
-                fh = parseFloat(fh);
-                if (isNaN(fh)) console.error("name:" + serie.name + " size[1] not support");
-            }
-        } else if (typeof  fh != 'number') {
-            console.error("name:" + serie.name + " size[1] not support");
-        }
-        serie.width = fw;
-        serie.height = fh;
-    }
-
-    /**
-     * 计算漏斗图的起始位置
-     * @param series
-     * @param that
-     */
-    function calcPosition(serie, that) {
-        var width = that.width, height = that.height, x = serie.x, y = serie.y;
-        var xOffset = 0, yOffset = 0;
-        if (x == 'center') {
-            xOffset = (width - serie.width) / 2;
-        }
-        else if (x == 'right') {
-            xOffset = (width - serie.width);
-        }
-        else if (x.substr(-1) == '%') {
-            xOffset = parseFloat(x) / 100 * width;
-        } else {
-            x = parseFloat(x);
-            if (isNaN(x)) console.error("name:" + serie.name + " serie.x not support")
-            else xOffset = x;
-        }
-
-        if (y == 'middle') {
-            yOffset = (height - serie.height) / 2;
-        }
-        else if ('y' == 'bottom') {
-            yOffset = (height - serie.height);
-        }
-        else if (y.substr(-1) == '%') {
-            yOffset = parseFloat(y) / 100 * height;
-        } else {
-            y = parseFloat(y);
-            if (isNaN(y)) console.error("name:" + serie.name + " serie.y not support")
-            else yOffset = y;
-        }
-        serie.xOffset = xOffset;
-        serie.yOffset = yOffset;
-    }
-
-    funnel.defaultFormatter = defaultFormatter;
-    function defaultFormatter(name, value, percentage) {
-        return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
-    }
-
-    function defaultConfig() {
-        /**
-         * @var funnel
-         * @type Object
-         * @extends xCharts.series
-         * @description 漏斗图配置项
-         */
-        var funnel = {
-            /**
-             * @var name
-             * @type String
-             * @extends xCharts.series.funnel
-             * @description 漏斗图代表的名字
-             */
-            name: '漏斗图',
-            /**
-             * @var type
-             * @type String
-             * @extends xCharts.series.funnel
-             * @default funnel
-             * @description 漏斗图指定类型
-             */
-            type: 'funnel',
-            /**
-             * @var sort
-             * @type String
-             * @values 'top'|'down'
-             * @default 'down'
-             * @description 漏斗图尖角朝向
-             * @extends xCharts.series.funnel
-             */
-            sort: 'down',
-            /**
-             * @var size
-             * @extends xCharts.series.funnel
-             * @type Array
-             * @description 漏斗图大小
-             * @description 可以为百分比，也可以为具体数字，默认单位px
-             * @default ['50%', '50%']
-             * @example
-             *  size:['50%','50%']//百分比
-             *  size:[500,'300']//固定宽高
-             */
-            size: ['50%', '50%'],
-            /**
-             *  @var x
-             *  @extends xCharts.series.funnel
-             *  @type String|Number
-             *  @default 'center'
-             *  @values 'left'|'right'|'center'|Number(单位像素)|Percentage
-             *  @description 漏斗图左上角在x轴方向的偏移量
-             */
-            x: 'center',
-            /**
-             *  @var y
-             *  @extends xCharts.series.funnel
-             *  @type String|Number
-             *  @default 'center'
-             *  @values 'top'|'middle'|'bottom'|Number(单位像素)|Percentage
-             *  @description 漏斗图左上角在y轴方向的偏移量
-             */
-            y: 'middle',
-            /**
-             * @var data
-             * @type Array
-             * @extends xCharts.series.funnel
-             * @description 一个装有漏斗图数据的二维数组
-             * @example
-             *   [
-             *      {name: '腾讯', value: '80'},
-             *      {name: '百度', value: '100'},
-             *      {name: '阿里巴巴', value: '60'},
-             *      {name: '京东', value: '40'},
-             *      {name: '淘宝', value: '20'},
-             *   ]
-             */
-            data: [],
-            /**
-             * @var formatter
-             * @extends xCharts.series.funnel
-             * @type Function
-             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
-             * @example
-             *  formatter: function (name,x,y) {
-             *      return '<p>'+name + ':&nbsp;' + value+' 占比:'+percentage+'%</p>';
-             *  }
-             */
-            //formatter:function(){},
-            /**
-             * @var itemStyle
-             * @extends xCharts.series.funnel
-             * @type Object
-             * @description 每个漏斗图区块的样式
-             */
-            itemStyle: {
-                /**
-                 * @var opacity
-                 * @extends xCharts.series.funnel.itemStyle
-                 * @type Number
-                 * @values 0-1
-                 * @description 鼠标移入时，变化的透明度
-                 * @default 0.5
-                 */
-                opacity: 0.5
-            }
-        }
-        return funnel;
-    }
-
-}(xCharts, d3));
-/**
- * Author liuyang46@meituan.com
- * Date 16/5/27
- * Describe 漏斗图,移动端适配
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var charts = xCharts.charts;
-    var funnel = charts.funnel;
-
-    funnel.prototype.extend({
-        mobileReady: function () {
-            this.funnelSection.on('touchstart.funnel', funnelSectionTrigger(this));
-        }
-    });
-
-    var defaultFormatter = funnel.defaultFormatter;
-
-    function funnelSectionTrigger(ctx) {
-        var tooltip = ctx.messageCenter.components['tooltip'];
-        var tooltipFormatter = tooltip.tooltipConfig.formatter;
-
-        return function (data) {
-            ctx.funnelSection.attr('opacity', 1);
-            d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
-            tooltip.showTooltip();
-
-            // 设置HTML
-            var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-
-            var title = "<p>" + data._serie.name + "</p>";
-            tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
-
-            // 获取坐标
-            var position = d3.mouse(ctx.svg.node());
-            tooltip.setPosition(position);
-            
-
-        }
-    }
-}(xCharts, d3));
-/**
- * Created by liuyang on 15/10/27.
- * 折线图
- *
- * TODO 动画效果
- * TODO 折线图鼠标hover影藏点出现
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var Chart = xCharts.charts.Chart;
-
-    xCharts.charts.extend({line: line});
-    utils.inherits(line, Chart);
-    function line(messageCenter, config) {
-        Chart.call(this, messageCenter, config, 'line');
-    }
-
-    line.prototype.extend = xCharts.extend;
-    line.prototype.extend({
-        init: function (messageCenter, config, type, series) {
-
-            this.xAxisScale = messageCenter.xAxisScale;
-            this.yAxisScale = messageCenter.yAxisScale;
-
-            // 处理折线图数据
-            this.series = parseSeries(this, series, config);
-
-            // 判断是否是时间轴
-            this.timeModel = config.xAxis[0].type == 'time';
-        },
-        render: function (animationEase, animationTime) {
-
-            this.__renderArea(animationEase, animationTime);
-            this.__renderLine(animationEase, animationTime);
-            if (!this.timeModel) this.__renderCircle(animationEase, animationTime);
-            if (this.config.peekPoints.enable) this.__renderPeek(animationEase, animationTime);
-            if (this.timeModel) this._brushRender();
-        },
-        __renderLine: function (animationEase, animationTime) {
-            var id = this.id, _this = this;
-
-            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
-
-            var lineGroup = this.main.selectAll('.xc-line-group').data([_this]);
-            lineGroup = lineGroup.enter().append('g').attr('class', 'xc-line-group')
-                .merge(lineGroup)
-
-                // .exit().remove().merage(lineGroup);
-            var lineScale = d3.line()
-                .x(function (d) {
-                    return d.x;
-                })
-                .y(function (d) {
-                    return d.y;
-                });
-            var linePath = lineGroup.selectAll('.xc-line-path').data(_this.series);
-            linePath = linePath.enter().append('path').attr('class', 'xc-line-path').attr('fill', 'none').merge(linePath);
-            linePath.exit().remove();
-            linePath.attr('stroke', function (d) {
-                if (d.lineStyle.color != 'auto')
-                    return d.lineStyle.color;
-                return _this.getColor(d.idx);
-            })
-                .attr('stroke-width', function (d) {
-                    return d.lineStyle.width;
-                })
-                .attr('id', function (d) {
-                    return 'xc-line-path-id' + id + "-" + d.idx;
-                })
-                .style("transition", transitionStr)
-                .style("opacity", function (d) {
-                    if (d.show === false) {
-                        return 0;
-                    } else {
-                        return 0.7;
-                    }
-                });
-
-            linePath.transition()
-                .duration(animationTime)
-                .ease(animationEase)
-                .attrTween("d", function (serie) {
-
-                    var ctx = this;
-                    if (serie.show === false) return function () {
-                        return ctx.linePath;
-                    };
-
-                    var transitionData = serie.data.map(function (dataItem) {
-                        return {
-                            x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
-                            y: serie.yScale(dataItem.y)
-                        }
-                    });
-
-                    if (this.transitionData === undefined) {
-                        var minValue = serie.yScale.range()[1];
-                        this.transitionData = serie.data.map(function (dataItem) {
-                            return {
-                                x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
-                                y: serie.yScale(minValue)
-                            }
-                        });
-                        // serie.data.map(function (dataItem) {
-                        //     return {
-                        //         x: serie.xScale(dataItem.x),
-                        //         y: serie.yScale(minValue)
-                        //     }
-                        // })
-                    }
-
-                    var interpolate = d3.interpolate(this.transitionData, transitionData);
-                    this.transitionData = transitionData;
-
-                    return function (t) {
-                        var interpolateData = interpolate(t);
-                        var invalidIdxList = [], validDataList = [];
-                        serie.data.forEach(function (d, i) {
-                            if (d.justCircle) {
-                                invalidIdxList.push(i);
-                            }
-                        });
-                        if (invalidIdxList.length > 0) {
-                            var preIndex = 0;
-                            invalidIdxList.push(interpolateData.length);
-                            for (var index = 0; index < invalidIdxList.length; index++) {
-                                var curIndex = invalidIdxList[index];
-                                if (curIndex - preIndex > 0) {
-                                    validDataList.push(interpolateData.slice(preIndex, curIndex));
-                                }
-                                preIndex = curIndex + 1;
-                            }
-                        } else {
-                            validDataList = [interpolateData];
-                        }
-                        lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-                        var path = '';
-                        validDataList.forEach(function (lineData) {
-                            path += lineScale(lineData);
-                        });
-                        if (t == 1) {
-                            ctx.linePath = path;
-                            _this.fire('lineAnimationEnd');
-                        }
-                        return path;
-                    }
-                });
-
-            this.lineGroup = lineGroup;
-        },
-        __renderArea: function (animationEase, animationTime) {
-            //面积
-            // DONE 不用d3.svg.area，重写一个以满足需求
-            var id = this.id, _this = this;
-            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
-            var areaGroup = _this.main.selectAll('.xc-area-group').data([_this]);
-            areaGroup = areaGroup.enter().append('g').attr('class', 'xc-area-group').merge(areaGroup);
-            areaGroup.exit().remove();
-            var areaPath = areaGroup.selectAll('.xc-line-area-path').data(_this.series);
-            areaPath = areaPath.enter().append('path').attr('class', 'xc-line-area-path').attr('stroke', 'none').merge(areaPath);
-            areaPath.exit().remove();
-            areaPath.attr('fill', function (d) {
-                if (d.areaStyle.color == 'auto') {
-                    //当面积的颜色为auto时，和折线保持一致
-                    if (d.lineStyle.color == 'auto')
-                        return _this.getColor(d.idx);
-                    else
-                        return d.lineStyle.color
-                }
-                else
-                    return d.areaStyle.color;
-            })
-                .attr('id', function (d) {
-                    return 'xc-line-area-path-id' + id + "-" + d.idx;
-                })
-                .style("transition", transitionStr)
-                .style("opacity", function (d) {
-                    if (d.show === false) {
-                        return 0;
-                    } else {
-                        return d.areaStyle.opacity;
-                    }
-                });
-
-
-            // 动画
-            areaPath.transition()
-                .duration(animationTime)
-                .ease(animationEase)
-                .attrTween("d", function (serie) {
-                    var ctx = this;
-
-                    if (serie.show === false) {
-                        return function () {
-                            return ctx.areaPath == null ? "" : ctx.areaPath;
-                        }
-                    }
-
-                    if (serie.areaStyle.show === false) {
-                        return function () {
-                            return "";
-                        }
-                    }
-
-
-                    var areaData = serie.data.map(function (dataItem) {
-                        return {
-                            x: dataItem.adjustedX ? dataItem.adjustedX : serie.xScale(dataItem.x),
-                            y: serie.yScale(dataItem.y),
-                            y0: serie.yScale(dataItem.y0)
-                        }
-                    });
-
-                    if (ctx.areaData === undefined) {
-                        ctx.areaData = serie.data.map(function (dataItem) {
-                            return {
-                                x: serie.xScale(dataItem.x),
-                                y: serie.yScale(dataItem.y0),
-                                y0: serie.yScale(dataItem.y0)
-                            }
-                        });
-                    }
-
-                    // ctx.areaData = ctx.areaData == undefined ? areaData : ctx.areaData;
-                    var interpolate = d3.interpolate(this.areaData, areaData);
-                    ctx.areaData = areaData;
-
-                    return function (t) {
-                        var data = interpolate(t);
-                        var invalidIdxList = [], validDataList = [];
-                        serie.data.forEach(function (d, i) {
-                            if (d.justCircle) {
-                                invalidIdxList.push(i);
-                            }
-                        });
-                        if (invalidIdxList.length > 0) {
-                            var preIndex = 0;
-                            invalidIdxList.push(data.length);
-                            for (var index = 0; index <= invalidIdxList.length; index++) {
-                                var curIndex = invalidIdxList[index];
-                                if (curIndex - preIndex > 0) {
-                                    validDataList.push(data.slice(preIndex, curIndex));
-                                }
-                                preIndex = curIndex + 1;
-                            }
-                        } else {
-                            validDataList = [data];
-                        }
-                        var areaPath = '';
-                        validDataList.forEach(function (areaData) {
-                            areaPath += area(areaData, serie);
-                        });
-                        if (t == 1) {
-                            ctx.areaPath = areaPath;
-                        }
-                        return areaPath;
-                    }
-                });
-        },
-        __renderCircle: function (animationEase, animationTime) {
-            //画点
-            //最后画点，防止面积遮盖
-            var id = this.id, _this = this;
-            var showDataList = _this.messageCenter.showDomainList[0];
-            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
-            var circleGroup = _this.main.selectAll('.xc-circle-group').data(_this.series);
-            circleGroup = circleGroup.enter().append('g').attr('class', function (serie) {
-                return 'xc-circle-group';
-            }).merge(circleGroup);
-            circleGroup .attr('id', function (d) {
-                circleGroup.exit().remove();
-                return 'xc-circle-group-id' + id + '-' + d.idx;
-            }).attr('fill', function (serie) {
-                    if (serie.lineStyle.color != 'auto')
-                        return serie.lineStyle.color;
-                    return _this.getColor(serie.idx);
-                });
-            var circle = circleGroup.selectAll('circle').data(function (d) {
-                return d.data;
-            });
-            circle = circle.enter().append('circle').attr('class', function (d, i) {
-                return 'xc-point xc-point-' + i;
-            }).merge(circle);
-            circle.exit().remove();
-
-            circle.style("transition", transitionStr)
-                .style("opacity", function (d) {
-                    if (typeof d !== 'object') {
-                        return 0;
-                    } else {
-                        return 0.7;
-                    }
-                })
-                .style("display", function (d, idx) {
-                    if (showDataList[idx] !== true) {
-                        this.circleDisplay = false;
-                        return "none";
-                    }
-                    this.circleDisplay = true;
-                    return "block";
-                })
-                .attr('r', function (d) {
-                    if (typeof d === 'object') {
-                        this.circleRadius = d._serie.lineStyle.radius;
-                    }
-                    return this.circleRadius;
-                });
-            // .attr('cx', function (data) {
-            //     var ctx = this;
-            //     if (typeof data !== 'object') {
-            //         return ctx.circleCX;
-            //     }
-            //     ctx.circleCX = data._serie.xScale(data.x);
-            //     return ctx.circleCX;
-            // })
-            // .attr('cy', function (data) {
-            //     var ctx = this;
-            //     if (typeof data !== 'object') {
-            //         return ctx.circleCY;
-            //     }
-            //     ctx.circleCY = data._serie.yScale(data.y);
-            //     return ctx.circleCY;
-            // })
-
-            //动画
-            circle.transition()
-                .duration(animationTime)
-                .ease(animationEase)
-                .attrTween("cx", function (d) {
-                    var ctx = this;
-                    if (typeof d !== 'object') {
-                        return function () {
-                            return ctx.circleCX
-                        }
-                    }
-                    var circleCX = d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
-                    ctx.circleCX = ctx.circleCX == undefined ? circleCX : ctx.circleCX;
-                    var interpolate = d3.interpolate(ctx.circleCX, circleCX);
-                    ctx.circleCX = circleCX;
-                    return function (t) {
-                        return interpolate(t);
-                    }
-                })
-                .attrTween("cy", function (d) {
-                    var ctx = this;
-
-                    if (typeof d !== 'object') {
-                        return function () {
-                            return ctx.circleCY;
-                        }
-                    }
-                    var circleCY = d._serie.yScale(d.y);
-                    if (ctx.circleCY === undefined) {
-                        var minValue = d._serie.yScale.range()[1];
-                        ctx.circleCY = d._serie.yScale(minValue);
-                    }
-                    ctx.circleCY = ctx.circleCY == undefined ? circleCY : ctx.circleCY;
-                    var interpolate = d3.interpolate(ctx.circleCY, circleCY);
-                    ctx.circleCY = circleCY;
-                    return function (t) {
-                        return interpolate(t);
-                    }
-                });
-
-            _this.circle = circle;
-            _this.circleGroup = circleGroup;
-        },
-        __renderPeek: function (animationEase, animationTime) {
-
-            // 绘制峰值点
-            var id = this.id, _this = this;
-            var showDataList = _this.messageCenter.showDomainList[0];
-            var transitionStr = "opacity " + (animationTime / 2) + "ms linear";
-            var peekGroup = _this.main.selectAll('xc-peek-group').data(_this.series);
-            peekGroup = peekGroup.enter().append('g').attr('class', 'xc-peek-group').merge(peekGroup);
-            peekGroup.exit().remove();
-            peekGroup.attr('id', function (d) {
-                return 'xc-peek-group-id' + id + d.idx;
-            }).attr('fill', function (serie) {
-                if (serie.lineStyle.color != 'auto')
-                    return serie.lineStyle.color;
-                return _this.getColor(serie.idx);
-            });
-            var peekPoints = peekGroup.selectAll('path').data(function (d) {
-                return d.peekPoints;
-            });
-            peekPoints = peekPoints.enter().append('path').merge(peekPoints)
-                .attr('class', function (d, i) {
-                    return 'xc-peek-point xc-peek-point-' + i;
-                }).attr('d', function (d) {
-                    var startX = d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
-                    var startY = d._serie.yScale(d.y);
-                    return utils.peekPointOfDrop(startX, startY);
-                });
-            peekPoints.exit().remove();
-            peekPoints.style("transition", transitionStr)
-                .style("opacity", function (d) {
-                    if (typeof d !== 'object') {
-                        return 0;
-                    } else {
-                        return 0.7;
-                    }
-                })
-                .style("display", function (d, idx) {
-                    if (showDataList[idx] !== true) {
-                        this.circleDisplay = false;
-                        return "none";
-                    }
-                    this.circleDisplay = true;
-                    return "block";
-                });
-
-            // 添加峰值点文字
-            var peekText = peekGroup.selectAll('text').data(function (d) {
-                return d.peekPoints;
-            });
-            peekText = peekText.enter().append('text').merge(peekText)
-                .text(function (d) {
-                    return d.y;
-                })
-                .attr('fill', '#fff')
-                .attr('class', function (d, i) {
-                    return 'xc-peek-text xc-peek-text-' + i;
-                })
-                .attr('x', function (d) {
-                    return d.adjustedX ? d.adjustedX : d._serie.xScale(d.x);
-                })
-                .attr('y', function (d) {
-                    return d._serie.yScale(d.y) - 21;
-                })
-                .attr('text-anchor', 'middle')
-                .attr('dominant-baseline', 'middle')
-                .style('font-size', '0.5em');
-            peekText.exit().remove();
-        },
-        _brushRender: function () {
-            this.lineGroup.attr('clip-path', 'url(#xc-clip-main-path)');
-        },
-        ready: function () {
-            if (this.mobileMode) {
-                this.mobileReady();
-            } else {
-                if (this.config.legend && this.config.legend.show) {
-                    this.__legendReady();
-                }
-                if (this.config.tooltip && this.config.tooltip.show) {
-                    this.__tooltipReady();
-                }
-            }
-            this._brushReady();
-        },
-        __legendReady: function () {
-            var lineUse, areaUse, circleUse, _this = this, id = _this.id;
-            this.on('legendMouseenter.line', function (name) {
-                lineUse = _this.main.selectAll('.xc-line-use').data([_this]);
-                areaUse = _this.main.selectAll('.xc-line-area-use').data([_this]);
-                circleUse = _this.main.selectAll('.xc-circle-use').data([_this]);
-                lineUse.enter().append('use').attr('class', "xc-line-use").attr('clip-path', 'url(#xc-clip-main-path)');
-                areaUse.enter().append('use').attr('class', "xc-line-area-use").attr('clip-path', 'url(#xc-clip-main-path)');
-                circleUse.enter().append('use').attr('class', "xc-circle-use").attr('clip-path', 'url(#xc-clip-main-path)');
-
-                var serie = getSeries(name);
-                if (!serie) return;
-                var lineId = "#xc-line-path-id" + id + "-" + serie.idx,
-                    areaId = "#xc-line-area-path-id" + id + "-" + serie.idx,
-                    circleId = "#xc-circle-group-id" + id + "-" + serie.idx;
-
-                lineUse.attr('xlink:href', lineId);
-                areaUse.attr('xlink:href', areaId);
-                circleUse.attr('xlink:href', circleId);
-                d3.select(lineId).attr('stroke-width', serie.lineStyle.width + 1);
-                //d3.select(circleId).attr('fill', 'yellow');
-            });
-
-            this.on('legendMouseleave.line', function (name) {
-
-                var serie = getSeries(name);
-                if (!serie) return;
-                var lineId = "#xc-line-path-id" + id + "-" + serie.idx,
-                    areaId = "#xc-line-area-path-id" + id + "-" + serie.idx,
-                    circleId = "#xc-circle-group-id" + id + "-" + serie.idx;
-
-                lineUse.attr('xlink:href', "");
-                areaUse.attr('xlink:href', "");
-                circleUse.attr('xlink:href', "");
-                d3.select(lineId).attr('stroke', serie.color).attr('stroke-width', serie.lineStyle.width);
-                d3.select(circleId).attr('fill', serie.color);
-            });
-
-
-            /**
-             * 根据name 取得对应的serie
-             * @param name
-             * @returns {*}
-             */
-            function getSeries(name) {
-                var series = _this.series;
-                for (var i = 0, s; s = series[i++];)
-                    if (s.name == name) return s;
-            }
-
-            this.on('legendClick.line', function (nameList) {
-                var series = _this.config.series;
-                var animationConfig = _this.config.animation;
-                _this.init(_this.messageCenter, _this.config, _this.type, series);
-                _this.render(animationConfig.animationEase, animationConfig.animationTime);
-                // _this.render(d3.easeLinear, animationConfig.animationTime);
-            });
-        },
-        __tooltipReady: function () {
-            var _this = this;
-
-            if (!this.config.tooltip || this.config.tooltip.show === false) return;//未开启tooltip
-
-            if (this.config.tooltip.trigger === 'axis' || this.config.tooltip.trigger === undefined) {
-
-                this.on('tooltipSectionChange.line', function (sectionNumber, callback, format) {
-
-                    var html = "", series = _this.series;
-
-                    if (_this.timeModel) {
-                        //时间轴时，鼠标地方会出现圆点
-                        _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
-                        _this.series.forEach(function (serie) {
-
-                            var data = serie.data[sectionNumber];
-                            _this.main.append('circle').datum(data)
-                                .attr('class', "xc-tooltip-circle")
-                                .attr('r', function (d) {
-                                    return d._serie.lineStyle.radius;
-                                })
-                                .attr('cx', function (d) {
-                                    return d._serie.xScale(d.x);
-                                })
-                                .attr('cy', function (d) {
-                                    return d._serie.yScale(d.y);
-                                })
-                                .attr('fill', function (d) {
-                                    return d._serie.color;
-                                })
-                        });
-
-                    } else {
-                        // 首先将不显示的圆点全部隐藏
-                        _this.circle.style('display', function () {
-                            if (!this.circleDisplay) {
-                                return 'none';
-                            }
-                        })
-                            .classed('xc-tooltip-circle', false);
-
-                        // 将其他circle都变小
-                        _this.circle.attr('r', function () {
-                            return this.circleRadius;
-                        });
-
-                        // 判断如果是 display:none; 显示为display:block;
-                        var circle = _this.circleGroup.selectAll('circle:nth-child(' + (sectionNumber + 1) + ')');
-                        circle.style('display', function () {
-                            if (!this.circleDisplay) {
-                                return 'block';
-                            }
-                        })
-                            .classed('xc-tooltip-circle', true)
-                            .attr('r', function () {
-                                return this.circleRadius * 1.8;
-                            });
-                    }
-
-                    series.forEach(function (serie) {
-                        if (serie.show === false) return;
-                        var data = serie.data[sectionNumber] === undefined ? "" : serie.data[sectionNumber].value;
-
-                        var serieFormat = serie.formatter || format || defaultFormatter;
-                        html += serieFormat(serie.name, data);
-                    });
-
-                    callback(html);
-                });
-
-                this.on('tooltipHidden', function () {
-                    //当tooltip滑出区域时，需要清理圆点
-                    if (_this.timeModel) {
-                        _this.main.selectAll('.xc-tooltip-circle').remove();//清理上个区间的圆点
-                    } else {
-                        _this.circle.style('display', function () {
-                            if (!this.circleDisplay) {
-                                return 'none';
-                            }
-                        })
-                            .classed('xc-tooltip-circle', false);
-                    }
-                })
-            } else if (_this.mobileMode) {
-                _this.mobileReady();
-            } else {
-                //trigger='item'
-                var tooltip = _this.messageCenter.components['tooltip'];
-
-                _this.circle.on('mouseenter', tooltipTriggerItem(_this));
-                _this.circle.on('mouseleave', function () {
-                    _this.circle.attr('r', function () {
-                        return this.circleRadius;
-                    });
-                    tooltip.hiddenTooltip();
-                });
-
-            }
-
-        },
-        _brushReady: function () {
-            this.on('brushChange.line', function (domain) {
-                // scale.domain(domain);
-                this.render(d3.easeLinear, 0);
-            }.bind(this));
-        }
-
-    });
-
-    line.tooltipTriggerItem = tooltipTriggerItem;
-
-
-    function tooltipTriggerItem(ctx) {
-
-        return function () {
-            var tooltip = ctx.messageCenter.components['tooltip'];
-            var tooltipFormatter = tooltip.tooltipConfig.formatter;
-            var axisConfig = ctx.messageCenter.components['xAxis'].axisConfig;
-
-            var target = d3.event.srcElement || d3.event.target;
-            target = d3.select(target);
-            var data = target.data()[0];
-            var value = data.value;
-            var name = data._serie.name;
-            var serieFormatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
-            var html = serieFormatter(name, value);
-
-            var xData = data.x;
-            xData = axisConfig[data._serie.xAxisIndex].tickFormat(xData);
-            var title = "<p>" + xData + "</p>";
-            tooltip.showTooltip();
-            tooltip.setTooltipHtml(title + html);
-
-            var position = d3.mouse(ctx.svg.node());
-
-            tooltip.setPosition(position);
-
-            // 处理圆变大
-
-            if (ctx.mobileMode) {
-                ctx.circle.attr('r', function () {
-                    return this.circleRadius;
-                });
-            }
-
-
-            d3.select(this).attr('r', function () {
-                return this.circleRadius * 1.8;
-            });
-        }
-    }
-
-    function parseSeries(ctx, series, config) {
-        //先剔除不属于line的serie
-        var stacks = {}, idx = 0, lineSeries = [];
-        series.forEach(function (serie) {
-            if (serie.type == 'line') {
-                serie = utils.merage(defaultConfig(), serie);//与默认参数合并
-                serie.idx = serie.idx == null ? idx++ : serie.idx;
-                if (!serie.stack) {
-                    lineSeries.push(serie);
-                    return;
-                }
-                stacks[serie.stack] || ( stacks[serie.stack] = []);
-                stacks[serie.stack].push(serie);
-            }
-        });
-        //处理堆积情况
-        var stackSeries = parseStacksSeries(ctx, stacks, config);
-        //非堆积情况
-        lineSeries = parseNormalSeries(ctx, lineSeries, config);
-        return lineSeries.concat(stackSeries);//反转一下是为了解决堆积面积图时会产生重叠覆盖问题
-    }
-
-    /**
-     *
-     * 处理堆积状态下的series
-     * @param _this
-     * @param stacks
-     * @param config
-     * @returns {Array}
-     */
-    function parseStacksSeries(ctx, stacksSeries, config) {
-        var stackSeries = [];
-        for (var k in stacksSeries) {
-            if (stacksSeries.hasOwnProperty(k)) {
-                var oldData = null, oldInterpolate = 'linear';
-                stacksSeries[k].forEach(function (serie) {
-                    if (serie.show !== false) {
-                        var xAxisIndex = serie.xAxisIndex,
-                            yAxisIndex = serie.yAxisIndex;
-                        var xConfig = config['xAxis'][xAxisIndex];
-                        var yConfig = config['yAxis'][yAxisIndex];
-                        var xScale = ctx.xAxisScale[xAxisIndex];
-                        var yScale = ctx.yAxisScale[yAxisIndex];
-                        var serieIdx = serie.idx;
-                        serie.interpolate = serie.smooth ? 'monotone' : 'linear';
-                        serie.y0Interpolate = oldInterpolate;
-                        serie.xScale = xScale;
-                        serie.yScale = yScale;
-                        oldInterpolate = serie.interpolate;
-                        if (serie.xScale.domain().length === 0) {
-                            serie.data = [];
-                        }
-                        serie.data = serie.data.map(function (dataValue, idx) {
-                            var data = {}, isStackPoint = true;
-
-                            // TODO 这里好像只能满足category
-                            if (xConfig.type != 'value') {
-                                data.x = xConfig.data[idx];
-                                if (data.x === undefined) {
-                                    console.error('The length of xAxis.data and series.data is not match!', idx);
-                                }
-                                var maxY = yScale.domain()[1];
-                                var minY = yScale.domain()[0];
-                                if (!oldData) {
-                                    data.y0 = minY;
-                                    data.y = parseFloat(dataValue);
-                                } else {
-                                    isStackPoint = oldData[idx] && !oldData[idx].justCircle;
-                                    data.y0 = isStackPoint ? oldData[idx].y : minY;
-                                    data.y = parseFloat(dataValue) + (isStackPoint ? oldData[idx].y : 0);
-                                }
-                                data.isStackPoint = isStackPoint;
-                                if (data.y > maxY) {
-                                    data.y = maxY;
-                                }
-                                if (data.y < minY) {
-                                    data.y = minY;
-                                }
-                                if (typeof data.y === 'number' && data.y !== data.y) {
-                                    data.justCircle = true;
-                                    dataValue = '-';
-                                    data.y = maxY;
-                                }
-                                data.x = xConfig.data[idx];
-                            }
-
-                            data.value = dataValue;
-                            data.idx = serieIdx;
-                            data._serie = serie;
-                            if (config.xAxis.middleBand) {
-                                var rangeBand = xScale.bandwidth();
-                                data.adjustedX = xScale(data.x) + idx * rangeBand / 2;
-                            }
-                            return data;
-                        });
-                        oldData = serie.data;
-                    }
-                    stackSeries.push(serie);
-                });
-
-            }
-        }
-        return stackSeries;
-    }
-
-    /**
-     * 处理非堆积状态的series
-     * @param _this
-     * @param lineSeries
-     * @param config
-     * @returns {*}
-     */
-    function parseNormalSeries(_this, lineSeries, config) {
-        var invalidPoints = 0;
-        lineSeries = lineSeries.map(function (serie) {
-            if (serie.show !== false) {
-
-                var xAxisIndex = serie.xAxisIndex,
-                    yAxisIndex = serie.yAxisIndex;
-
-                var xConfig = config['xAxis'][xAxisIndex];
-                var yConfig = config['yAxis'][yAxisIndex];
-                var xScale = _this.xAxisScale[xAxisIndex];
-                var yScale = _this.yAxisScale[yAxisIndex];
-                var serieIdx = serie.idx;
-                serie.interpolate = serie.smooth ? 'monotone' : 'linear';
-                serie.y0Interpolate = 'linear';
-                serie.xScale = xScale;
-                serie.yScale = yScale;
-                if (serie.xScale.domain().length === 0) {
-                    console.error('xAxis.data is empty!');
-                    serie.data = [];
-                }
-                serie.data = serie.data.map(function (dataValue, idx) {
-                    var data = {};
-                    if (xConfig.type != 'value') {
-                        data.x = xConfig.data[idx];
-                        if (data.x === undefined) {
-                            console.error('The length of xAxis.data and series.data is not match!', idx);
-                        }
-                        var maxY = yScale.domain()[1];
-                        var minY = yScale.domain()[0];
-                        data.y = parseFloat(dataValue);
-                        if (data.y > maxY) {
-                            data.y = maxY;
-                        }
-                        if (data.y < minY) {
-                            data.y = minY;
-                        }
-                        if (typeof data.y === 'number' && data.y !== data.y) {
-                            data.justCircle = true;
-                            dataValue = '-';
-                            data.y = maxY;
-                        }
-                        data.y0 = minY;
-                    }
-
-                    data.value = dataValue;
-                    data.idx = serieIdx;
-                    data._serie = serie;
-                    if (xConfig.middleBand) {
-                        var rangeBand = xScale.bandwidth();
-                        data.adjustedX = xScale(data.x) + rangeBand / 2;
-                    }
-                    return data;
-                });
-                if (config.peekPoints.enable) {
-                    var sortedData = utils.copy(serie.data);
-                    sortedData.sort(function (pre, cur) {
-                        if (pre.y < cur.y) {
-                            return -1;
-                        } else if (pre.y === cur.y) {
-                            return 0;
-                        } else {
-                            return 1;
-                        }
-                    });
-                    serie.peekPoints = [sortedData[0], sortedData[sortedData.length - 1]];
-                }
-            }
-            return serie;
-        }).filter(function (item) {
-            return item.data.length > 0;
-        });
-        return lineSeries;
-    }
-
-    /**
-     * 替换d3.svg.area函数
-     * @param data
-     */
-    function area(data, serie) {
-        var lineScale = d3.line()
-            .x(function (d) {
-                return d.x;
-            })
-            .y(function (d) {
-                return d.y;
-            });
-        var line0Scale = d3.line()
-            .x(function (d) {
-                return d.x;
-            })
-            .y(function (d) {
-                return d.y0;
-            });
-
-
-        lineScale.curve(serie.interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-        var path = lineScale(data);
-        // line0Scale.interpolate(serie.line0Scale);
-        line0Scale.curve(serie.y0Interpolate === 'linear' ? d3.curveLinear : d3.curveMonotoneX);
-        var stackIdxList = [], stackDataList = [];
-        serie.data.forEach(function (d, i) {
-            if (!d.isStackPoint) {
-                stackIdxList.push(i);
-            }
-        });
-        if (stackIdxList.length > 0) {
-            var preIndex = 0;
-            stackIdxList.push(data.length);
-            for (var index = 0; index < stackIdxList.length; index++) {
-                var curIndex = stackIdxList[index];
-                if (curIndex - preIndex > 0) {
-                    stackDataList.push(data.slice(preIndex, curIndex));
-                }
-                preIndex = curIndex + 1;
-            }
-        } else {
-            stackDataList = [data];
-        }
-        var path0 = '';
-        stackDataList.forEach(function (data) {
-            path0 += line0Scale(data.reverse());
-        });
-        // var path0 = line0Scale(data.reverse());
-        data.reverse()//再次翻转，恢复原状
-        return joinPath(path, path0, data);
-    }
-
-    /**
-     * 将path和path0拼接成一个areaPath
-     * @param serie
-     */
-    function joinPath(path, path0, data) {
-        var firstData = data[0], lastData = data[data.length - 1];
-        var leftTop = [firstData.x, firstData.y],
-            rightBottom = [lastData.x, lastData.y0];
-
-        return path + 'L' + rightBottom + path0 + 'L' + leftTop;
-    }
-
-    /**
-     * 折线图tooltip默认格式化函数
-     * @param name x轴值
-     * @param value y轴值
-     * @returns {string} 一段html文本
-     */
-    function defaultFormatter(name, value) {
-        if (value !== '') {
-            return '<p>' + name + ':&nbsp;' + value + '</p>';
-        }
-        return '';
-    }
-
-    function defaultConfig() {
-        /**
-         * @var line
-         * @type Object
-         * @extends xCharts.series
-         * @description 折线图配置项
-         */
-        var config = {
-            /**
-             * @var name
-             * @type String
-             * @description 线条名字
-             * @extends xCharts.series.line
-             */
-            name: '',
-            /**
-             * 定义图表类型是折线图
-             * @var type
-             * @type String
-             * @description 指定图表类型
-             * @values 'line'
-             * @extends xCharts.series.line
-             */
-            type: 'line',
-            xAxisIndex: 0,
-            /**
-             * @var yAxisIndex
-             * @type Number
-             * @description 使用哪一个y轴，从0开始，对应yAxis中的坐标轴
-             * @default 0
-             * @extends xCharts.series.line
-             */
-            yAxisIndex: 0,
-            /**
-             * @var smooth
-             * @type Boolean
-             * @description 折线是否开启平滑曲线,默认开启
-             * @default true
-             * @extends xCharts.series.line
-             */
-            smooth: true,
-            /**
-             * @var lineStyle
-             * @type Object
-             * @description 线条样式控制
-             * @extends xCharts.series.line
-             */
-            lineStyle: {
-                /**
-                 * @var color
-                 * @type String
-                 * @description 折线颜色控制，不设或者设置为'auto',则由系统默认分配一个颜色
-                 * @default 'auto'
-                 * @values 'auto'|css颜色值
-                 * @extends xCharts.series.line.lineStyle
-                 */
-                color: 'auto',
-                /**
-                 * @var width
-                 * @type Number
-                 * @description 折线宽度控制，数字越大折线越粗，不允许负值
-                 * @default 2
-                 * @extends xCharts.series.line.lineStyle
-                 */
-                width: 2,
-                /**
-                 * @var radius
-                 * @type Number
-                 * @description 折线上圆点的大小，数字越大，圆点越大
-                 * @default 3
-                 * @extends xCharts.series.line.lineStyle
-                 */
-                radius: 3
-            },
-            /**
-             * @var areaStyle
-             * @type Object
-             * @description 面积图样式控制
-             * @extends xCharts.series.line
-             */
-            areaStyle: {
-                /**
-                 * @var show
-                 * @type Boolean
-                 * @description 开启面积图，默认不开启
-                 * @default false
-                 * @extends xCharts.series.line.areaStyle
-                 */
-                show: false,
-                /**
-                 * @var color
-                 * @type String
-                 * @description 面积图颜色值,不设或者设置为'auto'，颜色和折线一致
-                 * @default 'auto'
-                 * @values 'auto'|css颜色值
-                 * @extends xCharts.series.line.areaStyle
-                 */
-                color: 'auto',
-                /**
-                 * @var opacity
-                 * @type Number
-                 * @description 面积图颜色透明度控制
-                 * @default 0.3
-                 * @values 0-1
-                 * @extends xCharts.series.line.areaStyle
-                 */
-                opacity: 0.3
-            },
-            /**
-             * @var data
-             * @type Array
-             * @description 折线图数据，提供给type=value的坐标轴使用
-             * @extends xCharts.series.line
-             * @example
-             * data: ['11%', 11, 15, 70, 12, 40, 60]
-             * //这里最终会通过parseFloat转化，字符串和数字都无所谓，不过单位会丢失，如果需要单位需要配置units选项
-             */
-            data: [],
-            /**
-             * @var units
-             * @type String
-             * @description 补全数据的单位配合data使用，提供给tooltip使用,也可以在tooltip里的formatter里自己配置格式化结果
-             * @extends xCharts.series.line
-             * @example
-             * units: '%'
-             */
-            units: ''
-            /**
-             * @var formatter
-             * @extends xCharts.series.line
-             * @type Function
-             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
-             * @example
-             *  formatter: function (name,data) {
-                 *   return '<p>'+name + ':&nbsp;' + data+'</p>';
-                 *  }
-             */
-            //formatter:function(name,value){
-            //    return name+':&nbsp;'+data;
-            //}
-        };
-        return config;
-    }
-
-}(xCharts, d3));
-/**
- * Author liuyang46@meituan.com
- * Date 16/5/26
- * Describe 折线图,移动端适配
- */
-(function (xCharts, d3) {
-    var utils = xCharts.utils;
-    var charts = xCharts.charts;
-    var line = charts.line;
-
-    line.prototype.extend({
-        mobileReady: function () {
-            this.circle.on('touchstart', line.tooltipTriggerItem(this));
-        }
-    });
-}(xCharts, d3));
-/**
  * @file 饼图
  * @author chenwubai.cx@gmail.com
  */
@@ -7431,646 +7496,576 @@ var peekPoints ={
 }(xCharts, d3));
 
 /**
- * @file 雷达图
- * @author chenwubai.cx@gmail.com
+ * 漏斗图
  */
-(function(xCharts, d3) {
+(function (xCharts, d3) {
     var utils = xCharts.utils;
     var Chart = xCharts.charts.Chart;
-    // 创建radar构造函数
-    function radar(messageCenter, config) {
-        // 调用这一步的原因是为了继承属性
-        Chart.call(this, messageCenter, config, 'radar');
+    xCharts.charts.extend({funnel: funnel});
+    utils.inherits(funnel, Chart);
+
+    function funnel(messageCenter, config) {
+        Chart.call(this, messageCenter, config, 'funnel');
     }
 
-    // 在xCharts中注册radar构造函数
-    xCharts.charts.extend({ radar: radar });
-    // 从父类Chart里继承一系列的方法
-    utils.inherits(radar, Chart);
-
-    radar.prototype.extend = xCharts.extend;
-    radar.prototype.extend({
-        init: function(messageCenter, config, type, series) {
-
-            // 提取雷达图配置项(目前不支持多图,直接忽略其他图表配置项)
-            for(var i = 0, length = series.length; i < length; i++) {
-                if(series[i].type === 'radar') {
-                    this.radarConfig = utils.copy(series[i], true);
-                    break;
-                }
-            }
-
-            // 合并默认值,转换百分比为数值等
-            __correctConfig.apply(this);
-
-            // 计算网轴点坐标
-            this.polygonWebs = __getPolygonWebs.apply(this);
-            // 计算雷达图形的点坐标
-            this.areas = __getAreas.apply(this);
-            // 计算文字标签的点
-            this.textPoints = __getTextPoints.apply(this);
-            // 计算覆盖整个网轴的多边形的点坐标
-            this.coverPolygons = __getCoverPolygons.apply(this);
+    funnel.prototype.extend = xCharts.extend;
+    funnel.prototype.extend({
+        init: function (messageCenter, config, type, series) {
+            var _this = this;
+            _this.series = parseSeries(series, _this);
         },
-        render: function(animationEase, animationTime) {
-            // 添加雷达图的g容器
-            this.radar = __renderRadarWrapper.apply(this);
-            // 添加网轴
-            this.webList = __renderWebs.apply(this);
-            // 添加网轴线
-            this.lineList = __renderLines.apply(this);
-            // 添加雷达图形
-            this.areaList = __renderAreas.apply(this, [animationEase, animationTime]);
-            // 添加文字标签
-            this.textList = __renderText.apply(this);
-            // 添加覆盖的多边形
-            this.coverPolygonList = __renderCoverPolygons.apply(this);
-        },
-        ready: function() {
-            if(this.mobileMode) {
-                this.mobileReady();
-            } else {
-                if(this.config.legend && this.config.legend.show) {
-                    __legendReady.apply(this);
-                }
-                if(this.config.tooltip && this.config.tooltip.show) {
-                    __tooltipReady.apply(this);
-                }
-            }
-        },
-        _reRenderAreas: function(nameList) {
-            for(var i=0;i<this.areas.length;i++) {
-                this.areas[i].isShow = false;
-            }
-            for(var i=0;i<nameList.length;i++) {
-                for(var k=0;k<this.areas.length;k++) {
-                    if(nameList[i] == this.areas[k].originalData.name) {
-                        this.areas[k].isShow = true;
-                        break;
-                    }
-                }
-            }
-            for(var i=0;i<this.areas.length;i++) {
-                d3.select(this.areaList._groups[0][i]).classed('hidden', !this.areas[i].isShow);
-            }
-        },
-        _showTooltip: function(index, ele) {
-            var tooltip = this.messageCenter.components.tooltip;
-            var tooltipFormatter = tooltip.tooltipConfig.formatter,
-                radarFormatter = this.radarConfig.formatter;
-            var formatter = radarFormatter || tooltipFormatter || defaultFormatter;
-            var position = d3.mouse(this.svg.node());
-            position = [
-                position[0] + 40,
-                position[1] + 40
-            ];
-            var indicator = this.radarConfig.indicator[index].text;
-            var valueList = [];
-            for(var i=0;i<this.radarConfig.data.length;i++) {
-                if(this.areas[i].isShow) {
-                    valueList.push({
-                        name: this.radarConfig.data[i].name,
-                        value: this.radarConfig.data[i].value[index]
-                    });
-                }
-            }
-            tooltip.setTooltipHtml(formatter(indicator, valueList));
-            tooltip.showTooltip();
-            tooltip.setPosition(position);
-            var areaPointsList = this.areaList.selectAll('.xc-radar-area-point');
-            for(var i=0;i<areaPointsList.length;i++) {
-                var areaPoints = areaPointsList[i];
-                d3.select(areaPoints[index]).style('stroke-width', 5);
-            }
-            this.lineList.classed('xc-radar-tooltip-line', false);
-            d3.select(this.lineList._groups[0][index]).classed('xc-radar-tooltip-line', true);
-        }
-    });
-    function __correctConfig() {
+        render: function (animationEase, animationTime) {
+            //注意一个serie就是一个图
+            var _this = this;
+            var animationConfig = _this.config.animation;
 
-        // 合并默认值
-        this.radarConfig = utils.merage(defaultConfig(), this.radarConfig);
+            var funnelGroup = _this.main.selectAll('.xc-funnel-group')
+                .data(_this.series);
 
-        // 计算图的中心坐标
-        var center = this.radarConfig.center;
-        if(typeof center[0] === 'string') {
-            center[0] = parseFloat(center[0]) * 0.01 * this.width;
-        }
-        if(typeof center[1] === 'string') {
-            center[1] = parseFloat(center[1]) * 0.01 * this.height;
-        }
-        // 计算最大的多边形的半径
-        if(typeof this.radarConfig.radius === 'string') {
-            this.radarConfig.radius = parseFloat(this.radarConfig.radius) * 0.01 * this.width;
-        }
-        // 添加对雷达图大小的处理,如果半径太大,自动把半径保持在可控的最大值
-        var minLength = this.width < this.height ? this.width : this.height;
-        // 减20是考虑到还有文字标签占着位置
-        if(this.radarConfig.radius * 2 + 20 > minLength) {
-            this.radarConfig.radius = (minLength - 20)/2 ;
-        }
-    }
-    function __getPolygonWebs() {
+            funnelGroup = funnelGroup.enter().append('g')
+                .attr('class', 'xc-funnel-group')
+                .merge(funnelGroup);
 
-        // 计算网轴多边形的点
-        this.radarConfig.total = this.radarConfig.data[0].value.length;
-        var onePiece = 2 * Math.PI/this.radarConfig.total;
-        var polygonWebs = [];
-        for(var k=this.radarConfig.levels;k>0;k--) {
-            var web = '',
-                points = [];
-            var r = this.radarConfig.radius/this.radarConfig.levels * k;
-            for(var i=0;i<this.radarConfig.total;i++) {
-                var x = r * Math.sin(i * onePiece),
-                    y = r * Math.cos(i * onePiece);
-                web += x + ',' + y + ' ';
-                points.push({ x: x, y: y });
-            }
-            polygonWebs.push({
-                webString: web,
-                webPoints: points
+            funnelGroup.exit().remove();//updateSeries时，删除多余的组
+
+            funnelGroup.attr('transform', function (serie) {
+                return 'translate(' + serie.xOffset + ',' + serie.yOffset + ')';
+            })
+            //画区块
+            var funnelSection = funnelGroup.selectAll('.xc-funnel-section').data(function (serie) {
+                return serie.data;
             });
-        }
-        return polygonWebs;
-    }
-    function __getAreas() {
-        // 计算雷达图形的点
-        var areas = [];
-        for(var i=0; i<this.radarConfig.data.length;i++) {
-            var d = this.radarConfig.data[i],
-                max = this.radarConfig.indicator[i].max,
-                min = this.radarConfig.indicator[i].min,
-                area = '',
-                points = [];
-            for(var k=0;k< d.value.length;k++) {
-                var x = this.polygonWebs[0].webPoints[k].x * d.value[k]/(max - min),
-                    y = this.polygonWebs[0].webPoints[k].y * d.value[k]/(max - min);
-                area += x + ',' + y + ' ';
-                points.push({
-                    x: x,
-                    y: y,
-                    // 增加一个属性存放原始属性,方便后面设置颜色
-                    originalData: d
+            funnelSection = funnelSection.enter().append('path')
+                .attr('class', 'xc-funnel-section')
+                .merge(funnelSection)
+
+            funnelSection.attr('fill', function (d) {
+                    return _this.getColor(d.idx);
+                })
+                .transition()
+                .ease(animationEase)
+                .duration(animationTime)
+                .attrTween('d', function (d) {
+
+                    if (this.pathArr === undefined) {
+                        var pathArr = utils.copy(d.pathArr, true);
+                        pathArr[2][1] = pathArr[2][1] * 0.95;
+                        pathArr[3][1] = pathArr[3][1] * 0.95;
+                        this.pathArr = pathArr;
+                    }
+
+                    // this.pathArr = this.pathArr === undefined ? d.pathArr : this.pathArr;
+                    var interpolate = d3.interpolate(this.pathArr, d.pathArr);
+                    this.pathArr = d.pathArr;
+                    return function (t) {
+                        return buildFunnelPath(interpolate(t));
+                    }
+                });
+
+            //画label
+            var funnelLabel = funnelGroup.selectAll('.xc-funnel-label')
+                .data(function (serie) {
+                    return serie.data;
+                });
+
+            var transitionStr = "opacity " + animationConfig.animationTime + "ms linear";
+
+            funnelLabel = funnelLabel.enter().append('g')
+                .attr('class', 'xc-funnel-label')
+                .style("transition", transitionStr)
+                .merge(funnelLabel);
+
+            funnelLabel.exit().remove();
+            funnelLabel.attr('opacity', function (d) {
+                    if (d.show == false)
+                        return 0;
+                    else
+                        return 1;
+                })
+                .transition()
+                .ease(animationEase)
+                .duration(animationTime)
+                .attrTween('transform', function (d) {
+
+                    if (this.labelPosition === undefined) {
+                        this.labelPosition = [d.labelPosition[0] * 1.1, d.labelPosition[1]];
+                    }
+
+                    // this.labelPosition = this.labelPosition === undefined ? d.labelPosition : this.labelPosition;
+                    var interpolate = d3.interpolate(this.labelPosition, d.labelPosition);
+                    this.labelPosition = d.labelPosition;
+                    return function (t) {
+                        return 'translate(' + interpolate(t) + ')';
+                    }
+
+                })
+
+            var labelLine = funnelLabel.selectAll('.xc-funnel-label-line')
+                .data(function (d) {
+                    if (d.show != false)
+                        return [d]
+                    else
+                        return [];
+                });
+
+            labelLine = labelLine.enter().append('path')
+                .attr('class', 'xc-funnel-label-line')
+                .merge(labelLine);
+
+            labelLine.attr('d', function (d) {
+                    return 'M0,0 L' + d.labelWidth + ',0';
+                })
+                .attr('stroke', function (d) {
+                    return _this.getColor(d.idx);
+                });
+
+            var labelText = funnelLabel.selectAll('.xc-funnel-label-text')
+                .data(function (d) {
+                    if (d.show != false)
+                        return [d]
+                    else
+                        return [];
+                });
+
+            labelText = labelText.enter().append('text')
+                .attr('class', 'xc-funnel-label-text')
+                .merge(labelText);
+            labelText.text(function (d) {
+                    return d.name
+                })
+                .attr('font-size', 14)
+                .attr('x', function (d) {
+                    return d.labelWidth + 5;
+                })
+                .attr('y', '0.2em');
+
+            _this.funnelSection = funnelSection;
+        },
+        ready: function () {
+            this.__legendReady();
+            this.__tooltipReady();
+        },
+        __legendReady: function () {
+            var _this = this;
+            _this.on('legendMouseenter.funnel', function (name) {
+                _this.funnelSection.attr('opacity', function (d) {
+                    var op = 1;
+                    if (d.name == name) op = d._serie.itemStyle.opacity
+                    return op;
+                });
+            });
+            _this.on('legendMouseleave.funnel', function () {
+                _this.funnelSection.attr('opacity', 1);
+            });
+            _this.on('legendClick.funnel', function (nameList) {
+                var series = legendClickSeries(_this.config.series, nameList);
+                var animationConfig = _this.config.animation;
+                _this.init(_this.series, _this.config, _this.type, series);
+                _this.render(animationConfig.animationEase, animationConfig.animationTime);
+            });
+        },
+        __tooltipReady: function () {
+            if (!this.config.tooltip || this.config.tooltip.show === false || this.config.tooltip.trigger == 'axis') return;//未开启tooltip
+            var _this = this;
+            var tooltip = _this.messageCenter.components['tooltip'];
+            var tooltipFormatter = tooltip.tooltipConfig.formatter;
+
+            if (_this.mobileMode) {
+                _this.mobileReady();
+            } else {
+                _this.funnelSection.on('mousemove.funnel', function (data) {
+                    var event = d3.event;
+                    var x = event.layerX || event.offsetX, y = event.layerY || event.offsetY;
+                    var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+
+                    var title = "<p>" + data._serie.name + "</p>";
+                    tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+                    tooltip.setPosition([x, y]);
+                });
+
+                _this.funnelSection.on('mouseenter.funnel', function (data) {
+                    d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+                    tooltip.showTooltip();
+                })
+
+                _this.funnelSection.on('mouseleave.funnel', function () {
+                    d3.select(this).attr('opacity', 1);
+                    tooltip.hiddenTooltip();
                 });
             }
-            areas.push({
-                areaString: area,
-                areaPoints: points,
-                originalData: d,
-                isShow: true
-            });
         }
-        return areas;
-    }
-    function __getTextPoints() {
-        // 计算文字标签的点
-        // TODO 优化文字标签分布
-        var textPoints = [];
-        var textRadius = this.radarConfig.radius + 20;
-        for(var i=0;i<this.radarConfig.total;i++) {
-            textPoints.push({
-                x: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].x,
-                y: textRadius/this.radarConfig.radius * this.polygonWebs[0].webPoints[i].y + 8
-            });
-        }
-        return textPoints;
-    }
-    function __getCoverPolygons() {
-        // 计算覆盖整个多边形网轴的多边形的坐标
-        var webPoints = this.polygonWebs[0].webPoints;
-        var coverPolygons = [];
-        var length = webPoints.length;
-        for(var i=0;i<length;i++) {
-            var lastPoint = i==0 ? webPoints[length-1] : webPoints[i-1],
-                currentPoint = webPoints[i],
-                nextPoint = webPoints[(i+1)%length];
-            var pointsStr = '0,0',
-                points = [ {x:0, y:0} ];
-            pointsStr += ' ' + (lastPoint.x+currentPoint.x)/2 + ',' + (lastPoint.y+currentPoint.y)/2;
-            points.push({
-                x: (lastPoint.x+currentPoint.x)/2,
-                y: (lastPoint.y+currentPoint.y)/2
-            });
-            pointsStr += ' ' + currentPoint.x + ',' + currentPoint.y;
-            points.push({
-                x: currentPoint.x,
-                y: currentPoint.y
-            });
-            pointsStr += ' ' + (currentPoint.x+nextPoint.x)/2 + ',' + (currentPoint.y+nextPoint.y)/2;
-            points.push({
-                x: (currentPoint.x+nextPoint.x)/2,
-                y: (currentPoint.y+nextPoint.y)/2
-            });
-            coverPolygons.push({
-                pointsStr: pointsStr,
-                points: points,
-                index: i
-            });
-        }
-        return coverPolygons;
-    }
-    function __renderRadarWrapper() {
-        var radar = this.main
-            .selectAll('.xc-radar')
-            .data([1]);
-        radar = radar.enter()
-            .append('g')
-            .classed('xc-radar', true)
-            .merge(radar);
-        radar.attr('transform', 'translate(' + this.radarConfig.center[0] + ',' + this.radarConfig.center[1] + ')');
-        return radar;
-    }
-    function __renderWebs() {
-        var webs = this.radar
-            .selectAll('.xc-radar-webs')
-            .data([1]);
-        webs = webs.enter()
-            .append('g')
-            .classed('xc-radar-webs', true)
-            .merge(webs);
-        var webList = webs.selectAll('.xc-radar-web')
-            .data(this.polygonWebs);
-        webList = webList.enter()
-            .append('polygon')
-            .classed('xc-radar-web', true)
-            .merge(webList);
-        webList.attr('points', function(d) { return d.webString; });
-        return webList;
-    }
-    function __renderLines() {
-        var lines = this.radar
-            .selectAll('.xc-radar-lines')
-            .data([1]);
-        lines = lines.enter()
-            .append('g')
-            .classed('xc-radar-lines', true)
-            .merge(lines);
-        var lineList = lines.selectAll('.xc-radar-line')
-            .data(this.polygonWebs[0].webPoints);
-        lineList = lineList.enter()
-            .append('line')
-            .classed('xc-radar-line', true)
-            .merge(lineList);
-        lineList.attr('x1', 0)
-            .attr('y1', 0)
-            .attr('x2', function(d) {
-                return d.x;
+    });
+
+
+    function legendClickSeries(series, nameList) {
+        series.forEach(function (serie) {
+
+            if (serie.type != 'funnel') return;
+
+            serie.data.forEach(function (d) {
+                if (inNameList(d.name, nameList)) d.show = true;
+                else d.show = false;
             })
-            .attr('y2', function(d) {
-                return d.y;
-            });
-        return lineList;
-    }
-    function __renderAreas(animationEase, animationTime) {
-        var _self = this;
-        var areas = this.radar
-            .selectAll('.xc-radar-areas')
-            .data([1]);
-        areas = areas.enter()
-            .append('g')
-            .classed('xc-radar-areas', true)
-            .merge(areas);
-        var areaList = areas.selectAll('.xc-radar-area')
-            .data(this.areas);
-        areaList = areaList.enter()
-            .append('g')
-            .attr('class', function(d, i) {
-                return 'xc-radar-area xc-radar-area' + d.originalData.idx;
-            })
-            .merge(areaList);
-        var polygonList = areaList.selectAll('polygon')
-            .data(function(d) {
-                return [d];
-            });
-        polygonList = polygonList.enter()
-            .append('polygon')
-            .attr('points', function(d) {
-                return Array.apply(0, Array(_self.radarConfig.total)).map(function() {
-                    return '0,0';
-                }).join(' ');
-            })
-            .style('stroke', function (d) {
-                if(!d.originalData.color) {
-                    d.originalData.color = _self.getColor(d.originalData.idx);
-                }
-                return d.originalData.color;
-            })
-            .style('fill', function(d) {
-                if(_self.radarConfig.fill) {
-                    return d.originalData.color;
-                }
-                return '';
-            })
-            .merge(polygonList);
-        polygonList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('points', function(d) {
-                return d.areaString;
-            });
-        var pointsList = areaList.selectAll('.xc-radar-area-point')
-            .data(function(d) {
-                return d.areaPoints;
-            });
-        pointsList = pointsList.enter()
-            .append('circle')
-            .classed('xc-radar-area-point', true)
-            .attr('cx', 0)
-            .attr('cy', 0)
-            .merge(pointsList);
-        pointsList.style('stroke', function(d){
-            return d.originalData.color;
-        });
-        pointsList.transition()
-            .duration(animationTime)
-            .ease(animationEase)
-            .attr('cx', function(d) {
-                return d.x;
-            })
-            .attr('cy', function(d) {
-                return d.y;
-            });
-        return areaList;
-    }
-    function __renderText() {
-        var _self = this;
-        var texts = this.radar
-            .selectAll('.xc-radar-texts')
-            .data([1]);
-        texts = texts.enter()
-            .append('g')
-            .classed('xc-radar-texts', true)
-            .merge(texts);
-        var textList = texts.selectAll('.xc-radar-text')
-            .data(this.textPoints);
-        textList = textList.enter()
-            .append('text')
-            .classed('xc-radar-text', true)
-            .text(function(d, i) {
-                return _self.radarConfig.indicator[i].text;
-            })
-            .attr('text-anchor', 'middle')
-            .merge(textList);
-        textList.attr('x', function(d) {
-            return d.x;
         })
-            .attr('y', function(d) {
-                return d.y;
-            });
-        return textList;
-    }
-    function __renderCoverPolygons() {
-        var coverPolygons = this.radar
-            .selectAll('.xc-radar-coverPolygons')
-            .data([1]);
-        coverPolygons = coverPolygons.enter()
-            .append('g')
-            .classed('xc-radar-coverPolygons', true)
-            .merge(coverPolygons);
-        var coverPolygonList = coverPolygons.selectAll('.xc-radar-coverPolygon')
-            .data(this.coverPolygons);
-        coverPolygonList = coverPolygonList.enter()
-            .append('polygon')
-            .classed('xc-radar-coverPolygon', true)
-            .merge(coverPolygonList);
-        coverPolygonList.attr('points', function(d) {
-            return d.pointsStr;
-        });
-        return coverPolygonList;
-    }
-    function __legendReady() {
-        __legendMouseEnter.apply(this);
-        __legendMouseOut.apply(this);
-        __legendClick.apply(this);
-    }
-    function __legendMouseEnter() {
-        var _this = this;
-        var areas = this.areas;
-        this.on('legendMouseenter.radar', function (name) {
-            var areaData = {};
-            for(var i=0;i<areas.length;i++) {
-                if(name == areas[i].originalData.name) {
-                    areaData = areas[i];
-                    break;
-                }
-            }
-            for(var i=0;i<_this.areaList._groups[0].length;i++) {
-                var areaEle = d3.select(_this.areaList._groups[0][i]);
-                if(areaEle.datum() == areaData) {
-                    areaEle.selectAll('.xc-radar-area-point')
-                        .style('stroke-width', 5);
-                    break;
-                }
-            }
-        });
-    }
-    function __legendMouseOut() {
-        var _this = this;
-        var areas = this.areas;
-        this.on('legendMouseleave.radar', function(name) {
-            var areaData = {};
-            for(var i=0;i<areas.length;i++) {
-                if(name == areas[i].originalData.name) {
-                    areaData = areas[i];
-                    break;
-                }
-            }
-            for(var i=0;i<_this.areaList._groups[0].length;i++) {
-                var areaEle = d3.select(_this.areaList._groups[0][i]);
-                if(areaEle.datum() == areaData) {
-                    areaEle.selectAll('.xc-radar-area-point')
-                        .style('stroke-width', 3);
-                    break;
-                }
-            }
-        });
-    }
-    function __legendClick() {
-        var _this = this;
-        this.on('legendClick.radar', function(nameList) {
-            _this._reRenderAreas(nameList);
-        });
-    }
-    function __tooltipReady() {
-        __tooltipMouseMove.apply(this);
-        __tooltipMouseOut.apply(this);
-    }
-    function __tooltipMouseMove() {
-        var _this = this;
-        this.coverPolygonList.on('mousemove.radar', function () {
-            var index = d3.select(this).datum().index;
-            _this._showTooltip(index, this);
-        });
-    }
-    function __tooltipMouseOut() {
-        var _this = this;
-        this.coverPolygonList.on('mouseout.radar', function () {
-            var tooltip = _this.messageCenter.components.tooltip;
-            tooltip.hiddenTooltip();
-            var areaPointsList = _this.areaList.selectAll('.xc-radar-area-point');
-            areaPointsList.style('stroke-width', 3);
-            _this.lineList.classed('xc-radar-tooltip-line', false);
-        });
+        return series;
     }
 
-    function defaultFormatter(indicator, valueList) {
-        var htmlStr = '';
-        htmlStr += "<h3>" + indicator + "</h3>";
-        for(var i=0;i<valueList.length;i++) {
-            htmlStr += "<div>" + valueList[i].name + "：" + valueList[i].value + "</div>";
+    function inNameList(name, nameList) {
+        for (var i = 0, n; n = nameList[i++];) {
+            if (name == n)
+                return true;
         }
-        return htmlStr;
+        return false;
     }
+
+    function buildFunnelPath(pathArr) {
+        var dStr = 'M';
+        dStr += pathArr[0];
+        dStr += 'L' + pathArr[1];
+        dStr += 'L' + pathArr[2];
+        dStr += 'L' + pathArr[3];
+        return dStr;
+    }
+
+    function parseSeries(series, that) {
+        var funnelSeries = []
+        for (var i = 0, s; s = series[i++];) {
+            //第一步判断是否是漏斗图
+            if (s.type != 'funnel') return;
+            s = utils.merage(defaultConfig(), s);
+            calcWidth(s, that);
+            calcPosition(s, that);
+            s.funnelPath = funnelPath(s);
+            s.data.forEach(function (d, idx) {
+                d.idx = d.idx == null ? idx : d.idx;
+                d._serie = s;
+                d.pathArr = s.funnelPath(idx);
+
+                //计算label的位置
+                var labelX = (d.pathArr[0][0] + d.pathArr[1][0]) / 2;
+                var labelY = (d.pathArr[0][1] + d.pathArr[2][1]) / 2;
+                d.labelPosition = [labelX, labelY];
+                //计算label线的长度
+                d.labelWidth = d.sectionWidth / 2 + 30;//30是突出多少
+            });
+
+            funnelSeries.push(s);
+        }
+        return funnelSeries;
+    }
+
+
+    function funnelPath(serie) {
+        var width = serie.width, height = serie.height, data = serie.data, sort = serie.sort;
+        //塔尖向下，从大到小排序，塔尖向上，从小到大排序
+        data.sort(function (a, b) {
+            var ret = a.value - b.value;
+            if (sort == 'top') {
+                return ret;
+            } else {
+                return -ret;
+            }
+        });
+        //计算还有多少区块需要显示
+        var length = data.length, maxValue = -Infinity;
+        data.forEach(function (d) {
+            if (d.show == false) length--;
+            maxValue = d3.max([maxValue, parseFloat(d.value)])
+        });
+        var sectionHeight = height / length;//每个区块的高度
+        //计算每个data对应的起点和终点
+        var index = sort == 'top' ? 1 : 0,//如果是塔尖向上，则第一个变量的y坐标不是0，而是一个sectionHeigth的高度,该变量是用来计算区块y坐标
+            position = [];
+        data.forEach(function (d, i) {
+            d.maxValue = maxValue;
+            d.percentage = parseFloat(d.value) / maxValue;
+            if (d.show == false) {
+                position[i] = undefined;
+                return
+            }
+            ;
+            var sectionWidth = d.percentage * width;
+            d.sectionWidth = sectionWidth;
+            var xOffset = (width - sectionWidth) / 2;
+            position[i] = [];
+            position[i][0] = [xOffset, sectionHeight * index];
+            position[i][1] = [xOffset + sectionWidth, sectionHeight * index];
+            index++;
+        });
+
+        //保证每个区块是由四个点组成，所以塔尖需要两个重复的点
+        if (sort == 'top') {
+            var topP = [width / 2, 0];
+            position.unshift([topP, topP]);
+        } else {
+            var bottomP = [width / 2, sectionHeight * index];
+            position.push([bottomP, bottomP]);
+        }
+        //在第一次计算区块坐标时会导致show=false的position位置为undefined，这里根据塔尖方向的不同进行补全
+        //主要是为了动画效果,show=false的时候，只是区块高度为0，并不代表没有这个区块
+        for (var i = 0, len = position.length; i < len; i++) {
+            var p = position[i];
+            if (p != undefined) continue;
+            var j = 1;
+            //防止偏移后还是undefined
+            while (position[i] === undefined) {
+                if (sort == 'top')
+                    position[i] = position[i - j];
+                else
+                    position[i] = position[i + j];
+
+                j++;
+            }
+
+        }
+        return function (idx) {
+            //传入一个区块index，获取区块的4个点，依次是左上，又上，右下，左下
+            if (idx < 0 || idx >= data.length) {
+                console.error('内部代码错误,漏斗图获取区块%d，最大值为%d', idx, data.length);
+            }
+            var pathPoints = [];
+            pathPoints[0] = position[idx][0], pathPoints[1] = position[idx][1];
+            pathPoints[2] = position[idx + 1][1], pathPoints[3] = position[idx + 1][0];
+            return pathPoints;
+        }
+    }
+
+    /**
+     * 计算每个漏斗图的宽高
+     * @param serie
+     * @param that
+     */
+    function calcWidth(serie, that) {
+        var width = that.width, heigth = that.height, size = serie.size;
+        var fw = size[0];
+        if (typeof fw == 'string') {
+            if (fw.substr(-1) === '%') {
+                var percent = parseFloat(fw) / 100;
+                fw = percent * width;
+            } else if (fw.substr(-2) == 'px') {
+                fw = parseFloat(fw);
+            } else {
+                fw = parseFloat(fw);
+                if (isNaN(fw)) console.error("name:" + serie.name + " size[0] not support");
+            }
+        } else if (typeof  fw != 'number') {
+            console.error("name:" + serie.name + " size[0] not support");
+        }
+
+        var fh = size[1];
+
+        if (typeof fh == 'string') {
+            if (fh.substr(-1) === '%') {
+                var percent = parseFloat(fh) / 100;
+                fh = percent * heigth;
+            } else if (fh.substr(-2) == 'px') {
+                fh = parseFloat(fh);
+            } else {
+                fh = parseFloat(fh);
+                if (isNaN(fh)) console.error("name:" + serie.name + " size[1] not support");
+            }
+        } else if (typeof  fh != 'number') {
+            console.error("name:" + serie.name + " size[1] not support");
+        }
+        serie.width = fw;
+        serie.height = fh;
+    }
+
+    /**
+     * 计算漏斗图的起始位置
+     * @param series
+     * @param that
+     */
+    function calcPosition(serie, that) {
+        var width = that.width, height = that.height, x = serie.x, y = serie.y;
+        var xOffset = 0, yOffset = 0;
+        if (x == 'center') {
+            xOffset = (width - serie.width) / 2;
+        }
+        else if (x == 'right') {
+            xOffset = (width - serie.width);
+        }
+        else if (x.substr(-1) == '%') {
+            xOffset = parseFloat(x) / 100 * width;
+        } else {
+            x = parseFloat(x);
+            if (isNaN(x)) console.error("name:" + serie.name + " serie.x not support")
+            else xOffset = x;
+        }
+
+        if (y == 'middle') {
+            yOffset = (height - serie.height) / 2;
+        }
+        else if ('y' == 'bottom') {
+            yOffset = (height - serie.height);
+        }
+        else if (y.substr(-1) == '%') {
+            yOffset = parseFloat(y) / 100 * height;
+        } else {
+            y = parseFloat(y);
+            if (isNaN(y)) console.error("name:" + serie.name + " serie.y not support")
+            else yOffset = y;
+        }
+        serie.xOffset = xOffset;
+        serie.yOffset = yOffset;
+    }
+
+    funnel.defaultFormatter = defaultFormatter;
+    function defaultFormatter(name, value, percentage) {
+        return '<p>' + name + ':&nbsp;' + value + ' 占比:' + percentage + '%</p>';
+    }
+
     function defaultConfig() {
         /**
-         * @var radar
+         * @var funnel
          * @type Object
          * @extends xCharts.series
-         * @description 雷达图配置项
+         * @description 漏斗图配置项
          */
-        var config = {
+        var funnel = {
+            /**
+             * @var name
+             * @type String
+             * @extends xCharts.series.funnel
+             * @description 漏斗图代表的名字
+             */
+            name: '漏斗图',
             /**
              * @var type
              * @type String
-             * @description 指定图表类型
-             * @values 'radar'
-             * @extends xCharts.series.radar
+             * @extends xCharts.series.funnel
+             * @default funnel
+             * @description 漏斗图指定类型
              */
-            type: 'radar',
+            type: 'funnel',
             /**
-             * @var levels
-             * @type Number
-             * @description 标记雷达图网轴有几层，取值必须为大于0的整数
-             * @default 4
-             * @extends xCharts.series.radar
+             * @var sort
+             * @type String
+             * @values 'top'|'down'
+             * @default 'down'
+             * @description 漏斗图尖角朝向
+             * @extends xCharts.series.funnel
              */
-            levels: 4,
+            sort: 'down',
             /**
-             * @var radius
-             * @type Number|String
-             * @description 定义雷达图的半径
-             * @default '15%'
-             * @extends xCharts.series.radar
-             */
-            radius: '15%',
-            /**
-             * @var fill
-             * @type Boolean
-             * @description 定义雷达图的区域是否填充，true为填充，false为不填充
-             * @default false
-             * @extends xCharts.series.radar
-             */
-            fill: false,
-            /**
-             * @var center
+             * @var size
+             * @extends xCharts.series.funnel
              * @type Array
-             * @description 雷达图中心位置，可为百分比或数值。若为百分比则center[0]（中心x坐标）参照容器宽度，center[1]（中心y坐标）参照容器高度。
-             * @default ['50%','50%']
-             * @extends xCharts.series.radar
+             * @description 漏斗图大小
+             * @description 可以为百分比，也可以为具体数字，默认单位px
+             * @default ['50%', '50%']
+             * @example
+             *  size:['50%','50%']//百分比
+             *  size:[500,'300']//固定宽高
              */
-            center: ['50%', '50%'],
+            size: ['50%', '50%'],
             /**
-             * @var indicator
-             * @type Array
-             * @description 雷达图各项指标
-             * @extends xCharts.series.radar
+             *  @var x
+             *  @extends xCharts.series.funnel
+             *  @type String|Number
+             *  @default 'center'
+             *  @values 'left'|'right'|'center'|Number(单位像素)|Percentage
+             *  @description 漏斗图左上角在x轴方向的偏移量
              */
-            indicator: [
-                {
-                    /**
-                     * @var text
-                     * @type String
-                     * @description 指标名称
-                     * @extends xCharts.series.radar.indicator
-                     */
-                    // text: '',
-                    /**
-                     * @var max
-                     * @type Number
-                     * @description 指标取值范围的最大值
-                     * @extends xCharts.series.radar.indicator
-                     */
-                    max: 100,
-                    /**
-                     * @var min
-                     * @type Number
-                     * @description 指标取值范围的最大值
-                     * @extends xCharts.series.radar.indicator
-                     */
-                    min: 0
-                }
-            ],
+            x: 'center',
+            /**
+             *  @var y
+             *  @extends xCharts.series.funnel
+             *  @type String|Number
+             *  @default 'center'
+             *  @values 'top'|'middle'|'bottom'|Number(单位像素)|Percentage
+             *  @description 漏斗图左上角在y轴方向的偏移量
+             */
+            y: 'middle',
             /**
              * @var data
              * @type Array
-             * @description 雷达图数据
-             * @extends xCharts.series.radar
+             * @extends xCharts.series.funnel
+             * @description 一个装有漏斗图数据的二维数组
+             * @example
+             *   [
+             *      {name: '腾讯', value: '80'},
+             *      {name: '百度', value: '100'},
+             *      {name: '阿里巴巴', value: '60'},
+             *      {name: '京东', value: '40'},
+             *      {name: '淘宝', value: '20'},
+             *   ]
              */
-            data: [
-                {
-                    /**
-                     * @var name
-                     * @type String
-                     * @description 数据项名称
-                     * @extends xCharts.series.radar.data
-                     */
-                    // name: '',
-                    /**
-                     * @var value
-                     * @type Array
-                     * @description 数据项对应所有指标的值的集合，其中的顺序必须和indicator中指标的顺序相对应。
-                     * @extends xCharts.series.radar.data
-                     */
-                    // value: []
-                }
-            ]
+            data: [],
+            /**
+             * @var formatter
+             * @extends xCharts.series.funnel
+             * @type Function
+             * @description 可以单独定义格式化函数来覆盖tooltip里面的函数
+             * @example
+             *  formatter: function (name,x,y) {
+             *      return '<p>'+name + ':&nbsp;' + value+' 占比:'+percentage+'%</p>';
+             *  }
+             */
+            //formatter:function(){},
+            /**
+             * @var itemStyle
+             * @extends xCharts.series.funnel
+             * @type Object
+             * @description 每个漏斗图区块的样式
+             */
+            itemStyle: {
+                /**
+                 * @var opacity
+                 * @extends xCharts.series.funnel.itemStyle
+                 * @type Number
+                 * @values 0-1
+                 * @description 鼠标移入时，变化的透明度
+                 * @default 0.5
+                 */
+                opacity: 0.5
+            }
         }
-        return config;
+        return funnel;
     }
+
 }(xCharts, d3));
 /**
- * @file 雷达图(移动端)
- * @date 2016-05-30
- * @author chenxuan.cx@gmail.com
+ * Author liuyang46@meituan.com
+ * Date 16/5/27
+ * Describe 漏斗图,移动端适配
  */
 (function (xCharts, d3) {
     var utils = xCharts.utils;
     var charts = xCharts.charts;
-    var radar = charts.radar;
+    var funnel = charts.funnel;
 
-    radar.prototype.extend({
-        mobileReady: function() {
-            if(this.config.legend && this.config.legend.show) {
-                __legendMobileReady.apply(this);
-            }
-            if(this.config.tooltip && this.config.tooltip.show) {
-                __tooltipMobileReady.apply(this);
-            }
+    funnel.prototype.extend({
+        mobileReady: function () {
+            this.funnelSection.on('touchstart.funnel', funnelSectionTrigger(this));
         }
     });
-    function __legendMobileReady() {
-        __legendTouch.apply(this);
-    }
-    function __legendTouch() {
-        var _this = this;
-        this.on('legendClick.radar', function(nameList) {
-            _this._reRenderAreas(nameList);
-            _this.messageCenter.components.tooltip.hiddenTooltip();
-        });
-    }
-    function __tooltipMobileReady() {
-        __tooltipTouch.apply(this);
-    }
-    function __tooltipTouch() {
-        var _this = this;
-        this.coverPolygonList.on('touchstart.radar', function () {
-            var index = d3.select(this).datum().index;
-            _this.areaList.selectAll('.xc-radar-area-point').style('stroke-width', 3);
-            _this._showTooltip(index, this);
-        });
+
+    var defaultFormatter = funnel.defaultFormatter;
+
+    function funnelSectionTrigger(ctx) {
+        var tooltip = ctx.messageCenter.components['tooltip'];
+        var tooltipFormatter = tooltip.tooltipConfig.formatter;
+
+        return function (data) {
+            ctx.funnelSection.attr('opacity', 1);
+            d3.select(this).attr('opacity', data._serie.itemStyle.opacity);
+            tooltip.showTooltip();
+
+            // 设置HTML
+            var formatter = data._serie.formatter || tooltipFormatter || defaultFormatter;
+
+            var title = "<p>" + data._serie.name + "</p>";
+            tooltip.setTooltipHtml(title + formatter(data.name, data.value, (data.percentage * 100).toFixed(1)));
+
+            // 获取坐标
+            var position = d3.mouse(ctx.svg.node());
+            tooltip.setPosition(position);
+            
+
+        }
     }
 }(xCharts, d3));
-
 /**
  *  scatter 散点图
  *  继承自 Chart

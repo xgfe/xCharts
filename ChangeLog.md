@@ -1,4 +1,7 @@
 # ChangeLog
+# 0.3.2
+
+- resize:[fix] Handle asynchronous errors
 
 # 0.3.1
 
